@@ -71,5 +71,19 @@ public class Program {
   }
 
   /* Main */
-  static void Main(System.String[] arguments) {}
+  struct A { public static A[] all = null; /* public int this[string i] { get => 42; } */ };
+  struct B { public static implicit operator A[](B _) { return new A[] {new()}; } };
+  struct C { public void c() => System.Array.IndexOf(new int[] {1}, 1); };
+
+  static void Main(System.String[] arguments) {
+    B b = new();
+
+    System.Console.WriteLine($"[..]: {b.GetType() == typeof(A[])}");
+    System.Console.WriteLine($"[..]: {IsConvertible(b.GetType(), typeof(A[]))}");
+    System.Console.WriteLine($"[..]: {IsConvertible(typeof(A[]), b.GetType())}");
+    System.Console.WriteLine($"");
+    System.Console.WriteLine($"[..]: {b.GetType() == typeof(A?[])}");
+    System.Console.WriteLine($"[..]: {IsConvertible(b.GetType(), typeof(A?[]))}");
+    System.Console.WriteLine($"[..]: {IsConvertible(typeof(A?[]), b.GetType())}");
+  }
 }
