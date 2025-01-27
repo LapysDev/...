@@ -11,7 +11,9 @@ public class Program {
       System.Object                                                          System.Collections.IEnumerator.Current => Current;
       private          int                                                   version;
 
-      /* ... */
+      /* … */
+      public void Dispose() {}
+
       internal Enumerator(Dictionary<TKey, TValue> dictionary) {
         this.current    = default(System.Collections.Generic.KeyValuePair<TKey, TValue>);
         this.dictionary = dictionary;
@@ -19,16 +21,13 @@ public class Program {
         this.version    = dictionary.version;
       }
 
-      /* ... */
-      public void Dispose() {}
-
       public bool MoveNext() {
         if (this.dictionary.version != this.version)
-        throw new System.InvalidOperationException($"Enumerator version {this.version} must be the same as Dictionary version {this.dictionary.version}");
+        throw new System.InvalidOperationException($"Dictionary version {this.version} must be the same as Enumerator version {this.dictionary.version}");
 
         while (this.dictionary.count > this.index) {
           if (this.dictionary.hashes[this.index] >= 0) {
-            this.current = new System.Collections.Generic.KeyValuePair<TKey, TValue>(this.dictionary.keys[index], this.dictionary.values[index]);
+            this.current = new(this.dictionary.keys[index], this.dictionary.values[index]);
             this.index  += 1;
 
             return true;
@@ -45,59 +44,14 @@ public class Program {
 
       void System.Collections.IEnumerator.Reset() {
         if (this.dictionary.version != this.version)
-        throw new System.InvalidOperationException($"Enumerator version {this.version} must be the same as Dictionary version {this.dictionary.version}");
+        throw new System.InvalidOperationException($"Dictionary version {this.version} must be the same as Enumerator version {this.dictionary.version}");
 
         this.current = default(System.Collections.Generic.KeyValuePair<TKey, TValue>);
         this.index   = 0;
       }
     }
 
-    private struct Prime {
-      public static readonly int[] Primes = new[] {3, 7, 11, 17, 23, 29, 37, 47, 59, 71, 89, 107, 131, 163, 197, 239, 293, 353, 431, 521, 631, 761, 919, 1103, 1327, 1597, 1931, 2333, 2801, 3371, 4049, 4861, 5839, 7013, 8419, 10103, 12143, 14591, 17519, 21023, 25229, 30293, 36353, 43627, 52361, 62851, 75431, 90523, 108631, 130363, 156437, 187751, 225307, 270371, 324449, 389357, 467237, 560689, 672827, 807403, 968897, 1162687, 1395263, 1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369};
-
-      /* ... */
-      public static int ExpandPrime(int size) {
-        int number = 2 * size;
-        return number > 0x7FEFFFFD && 0x7FEFFFFD > size ? 0x7FEFFFFD : Prime.GetPrime(number);
-      }
-
-      public static int GetPrime(int minimum) {
-        if (minimum < 0)
-        throw new System.ArgumentException("Prime minimum is less than 0");
-
-        for (int index = 0; index != Prime.Primes.Length; ++index) {
-          int prime = Prime.Primes[index];
-
-          if (prime >= minimum)
-          return prime;
-        }
-
-        for (int index = minimum | 1; index != 0x7FFFFFFF; index += 2) {
-          if (Prime.IsPrime(index) && 0 != (index - 1) % 101)
-          return index;
-        }
-
-        return minimum;
-      }
-
-      public static bool IsPrime(int candidate) {
-        if (0 != (candidate & 1)) {
-          int number = (int) System.Math.Sqrt((double) candidate);
-
-          // ...
-          for (int index = 3; index <= number; index += 2) {
-            if (0 == candidate % index)
-            return false;
-          }
-
-          return true;
-        }
-
-        return candidate == 2;
-      }
-    }
-
-    /* ... */
+    /* … */
     public  System.Collections.Generic.Dictionary<TKey, TValue>         AsDictionary => new System.Collections.Generic.Dictionary<TKey, TValue>(this);
     private int[]                                                       buckets      =  null;
     private readonly System.Collections.Generic.IEqualityComparer<TKey> comparer     =  System.Collections.Generic.EqualityComparer<TKey>.Default;
@@ -109,12 +63,12 @@ public class Program {
     public  bool                                                        IsReadOnly   => false;
     public  System.Collections.Generic.ICollection<TKey>                Keys         { get { TKey[] keys = new TKey[this.Count]; System.Array.Copy(this.keys, 0, keys, 0, this.Count); return keys; } }
     private TKey[]                                                      keys         = null;
-    private int []                                                       next         = null;
+    private int []                                                      next         = null;
     public  System.Collections.Generic.ICollection<TValue>              Values       { get { TValue[] values = new TValue[this.Count]; System.Array.Copy(this.values, 0, values, 0, this.Count); return values; } }
     private TValue[]                                                    values       = null;
     private int                                                         version      = 0;
 
-    /* ... */
+    /* … */
     public Dictionary()                                                                : this(0,          null)     {}
     public Dictionary(int                                                  capacity)   : this(capacity,   null)     {}
     public Dictionary(System.Collections.Generic.IEqualityComparer<TKey>   comparer)   : this(0,          comparer) {}
@@ -134,7 +88,7 @@ public class Program {
       this.Add(current.Key, current.Value);
     }
 
-    /* ... */
+    /* … */
     public void Add(System.Collections.Generic.KeyValuePair<TKey, TValue> item) {
       this.Add(item.Key, item.Value);
     }
@@ -173,7 +127,7 @@ public class Program {
     public bool ContainsValue(TValue value) {
       System.Func<TValue?, TValue?, bool> comparer = null == value ? (x, y) => null == x : System.Collections.Generic.EqualityComparer<TValue>.Default.Equals;
 
-      // ...
+      // …
       for (int index = 0; index != this.count; ++index) {
         if (this.hashes[index] >= 0 && comparer(this.values[index], value))
         return true;
@@ -184,12 +138,12 @@ public class Program {
 
     public void CopyTo(System.Collections.Generic.KeyValuePair<TKey, TValue>[] array, int offset) {
       if (null == array)                     throw new System.ArgumentNullException        ($"Array is null");
-      if (offset < 0 || offset > array.Length) throw new System.ArgumentOutOfRangeException($"Dictionary.CopyTo(...) {{index: {offset}, array: {{Length: {array.Length}}}}}");
+      if (offset < 0 || offset > array.Length) throw new System.ArgumentOutOfRangeException($"Dictionary.CopyTo(…) {{index: {offset}, array: {{Length: {array.Length}}}}}");
       if (Count > array.Length - offset)      throw new System.ArgumentException           ($"The number of elements in the dictionary ({Count}) is greater than the available space from offset to the end of the destination array ({array.Length})");
 
       for (int index = 0; index != this.count; ++index) {
         if (this.hashes[index] >= 0)
-        array[offset++] = new System.Collections.Generic.KeyValuePair<TKey, TValue>(this.keys[index], this.values[index]);
+        array[offset++] = new(this.keys[index], this.values[index]);
       }
     }
 
@@ -213,10 +167,42 @@ public class Program {
       return new(this);
     }
 
-    private void Initialize(int capacity) {
-      int prime = Prime.GetPrime(capacity);
+    public static int GetPrime(int minimum) {
+      if (minimum < 0)
+      throw new System.ArgumentException("Prime minimum is less than 0");
 
-      // ...
+      foreach (int prime in new[] {3, 7, 11, 17, 23, 29, 37, 47, 59, 71, 89, 107, 131, 163, 197, 239, 293, 353, 431, 521, 631, 761, 919, 1103, 1327, 1597, 1931, 2333, 2801, 3371, 4049, 4861, 5839, 7013, 8419, 10103, 12143, 14591, 17519, 21023, 25229, 30293, 36353, 43627, 52361, 62851, 75431, 90523, 108631, 130363, 156437, 187751, 225307, 270371, 324449, 389357, 467237, 560689, 672827, 807403, 968897, 1162687, 1395263, 1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369}) {
+        if (minimum <= prime)
+        return prime;
+      }
+
+      for (int index = minimum | 1; index != 0x7FFFFFFF; index += 2) {
+        if (index == 2)
+        return index;
+
+        if (0 != (index & 1)) {
+          int  limit  = (int) System.Math.Sqrt((double) index);
+          bool primed = true;
+
+          // …
+          for (int subindex = 3; limit >= subindex; subindex += 2)
+          if (0 == index % subindex) {
+            primed = false;
+            break;
+          }
+
+          if (primed && 0 != (index - 1) % 101)
+          return index;
+        }
+      }
+
+      return minimum;
+    }
+
+    private void Initialize(int capacity) {
+      int prime = Dictionary<TKey, TValue>.GetPrime(capacity);
+
+      // …
       this.buckets  = new int[prime];
       this.freeList = -1;
       this.hashes   = new int   [prime];
@@ -233,7 +219,7 @@ public class Program {
       int hashIndex = 0;
       int number    = 0;
 
-      // ...
+      // …
       if (null == key)
         throw new System.ArgumentNullException("Key is null");
 
@@ -284,7 +270,7 @@ public class Program {
       int hashIndex = 0;
       int number    = -1;
 
-      // ...
+      // …
       if (key == null)
         throw new System.ArgumentNullException("Key is null");
 
@@ -318,7 +304,7 @@ public class Program {
     }
 
     private void Resize() {
-      this.Resize(Prime.ExpandPrime(this.count), false);
+      this.Resize(this.count < 0x7FEFFFFD && this.count * 2 > 0x7FEFFFFD ? 0x7FEFFFFD : Dictionary<TKey, TValue>.GetPrime(this.count * 2), false);
     }
 
     private void Resize(int capacity, bool regenerateHashes) {
@@ -328,7 +314,7 @@ public class Program {
       int[]    next    = new int   [capacity];
       TValue[] values  = new TValue[capacity];
 
-      // ...
+      // …
       for (int index = 0; buckets.Length != index; ++index)
         buckets[index] = -1;
 
@@ -346,7 +332,7 @@ public class Program {
       for (int index = 0; index != this.count; index++) {
         int hashIndex = hashes[index] % capacity;
 
-        // ...
+        // …
         next   [index]     = buckets[hashIndex];
         buckets[hashIndex] = index;
       }
@@ -369,7 +355,7 @@ public class Program {
     public bool TryGetValue(TKey key, out TValue value) {
       int index = this.FindIndex(key);
 
-      // ...
+      // …
       if (index >= 0) {
         value = this.values[index];
         return true;
@@ -392,10 +378,10 @@ public class Program {
       }
     }
 
-    public TValue this[TKey key, TValue defaultValue] {
+    public TValue this[TKey key, TValue _] {
       get {
         int index = this.FindIndex(key);
-        return index >= 0 ? this.values[index] : defaultValue;
+        return index >= 0 ? this.values[index] : _;
       }
     }
   }
@@ -405,9 +391,52 @@ public class Program {
     Dictionary<string, int> dictionary = new() {{"A", 42}, {"B", 1337}};
 
     // ...
-    void Log(Dictionary<string, int> dictionary) {}
+    void Log(Dictionary<string, int> dictionary) {
+      System.Collections.Generic.ICollection<string> keys   = dictionary.Keys;
+      System.Collections.Generic.ICollection<int>    values = dictionary.Values;
+
+      // ...
+      System.Console.WriteLine($"({dictionary.Count}) {{Keys: ({keys.Count}), Values: ({dictionary.Values.Count})}}");
+
+      foreach (System.Collections.Generic.KeyValuePair<string, int> item in dictionary)
+        System.Console.WriteLine("   " + $"{item.Key} => {item.Value}");
+
+      System.Console.Write("  Keys  : ["); foreach (string key   in keys)   System.Console.Write($"{key}"   + ", "); System.Console.WriteLine("..]");
+      System.Console.Write("  Values: ["); foreach (int    value in values) System.Console.Write($"{value}" + ", "); System.Console.WriteLine("..]");
+    }
 
     /* ... */
-    // dictionary.
+    Log(dictionary);
+    System.Console.WriteLine($"[A (val.)]: {dictionary["A"]}");
+    System.Console.WriteLine();
+
+    dictionary.Add("C", 3);
+    Log(dictionary);
+    System.Console.WriteLine($"[C (val.)]: {dictionary["C"]}");
+    System.Console.WriteLine();
+
+    System.Console.WriteLine($"[B    (has)]: {dictionary.ContainsKey  ("B")}");
+    System.Console.WriteLine($"[D    (has)]: {dictionary.ContainsKey  ("D")}");
+    System.Console.WriteLine($"[1337 (has)]: {dictionary.ContainsValue(1337)}");
+    System.Console.WriteLine($"[69   (has)]: {dictionary.ContainsValue(69)}");
+    System.Console.WriteLine();
+
+    dictionary.Clear();
+    Log(dictionary);
+    System.Console.WriteLine();
+
+    dictionary.Add("D", 69);
+    Log(dictionary);
+    System.Console.WriteLine($"[D  (val.)]: {dictionary              ["D"]}");
+    System.Console.WriteLine($"[D  (has)] : {dictionary.ContainsKey  ("D")}");
+    System.Console.WriteLine($"[69 (has)] : {dictionary.ContainsValue(69)}");
+    System.Console.WriteLine();
+
+    System.Console.WriteLine($"[D (del.)]: {dictionary.Remove("D")}");
+    Log(dictionary);
+    System.Console.WriteLine();
+
+    System.Console.WriteLine($"[D (del.)]: {dictionary.Remove("D")}");
+    Log(dictionary);
   }
 }

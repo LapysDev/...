@@ -52,21 +52,20 @@ int main(int count, char* arguments[]) /* noexcept */ {
       librariesLength // --> std::size_t{…}
     };
 
-    WCHAR                      librariesPath[MAX_PATH + 1u] = L"";
-    UINT const                 librariesPathLength          = ::GetSystemDirectoryW(librariesPath, ((MAX_PATH + 1u) * sizeof(WCHAR)) / sizeof(TCHAR));
-    static struct libraryinfo *libraries                  = NULL;
+    static struct libraryinfo *libraries = NULL;
     static struct libraryinfo /* final */ {
-      LPCWSTR const name;
-      HMODULE       moduleHandle;
-      BOOL        (*unloader)(HMODULE);
+      enum      { nameLengthMaximum = /* ->> Arbitrarily-long */ 12u }; // --> std::size_t
+      WCHAR const name[nameLengthMaximum + /* ->> NUL terminator */ 1u];
+      HMODULE     moduleHandle;
+      BOOL      (*moduleUnloader)(HMODULE);
 
       static void exit() /* extern "C" */ {
-        for (struct libraryinfo *library = libraries; library != libraries + (NULL == libraries ? 0u : librariesLength); ++library)
-        if (NULL != library -> moduleHandle and NULL != library -> unloader) {
-          library -> unloader(library -> moduleHandle); // --> FreeLibrary(…)
+        for (struct libraryinfo *library = libraries; library != libraries + (NULL == libraries ? 0u : librariesLength); ++library) {
+          if (NULL != library -> moduleHandle and NULL != library -> moduleUnloader)
+            library -> moduleUnloader(library -> moduleHandle); // --> FreeLibrary(…)
 
-          library -> moduleHandle = NULL;
-          library -> unloader     = NULL;
+          library -> moduleHandle   = NULL;
+          library -> moduleUnloader = NULL;
         }
       }
     } l[librariesLength] = {
@@ -78,10 +77,17 @@ int main(int count, char* arguments[]) /* noexcept */ {
       {L"shell32"  ".dll", NULL, NULL},
       {L"taskschd" ".dll", NULL, NULL}
     };
+    WCHAR      librariesPath[MAX_PATH + libraryinfo::nameLengthMaximum + /* ->> NUL terminator */ 1u]; // --> ::GetSystemDirectoryW(…) + '\\' + libraries[kernel32].name
+    UINT const librariesPathLength = (::GetSystemDirectoryW(librariesPath, sizeof librariesPath / sizeof(TCHAR)) * sizeof(TCHAR)) / sizeof(WCHAR);
 
     // ...
     libraries                          = l;
     librariesPath[librariesPathLength] = L'\\';
+
+    for (std::size_t index = 0u; ; ++index) {
+      librariesPath[index + librariesPathLength + 1u] = libraries[kernel32].name[index];
+      if (L'\0' == libraries[kernel32].name[index]) break;
+    }
 
     (void) std::atexit(&libraries -> exit);
     #if __cplusplus >= 201103L
@@ -94,11 +100,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
       BOOL    (*SetDefaultDllDirectories)(DWORD)                  = NULL;
 
       // ... ->> Load the userland `kernel32` library
-      for (std::size_t index = 0u; ; ++index) {
-        librariesPath[index + librariesPathLength + 1u] = libraries[kernel32].name[index];
-        if (L'\0' == libraries[kernel32].name[index]) break;
-      }
-
       if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, librariesPath, &libraries[kernel32].moduleHandle))
       if (NULL != libraries[kernel32].moduleHandle) {
         FreeLibrary              = reinterpret_cast<BOOL    (*)(HMODULE)>               (::GetProcAddress(libraries[kernel32].moduleHandle, "FreeLibrary"));              // --> <windows.h>
@@ -107,7 +108,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       if (NULL != SetDefaultDllDirectories)
-      (void) SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
+      (void) SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32); // --> %SystemRoot%\System32
 
       // ... ->> Load other used Windows API libraries —
       for (struct libraryinfo *library = libraries; library != libraries + librariesLength; ++library)
@@ -117,11 +118,13 @@ int main(int count, char* arguments[]) /* noexcept */ {
           if (L'\0' == library -> name[index]) break;
         }
 
-        if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, librariesPath, &library -> moduleHandle))
-        if (NULL != library -> moduleHandle) continue;
+        if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, librariesPath, &library -> moduleHandle)) {
+          if (NULL != library -> moduleHandle)
+          continue; // --> library -> moduleUnloader = NULL;
+        }
 
-        library -> moduleHandle = LoadLibraryExW(librariesPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
-        library -> unloader     = NULL == library -> moduleHandle ? NULL : FreeLibrary;
+        library -> moduleHandle   = LoadLibraryExW(librariesPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
+        library -> moduleUnloader = NULL == library -> moduleHandle ? NULL : FreeLibrary;
       }
     }
   #endif
@@ -132,28 +135,28 @@ int main(int count, char* arguments[]) /* noexcept */ {
     enum /* : std::size_t */     { MESSAGE_MAXIMUM_LENGTH = 256u };                                                                                         //
     union  formatinfo            { unsigned char metadata[32]; };                                                                                           // ->> Arbitrarily-sized
     enum   formatstyle           { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN };                                                                     // ->> Mutually-exclusive
-    enum   parsediag             { PARSED, PARSE_NAME, PARSE_NOT_NAME, PARSE_NOT_TAG, PARSE_NOT_VALUE, PARSE_TAG, PARSE_VALUE, REPARSED, REPARSE_COMMAND }; //
-    enum   parsestyle            { PARSE_INITIAL  = 0x00u, PARSE_TRIMMED = 0x01u, PARSE_UNCASED = 0x02u };                                                  //
+    enum   parsediag             { PARSED, PARSE_NAME, PARSE_NOT_NAME, PARSE_NOT_TAG, PARSE_NOT_VALUE, PARSE_TAG, PARSE_VALUE, REPARSED, REPARSE_COMMAND }; // ->> Command-line option   parsing
+    enum   parsestyle            { PARSE_INITIAL  = 0x00u, PARSE_TRIMMED = 0x01u, PARSE_UNCASED = 0x02u };                                                  // ->> Command-line argument interpretation
     struct parsecmd  /* final */ {                                                                                                                          //
-      /* ... ->> `NULL`-ish `::…name`s represent unrecognized command-line arguments */
-      enum command {
-        ABOUT, // ->> "About" command prompted
-        CLOCK, // ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
-        HELP,  // ->> "Help" command prompted
-        LOG,   // ->> Filesystem location for storing catalogs;          Assume NUL-terminated
-        RERUN  // ->> Catalog is re-executed
-      }                      /* const */ command;                                                           // ->> Command-line option identifier
-      union { char const    */* const */ text, *const name; };                                              // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
-      char const            */* const */ longName;                                                          // ->> Multi-byte NUL-terminated text representing the        long  (prefixed by `::commandLineOptionLongTag`)  name of the command-line option; Optionally `NULL`
-      union { char const    */* const */ shortName, *const alias; };                                        // ->> Multi-byte NUL-terminated text representing the alias/ short (prefixed by `::commandLineOptionShortTag`) name of the command-line option; Optionally `NULL`
-      enum parsestyle        /* const */ style;                                                             // ->> Determines the textual interpretation of `::argument`
-      std::size_t            /* const */ count;                                                             // ->> Number of command-line arguments (after `::argument`/ `::value`) evaluated; Non-zero invalidates use of value tags within the same `::argument`/ `::value`
-      void                              *metadata;                                                          //
-      bool                             (*diagnosis)(enum parsediag, char[], struct parsecmd const*, void*); // ->> Predicate function determining the validity of the command-line option; Called through command-line `parse()`; Optionally `NULL`
-      struct parse /* final */ {                                                                            //
-        char                                                                              *argument;        // ->> Command-line argument representing the command-line option;        Set through command-line `parse()`; Initially  `NULL`
-        struct /* final */ { union { std::ptrdiff_t name, text; }; std::ptrdiff_t value; } offsets;         // ->> Offsets denoting particular attributes of the command-line option; Set through command-line `parse()`
-      } parsed;                                                                                             //
+      /* ... ->> `NULL` `::…name`s represent unrecognized command-line arguments */
+      enum command {                                                                                     //
+        ABOUT,                                                                                           //   ->> "About" command prompted
+        CLOCK,                                                                                           //   ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
+        HELP,                                                                                            //   ->> "Help" command prompted
+        LOG,                                                                                             //   ->> Filesystem location for storing catalogs;          Assume NUL-terminated
+        RERUN                                                                                            //   ->> Catalog is re-executed
+      }                   /* const */ command;                                                           // ->> Command-line option identifier
+      union { char const */* const */ text,      *const name; };                                         // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
+      char const         */* const */ longName;                                                          // ->> Multi-byte NUL-terminated text representing the        long  (prefixed by `::commandLineOptionLongTag`)  name of the command-line option; Optionally `NULL`
+      union { char const */* const */ shortName, *const alias; };                                        // ->> Multi-byte NUL-terminated text representing the alias/ short (prefixed by `::commandLineOptionShortTag`) name of the command-line option; Optionally `NULL`
+      enum parsestyle     /* const */ style;                                                             // ->> Determines the textual interpretation of `::argument`
+      std::size_t         /* const */ count;                                                             // ->> Number of command-line arguments (after `::argument`/ `::value`) evaluated; Non-zero invalidates use of value tags within the same `::argument`/ `::value`
+      void                           *metadata;                                                          //
+      bool                          (*diagnosis)(enum parsediag, char[], struct parsecmd const*, void*); // ->> Predicate function determining the validity of the command-line option; Called through command-line `parse()`; Optionally `NULL`
+      struct parse /* final */ {                                                                         // ->> Set through command-line `parse()`
+        char                                                                              *argument;     //   ->> Command-line argument representing the command-line option; Initially `NULL`
+        struct /* final */ { union { std::ptrdiff_t name, text; }; std::ptrdiff_t value; } offsets;      //   ->> Offsets denoting particular attributes of the command-line option;
+      } parsed;                                                                                          //
     };
 
     /* ... */
@@ -178,8 +181,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
     static int exit(int const code) /* [[noreturn]] */ {
       if (NULL != catalog) {
-        if (catalog -> clockPathAllocated)      ::delete[]  catalog -> clockPath;
-        if (NULL != catalog -> clockFileStream) std::fclose(catalog -> clockFileStream);
+        if         (catalog -> clockPathAllocated) ::delete[] catalog -> clockPath;
+        if (NULL != catalog -> clockFileStream) std::fclose  (catalog -> clockFileStream);
 
         catalog -> applicationExitCode = code;
         catalog -> clockFileStream     = NULL;
@@ -333,7 +336,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
         unsigned char const *character      = static_cast<unsigned char const*>(message) + index;
         bool                 characterIsNUL = true;
 
-        // ... ->> Assumes `character` NUL is a complete set of zeroed code units
+        // ... ->> Assumes NUL `character` is a complete set of zeroed code units
         for (std::size_t subindex = 0u; stride != subindex; ++subindex)
         if (0x00u != character[subindex]) {
           characterIsNUL = false;
@@ -516,16 +519,16 @@ int main(int count, char* arguments[]) /* noexcept */ {
           return value;
         }
 
+        static struct parsecmd* info(struct parsecmd const option, union parseinfo const& information = parseinfo()) {
+          information.option = option;
+          return &information.option;
+        }
+
         static char** info(char argumentBegin[], char argumentEnd[], union parseinfo const& information = parseinfo()) {
           information.argument[0] = argumentBegin;
           information.argument[1] = argumentEnd;
 
           return information.argument;
-        }
-
-        static struct parsecmd* info(struct parsecmd const option, union parseinfo const& information = parseinfo()) {
-          information.option = option;
-          return &information.option;
         }
 
         static char* nextchar(char* argument) {
@@ -587,21 +590,16 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
           for (char const *const parsecmd:: *const names[] = {&parsecmd::text, &parsecmd::longName, &parsecmd::shortName}, *const parsecmd:: *const *name = names; diagnostic and name != names + (sizeof names / sizeof(char const* parsecmd::*)); ++name)
           if (NULL != option ->* *name) {
-            char const *const   notag[2]    = {"", NULL};
+            char const *const   notag[2]    = {"", NULL}; // ->> Key-value token pair
             char               *subargument = argument;
-            char const *const (*tags)[2]    = NULL;
-            std::size_t         tagsLength  = 0u;
+            char const *const (*tags)[2]    = &notag;
+            std::size_t         tagsLength  = 1u;
 
-            // ... --> tags… = …;
-            subargument = option -> style & PARSE_TRIMMED ? option::nextchar(subargument) : subargument;
-
+            // ...
             if (&parsecmd::longName  == *name) { tags = catalog -> commandLineOptionLongTags;  tagsLength = catalog -> commandLineOptionLongTagsLength;  }
             if (&parsecmd::shortName == *name) { tags = catalog -> commandLineOptionShortTags; tagsLength = catalog -> commandLineOptionShortTagsLength; }
 
-            if (NULL == tags or 0u == tagsLength) {
-              tags       = &notag;
-              tagsLength = 1u;
-            } else subargument = argument::nextchar(subargument);
+            subargument = option -> style & PARSE_TRIMMED or &notag != tags ? argument::nextchar(subargument) : subargument;
 
             // ... ->> Match based on the `option` `tags`
             for (std::size_t tagIndex = 0u; diagnostic and tagIndex != tagsLength; ++tagIndex) {
@@ -630,7 +628,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
               if (NULL == argumentName)
               continue;
 
-              // ... ->> Validate based on `argument` name (or `tagValue`)
+              // ... ->> Validate based on `argument` name (or optionally `tagValue`)
               for (std::size_t index = 0u; ; ++index) {
                 char *const subargument = argument::nextchar(argumentName + index);
 

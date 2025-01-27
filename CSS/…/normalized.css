@@ -136,6 +136,23 @@
   /* <iframe> */
   iframe { border-width: 0 }
 
+  /* <img> */
+  img {
+    background            : inherit;
+    background-attachment : inherit;
+    background-blend-mode : inherit;
+    background-clip       : inherit;
+    background-color      : inherit;
+    background-color      : transparent;
+    background-image      : inherit;
+    background-origin     : inherit;
+    background-position   : inherit;
+    background-position-x : inherit;
+    background-position-y : inherit;
+    background-repeat     : inherit;
+    background-size       : inherit
+  }
+
   /* <input> */
   input[type=search] {
     outline-offset    : -2px;

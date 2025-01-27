@@ -63,9 +63,9 @@ typedef std::nullptr_t sfinaeptr_t;
 
 // ... --> bless(...)
 constexpr char*                         bless(char*                         address) noexcept { return address; }
-constexpr char const*                   bless(char const*                   address) noexcept { return address; }
-constexpr char const volatile*          bless(char const volatile*          address) noexcept { return address; }
-constexpr char       volatile*          bless(char       volatile*          address) noexcept { return address; }
+constexpr char          const*          bless(char          const*          address) noexcept { return address; }
+constexpr char          const volatile* bless(char          const volatile* address) noexcept { return address; }
+constexpr char                volatile* bless(char                volatile* address) noexcept { return address; }
 constexpr unsigned char*                bless(unsigned char*                address) noexcept { return address; }
 constexpr unsigned char const*          bless(unsigned char const*          address) noexcept { return address; }
 constexpr unsigned char const volatile* bless(unsigned char const volatile* address) noexcept { return address; }
