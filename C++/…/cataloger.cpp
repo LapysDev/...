@@ -56,8 +56,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
     static struct libraryinfo /* final */ {
       enum      { nameLengthMaximum = /* ->> Arbitrarily-long */ 12u }; // --> std::size_t
       WCHAR const name[nameLengthMaximum + /* ->> NUL terminator */ 1u];
-      HMODULE     moduleHandle;
       BOOL      (*moduleUnloader)(HMODULE);
+      HMODULE     moduleHandle;
 
       static void exit() /* extern "C" */ {
         for (struct libraryinfo *library = libraries; library != libraries + (NULL == libraries ? 0u : librariesLength); ++library) {
