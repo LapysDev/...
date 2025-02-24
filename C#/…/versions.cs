@@ -220,6 +220,9 @@
     #if NET9_0
       System.Console.WriteLine(".NET 9.0");
     #endif
+    #if NET9_0_OR_GREATER
+      System.Console.WriteLine(".NET 9.0+");
+    #endif
 
     // ...
     #if ANDROID21_0_OR_GREATER
