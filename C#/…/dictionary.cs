@@ -391,7 +391,7 @@ public class Program {
     Dictionary<string, int> dictionary = new() {{"A", 42}, {"B", 1337}};
 
     // ...
-    void Log(Dictionary<string, int> dictionary) {
+    static void Log(Dictionary<string, int> dictionary) {
       System.Collections.Generic.ICollection<string> keys   = dictionary.Keys;
       System.Collections.Generic.ICollection<int>    values = dictionary.Values;
 

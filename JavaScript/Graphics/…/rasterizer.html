@@ -82,39 +82,47 @@
       };
 
       /* Function */
-      // [Draw] ... ->> Transparency unsupported
+      // [Draw] ... ->> Sub-pixel coordinates unsupported, Transparency unsupported
+      function drawArc(origin, target, ...draw) /* TODO (Lapys) ->> See `drawEllipse(…)`  */ {}
+
       function drawArchimedeanSpiral(...draw) /* TODO (Lapys) */ {}
 
       function drawBeveledRect(...draw) /* TODO (Lapys) */ {}
 
       function drawChamferedRect(...draw) /* TODO (Lapys) */ {}
 
-      function drawCircle(origin, size, ...draw) /* TODO (Lapys) -> r²π */ {
-        drawEllipse(origin, new xy(size + origin.x, size + origin.y), ...draw)
-      }
+      function drawCircle(origin, size, ...draw) /* ->> See `drawEllipse(origin, xy(size, size), ...draw)` */ {
+        var axis    = size * size; // --> sqr(size)
+        var squared = {current: xy(0, axis), next: xy(0, axis - (size + size - 1))};
 
-      function drawCircularArc(...draw) /* TODO (Lapys) */ {}
+        for (var x = 0, y = size; x !== size && 0 <= y; ) {
+          drawPoint(xy(origin.x + x, origin.y + y), ...draw); // ->> Bottom Right
+          drawPoint(xy(origin.x - x, origin.y + y), ...draw); // ->> Bottom Left
+          drawPoint(xy(origin.x - x, origin.y - y), ...draw); // ->> Top    Left
+          drawPoint(xy(origin.x + x, origin.y - y), ...draw); // ->> Top    Right
 
-      function drawEllipse(origin, target, ...draw) {
-        if (origin.x > target.x || origin.y > target.y) return;
-        var height = (int32_t) (target.y - origin.y) / 2;
-        var width  = (int32_t) (target.x - origin.x) / 2;
-
-        // ...
-        for (var axis = height * width, x = 0, y = height; x !== width && 0 !== y; ) {
-          drawPoint(new xy(origin.x + (width + x), origin.y + (height + y)), ...draw); // ->> Bottom Right
-          drawPoint(new xy(origin.x + (width + x), origin.y + (height - y)), ...draw); // ->> Top    Right
-          drawPoint(new xy(origin.x + (width - x), origin.y + (height + y)), ...draw); // ->> Bottom Left
-          drawPoint(new xy(origin.x + (width - x), origin.y + (height - y)), ...draw); // ->> Top    Left
-
-          // ... ->> Algorithm for bottom-right quadrant
-          if (axis > ((height * pow(x + 1, 2)) / width) + ((width * pow(y + 0, 2)) / height)) { ++x; continue }
-          if (axis > ((height * pow(x + 0, 2)) / width) + ((width * pow(y - 1, 2)) / height)) { --y; continue }
-          if (axis > ((height * pow(x + 1, 2)) / width) + ((width * pow(y - 1, 2)) / height)) { ++x; --y }
+          // ... --> r² = x² + y² ->> Explore bottom-right quadrant by `xy(+1, -1)`
+          if (axis > squared.current.y + squared.next.x) { squared.current.x += x + ++x; squared.next.x += x + x + 1; continue }
+          if (axis > squared.current.x + squared.next.y) { squared.current.y -= y + --y; squared.next.y -= y + y - 1; continue }
         }
       }
 
-      function drawEllipticalArc(...draw) /* TODO (Lapys) */ {}
+      function drawEllipse(origin, size, ...draw) {
+        var axis    = size.height * size.width;
+        var squared = {height: sqr(size.height), width: sqr(size.width)};
+        var squared = {height: squared.height,   width: squared.width, current: xy(0, squared.height), next: xy(0, squared.height - (size.height + size.height - 1))};
+
+        for (var x = 0, y = size.height; x !== size.width && 0 <= y; ) {
+          drawPoint(xy(origin.x + x, origin.y + y), ...draw); // ->> Bottom Right
+          drawPoint(xy(origin.x - x, origin.y + y), ...draw); // ->> Bottom Left
+          drawPoint(xy(origin.x - x, origin.y - y), ...draw); // ->> Top    Left
+          drawPoint(xy(origin.x + x, origin.y - y), ...draw); // ->> Top    Right
+
+          // ... --> 1 = x²/H² + y²/W² = (H²x² + W²y²) ÷ WH ->> Explore bottom-right quadrant by `xy(+1, -1)`
+          if (axis > ((squared.current.y * squared.width)  + (squared.next.x * squared.height)) / axis) { squared.current.x += x + ++x; squared.next.x += x + x + 1; continue }
+          if (axis > ((squared.current.x * squared.height) + (squared.next.y * squared.width))  / axis) { squared.current.y -= y + --y; squared.next.y -= y + y - 1; continue }
+        }
+      }
 
       function drawGlyph(origin, target, unit, font, ...draw) /* TODO (Lapys) */ {
         // Alias
@@ -240,9 +248,9 @@
       function drawImage(...draw) /* TODO (Lapys) -> APNG, AVIF, BMP, GIF, HEIF, ICO, JFIF/ JPEG, JPEG 2000, JPEG XL, JPEG XR, PBM, PGM, PNG, PPM, RGBE, SVG, TIFF, TinyVG, WebP, XBM, XPM */ {}
 
       function drawLine(origin, target, ...draw) {
-        var distances = new xy(abs(origin.x - target.x), abs(origin.y - target.y));
-        var slope     = max   (abs(origin.x - target.x), abs(origin.y - target.y));
-        var slopes    = new xy(0, 0);
+        var distances = xy(abs(origin.x - target.x), abs(origin.y - target.y));
+        var slope     = imax  (abs(origin.x - target.x), abs(origin.y - target.y));
+        var slopes    = xy(0, 0);
         var x         = origin.x;
         var y         = origin.y;
 
@@ -256,7 +264,7 @@
 
           slopes.x += distances.x;
           slopes.y += distances.y;
-          drawPoint(new xy(x, y), ...draw)
+          drawPoint(xy(x, y), ...draw)
         }
       }
 
@@ -281,13 +289,13 @@
           return;
 
         for (var x = target.x; origin.x !== --x; ) {
-          drawPoint(new xy(x, origin.y), ...draw);
-          drawPoint(new xy(x, target.y), ...draw)
+          drawPoint(xy(x, origin.y), ...draw);
+          drawPoint(xy(x, target.y), ...draw)
         }
 
         for (var y = target.y; origin.y !== --y; ) {
-          drawPoint(new xy(origin.x, y), ...draw);
-          drawPoint(new xy(target.x, y), ...draw)
+          drawPoint(xy(origin.x, y), ...draw);
+          drawPoint(xy(target.x, y), ...draw)
         }
       }
 
@@ -322,9 +330,9 @@
             var origin = subcontrols[index + 0];
             var target = subcontrols[index + 1];
 
-            var distances = new xy(abs(origin.x - target.x), abs(origin.y - target.y));
-            var slope     = max   (abs(origin.x - target.x), abs(origin.y - target.y));
-            var slopes    = new xy(0, 0);
+            var distances = xy(abs(origin.x - target.x), abs(origin.y - target.y));
+            var slope     = imax  (abs(origin.x - target.x), abs(origin.y - target.y));
+            var slopes    = xy(0, 0);
 
             // ...
             x = origin.x;
@@ -346,13 +354,13 @@
             }
           }
 
-          drawLine(new xy(x, y), anchor, ...draw);
-          anchor = new xy(x, y)
+          drawLine(xy(x, y), anchor, ...draw);
+          anchor = xy(x, y)
         }
       }
 
       function drawSquare(coordinates, size, ...draw) {
-        drawRectangle(coordinates, new xy(size + coordinates.x, size + coordinates.y), ...draw)
+        drawRectangle(coordinates, xy(size + coordinates.x, size + coordinates.y), ...draw)
       }
 
       function drawStar(...draw) /* TODO (Lapys) -> Astroid, Rose Curve, … */ {}
@@ -379,7 +387,7 @@
       function translate(offset, transform = I) {
         return function(coordinates) {
           var coordinates = transform(coordinates);
-          return new xy(coordinates.x + offset.x, coordinates.y + offset.y)
+          return xy(coordinates.x + offset.x, coordinates.y + offset.y)
         }
       }
 
@@ -417,17 +425,23 @@
         return (number | 0) /* --> `… & 0xFFFFFFFF` */
       }
 
-      function max(integerA, integerB) {
+      function ipow(base, exponent) /* ->> `exponent` is a positive integer */ {
+        for (var base = base, product = 1; ; base *= base) {
+          product    *= exponent & 1 /* --> exponent % 2 */ ? base : 1;
+          exponent >>>= 1; // --> exponent / 2
+
+          if (0 === exponent)
+          return product
+        }
+      }
+
+      function imax(integerA, integerB) {
         var difference = integerA - integerB;
         return integerA - (difference * (difference >>> 31))
       }
 
-      function pow(base, exponent) /* ->> `exponent` is a positive integer */ {
-        for (var base = base, product = 1; ; base *= base) {
-          if (exponent & 1 /* --> exponent % 2 */) product *= base;
-          exponent >>>= 1; // --> exponent / 2
-          if (0 === exponent) return product
-        }
+      function irgb(red, green, blue) /* ->> Specified for integer channels between `0x00` and `0xFF` */ {
+        return (blue << 0x00) | (green << 0x08) | (red << 0x10)
       }
 
       function r(color) {
@@ -435,7 +449,25 @@
       }
 
       function rgb(red, green, blue) /* ->> Specified for floating-point channels between `+0.0` and `1.0` */ {
-        return (((int32_t) (blue * 0xFF)) << 0x00) | (((int32_t) (green * 0xFF)) << 0x08) | (((int32_t) (red * 0xFF)) << 0x10)
+        return (((uint32_t) (blue * 0xFF)) << 0x00) | (((uint32_t) (green * 0xFF)) << 0x08) | (((uint32_t) (red * 0xFF)) << 0x10)
+      }
+
+      function sqr(number) {
+        return number * number
+      }
+
+      function struct(...properties) {
+        var object = Object.create(null); // --> {[properties[… + 0]]: properties[… + 1], …}
+
+        // …
+        for (var index = 0, length = properties.length; length - index > 1; )
+        object[properties[index++]] = properties[index++];
+
+        return object
+      }
+
+      function sz(width, height) {
+        return new vec2(width, height)
       }
 
       function uint8_t(number) /* ->> See `int8_t(…)` */ {
@@ -454,31 +486,36 @@
         return (number >>> 0) /* --> `… & 0xFFFFFFFF` */
       }
 
-      function xy(x, y) {
-        if (this instanceof xy) {
-          if (x instanceof xy) { this.x = x.x; this.y = x.y }
-          else { this.x = (int32_t) (x); this.y = (int32_t) (y) }
+      function vec2(x, y) {
+        if (false === this instanceof vec2) return new vec2(x, y);                 // ->> Static construct
+        if (false !== x    instanceof vec2) { this.x = x.x; this.y = x.y; return } // ->> Copy   construct
 
-          return // --> this
-        }
-
-        return new xy(x, y)
+        this.x = (int32_t) (x);
+        this.y = (int32_t) (y)
       }
-        xy.prototype = {x: 0, y: 0};
+        vec2.prototype = {
+          x: 0, y: 0,
+          get height() { return this.y }, set height(value) { this.y = value },
+          get width () { return this.x }, set width (value) { this.x = value }
+        };
+
+      function xy(x, y) {
+        return new vec2(x, y)
+      }
 
       // ...
       function render() {
-        drawCircle   (xy(145, 20), 750 - 20,     colors.grey);
-        // drawEllipse  (xy(20,  20), xy(980, 750), colors.grey);
-        // drawLine     (xy(20,  20), xy(980, 750), colors.magenta);
+        drawCircle   (xy(400, 250), 200,          colors.grey);
+        drawEllipse  (xy(400, 250), sz(400, 200), colors.red);
+        // drawLine     (xy(20,  20), xy(980, 750), colors.blue);
         // drawRectangle(xy(20,  20), xy(980, 750), colors.green);
-        // drawSquare   (xy(145, 20), 750 - 20,     colors.cyan);
+        // drawSquare   (xy(145, 20), 750 - 20,     colors.orange);
 
-        drawLine  (   xy(20, 20),                                        xy(980, 980));
-        drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.blue);
-        drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.red);
-        drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);
-        drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.orange);
+        // drawLine  (   xy(20, 20),                                        xy(980, 980));
+        // drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.blue);
+        // drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.red);
+        // drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);
+        // drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.orange);
 
         // drawGlyph(xy(20, 20), xy(980, 980), 'A', "font.ttf");
 

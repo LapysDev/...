@@ -259,6 +259,9 @@ namespace {
   extern "C" long double                           sin                         (long double, bool* = NULL);
   extern "C" long double                           sinh                        (long double, bool* = NULL);
   extern "C" long double                           slerp                       (long double, long double, long double);
+             intmax_t                              sqr                         (intmax_t,                 bool* = NULL);
+  extern "C" long double                           sqr                         (long double,              bool* = NULL);
+             uintmax_t                             sqr                         (uintmax_t,                bool* = NULL);
              intmax_t                              sqrt                        (intmax_t,                 bool* = NULL);
   extern "C" long double                           sqrt                        (long double,              bool* = NULL);
              uintmax_t                             sqrt                        (uintmax_t,                bool* = NULL);
