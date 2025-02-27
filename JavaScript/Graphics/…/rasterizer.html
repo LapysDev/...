@@ -97,7 +97,7 @@
       function draw3DUtahTeapot(...draw) /* TODO (Lapys) ->> See `persp(…)` */ {}
       function draw3DUVSphere(segments /* ->> Meridian */, rings /* ->> Parallel */, ...draw) /* TODO (Lapys) ->> See `persp(…)` */ {}
 
-      function drawArc(origin, ...draw) /* TODO (Lapys) ->> See `drawSpline(…)` */ {}
+      function drawArc(origin, target, ...draw) /* TODO (Lapys) ->> See `drawSpline(…)` */ {}
 
       function drawArchimedeanSpiral(...draw) /* TODO (Lapys) */ {}
 
@@ -261,10 +261,10 @@
       function drawHeart(...draw) /* TODO (Lapys) -> Cardioid */ {}
       function drawImage(...draw) /* TODO (Lapys) -> APNG, AVIF, BMP, GIF, HEIF, ICO, JFIF/ JPEG, JPEG 2000, JPEG XL, JPEG XR, PBM, PGM, PNG, PPM, RGBE, SVG, TIFF, TinyVG, WebP, XBM, XPM */ {}
 
-      function drawLine(origin, target, ...draw) {
+      function drawLine(origin, target, ...draw) /* TODO (Lapys) */ {
         var distances = xy  (abs(origin.x - target.x), abs(origin.y - target.y));
         var slope     = imax(abs(origin.x - target.x), abs(origin.y - target.y));
-        var slopes    = xy(0, 0);
+        var slopes    = xy  (0, 0);
         var x         = origin.x;
         var y         = origin.y;
 
@@ -298,20 +298,19 @@
       function drawPolyline(...draw) /* TODO (Lapys) */ {}
       function drawPolygon(...draw) /* TODO (Lapys) ->> See `drawPolyline(…)` */ {}
 
-      function drawQuadrant(origin, target, ...draw) /* TODO (Lapys) ->> See `drawEllipse(…)`  */ {
-        var size      = sz(abs (origin.x - target.x), abs (origin.y - target.y));
-        var direction = xy(sign(origin.x - target.x), sign(origin.y - target.y));
+      function drawQuadrant(origin, target, ...draw) /* ->> See `drawEllipse(…)`  */ {
+        var direction = xy(-sign(origin.x - target.x), -sign(origin.y - target.y));
+        var size      = sz(+abs (origin.x - target.x), +abs (origin.y - target.y));
+        var squared   = {height: sqr(size.height), width: sqr(size.width)};
+        var squared   = {height: squared.height,   width: squared.width, current: xy(0, squared.height), next: xy(0, squared.height - (size.height + size.height - 1))};
         var axis      = size.height * size.width;
 
         // …
-        for (var count = 5000, x = 0, y = size.height; --count && x !== size.width && 0 <= y; ) {
-          drawPoint(xy(
-            origin.x - (direction.x * (size.width - x)),
-            origin.y - (direction.y * y)
-          ), ...draw);
+        for (var x = 0, y = size.height; x !== size.width && 0 <= y; ) {
+          drawPoint(xy(origin.x + (direction.x * (size.width - x)), origin.y + (direction.y * y)), ...draw);
 
-          if (axis > ((sqr(y) * size.width * size.width) + (sqr(x + 1) * size.height * size.height)) / axis) { ++x; continue }
-          if (axis > ((sqr(x) * size.height * size.height) + (sqr(y - 1) * size.width * size.width)) / axis) { --y; continue }
+          if (axis > ((squared.current.y * squared.width)  + (squared.next.x * squared.height)) / axis) { squared.current.x += x + ++x; squared.next.x += x + x + 1; continue }
+          if (axis > ((squared.current.x * squared.height) + (squared.next.y * squared.width))  / axis) { squared.current.y -= y + --y; squared.next.y -= y + y - 1; continue }
         }
       }
 
@@ -667,42 +666,9 @@
 
       // ...
       function render() {
-        var size   = imin(canvas.height, canvas.width);
-        var center = size / 2;
-
-        // …
-        // drawCircle (xy(center, center), percof(size, 20),                       colors.gray); // ✅
-        // drawEllipse(xy(center, center), sz(percof(size, 20), percof(size, 40)), colors.gray); // ✅
-        // drawEllipse(xy(center, center), sz(percof(size, 40), percof(size, 20)), colors.gray); // ✅
-
-        drawLine(xy(center, center), xy(center - percof(center, 75), center - percof(center, 25)), colors.red);
-          drawQuadrant(xy(center - percof(center, 75), center - percof(center, 25)), xy(center, center), colorlerp(colors.red, colors.white, 0.5), function A(coordinates) { return coordinates });
-          drawQuadrant(xy(center, center), xy(center - percof(center, 75), center - percof(center, 25)), colors.red,                               function B(coordinates) { return coordinates });
-        drawLine(xy(center, center), xy(center - percof(center, 25), center - percof(center, 75)), colors.orange);
-          drawQuadrant(xy(center - percof(center, 25), center - percof(center, 75)), xy(center, center), colorlerp(colors.orange, colors.white, 0.5), function C(coordinates) { return coordinates });
-          drawQuadrant(xy(center, center), xy(center - percof(center, 25), center - percof(center, 75)), colors.orange,                               function D(coordinates) { return coordinates });
-        drawLine(xy(center, center), xy(center + percof(center, 25), center - percof(center, 75)), colors.yellow);
-          drawQuadrant(xy(center + percof(center, 25), center - percof(center, 75)), xy(center, center), colorlerp(colors.yellow, colors.white, 0.5), function E(coordinates) { return coordinates });
-          drawQuadrant(xy(center, center), xy(center + percof(center, 25), center - percof(center, 75)), colors.yellow,                               function F(coordinates) { return coordinates });
-        drawLine(xy(center, center), xy(center + percof(center, 75), center - percof(center, 25)), colors.green);
-          drawQuadrant(xy(center + percof(center, 75), center - percof(center, 25)), xy(center, center), colorlerp(colors.green, colors.white, 0.5), function G(coordinates) { return coordinates });
-          drawQuadrant(xy(center, center), xy(center + percof(center, 75), center - percof(center, 25)), colors.green,                               function H(coordinates) { return coordinates });
-        drawLine(xy(center, center), xy(center + percof(center, 75), center + percof(center, 25)), colors.blue);
-          drawQuadrant(xy(center + percof(center, 75), center + percof(center, 25)), xy(center, center), colorlerp(colors.blue, colors.white, 0.5), function I(coordinates) { return coordinates });
-          drawQuadrant(xy(center, center), xy(center + percof(center, 75), center + percof(center, 25)), colors.blue,                               function J(coordinates) { return coordinates });
-        drawLine(xy(center, center), xy(center + percof(center, 25), center + percof(center, 75)), colors.indigo);
-          drawQuadrant(xy(center + percof(center, 25), center + percof(center, 75)), xy(center, center), colorlerp(colors.indigo, colors.white, 0.5), function K(coordinates) { return coordinates });
-          drawQuadrant(xy(center, center), xy(center + percof(center, 25), center + percof(center, 75)), colors.indigo,                               function L(coordinates) { return coordinates });
-        drawLine(xy(center, center), xy(center - percof(center, 25), center + percof(center, 75)), colors.violet);
-          drawQuadrant(xy(center - percof(center, 25), center + percof(center, 75)), xy(center, center), colorlerp(colors.violet, colors.white, 0.5), function M(coordinates) { return coordinates });
-          drawQuadrant(xy(center, center), xy(center - percof(center, 25), center + percof(center, 75)), colors.violet,                               function N(coordinates) { return coordinates });
-        drawLine(xy(center, center), xy(center - percof(center, 75), center + percof(center, 25)), colors.white);
-          drawQuadrant(xy(center - percof(center, 75), center + percof(center, 25)), xy(center, center), colorlerp(colors.white, colors.black, 0.5), function O(coordinates) { return coordinates });
-          drawQuadrant(xy(center, center), xy(center - percof(center, 75), center + percof(center, 25)), colors.white,                               function P(coordinates) { return coordinates });
-
-        // drawLine     (xy(20,  20), xy(980, 750), colors.blue);   // ⚠️
-        // drawRectangle(xy(20,  20), xy(980, 750), colors.cyan);   // ⚠️
-        // drawSquare   (xy(145, 20), 750 - 20,     colors.orange); // ⚠️
+        drawLine     (xy(20,  20), xy(980, 750), colors.blue);   // ⚠️
+        drawRectangle(xy(20,  20), xy(980, 750), colors.cyan);   // ⚠️
+        drawSquare   (xy(145, 20), 750 - 20,     colors.orange); // ⚠️
 
         // drawLine  (   xy(20, 20),                                        xy(980, 980));
         // drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.blue);   // ⚠️
