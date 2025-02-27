@@ -70,20 +70,21 @@
         blue   : rgb(0.0, 0.0, 1.0),
         cyan   : rgb(0.0, 1.0, 1.0),
         gray   : rgb(0.5, 0.5, 0.5),
-        grey   : rgb(0.5, 0.5, 0.5),
         green  : rgb(0.0, 1.0, 0.0),
+        indigo : rgb(0.5, 0.5, 1.0),
         lime   : rgb(0.0, 1.0, 0.0),
-        magenta: rgb(1.0, 0.0, 1.0),
+        magenta: rgb(1.0, 0.0, 0.5),
         orange : rgb(1.0, 0.5, 0.0),
+        pink   : rgb(1.0, 0.0, 1.0),
         red    : rgb(1.0, 0.0, 0.0),
-        violet : rgb(1.0, 0.0, 0.5),
+        violet : rgb(0.5, 0.0, 1.0),
         white  : rgb(1.0, 1.0, 1.0),
         yellow : rgb(1.0, 1.0, 0.0)
       };
 
       /* Function */
       // [Draw] ... ->> Sub-pixel coordinates unsupported, Transparency unsupported
-      function drawArc(origin, target, ...draw) /* TODO (Lapys) ->> See `drawEllipse(…)`  */ {}
+      function drawArc(origin, ...draw) /* TODO (Lapys) ->> See `drawSpline(…)` */ {}
 
       function drawArchimedeanSpiral(...draw) /* TODO (Lapys) */ {}
 
@@ -118,7 +119,7 @@
           drawPoint(xy(origin.x - x, origin.y - y), ...draw); // ->> Top    Left
           drawPoint(xy(origin.x + x, origin.y - y), ...draw); // ->> Top    Right
 
-          // ... --> 1 = x²/H² + y²/W² = (H²x² + W²y²) ÷ WH ->> Explore bottom-right quadrant by `xy(+1, -1)`
+          // ... --> 1 = x²/H² + y²/W² = (x²⋅H² + y²⋅W²) ÷ WH ->> Explore bottom-right quadrant by `xy(+1, -1)`
           if (axis > ((squared.current.y * squared.width)  + (squared.next.x * squared.height)) / axis) { squared.current.x += x + ++x; squared.next.x += x + x + 1; continue }
           if (axis > ((squared.current.x * squared.height) + (squared.next.y * squared.width))  / axis) { squared.current.y -= y + --y; squared.next.y -= y + y - 1; continue }
         }
@@ -248,8 +249,8 @@
       function drawImage(...draw) /* TODO (Lapys) -> APNG, AVIF, BMP, GIF, HEIF, ICO, JFIF/ JPEG, JPEG 2000, JPEG XL, JPEG XR, PBM, PGM, PNG, PPM, RGBE, SVG, TIFF, TinyVG, WebP, XBM, XPM */ {}
 
       function drawLine(origin, target, ...draw) {
-        var distances = xy(abs(origin.x - target.x), abs(origin.y - target.y));
-        var slope     = imax  (abs(origin.x - target.x), abs(origin.y - target.y));
+        var distances = xy  (abs(origin.x - target.x), abs(origin.y - target.y));
+        var slope     = imax(abs(origin.x - target.x), abs(origin.y - target.y));
         var slopes    = xy(0, 0);
         var x         = origin.x;
         var y         = origin.y;
@@ -277,12 +278,25 @@
         var coordinates = transform(coordinates);
 
         // ... ->> `…CanvasRenderingContext2d.prototype.putImage(…)` is terribly non-performant compared to `…CanvasRenderingContext2d.prototype.fillRect(…)`
-        offscreenContext.fillStyle = "rgb(" + r(color) + ", " + g(color) + ", " + b(color) + ')';
+        offscreenContext.fillStyle = "rgb(" + ir(color) + ", " + ig(color) + ", " + ib(color) + ')';
         offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
       }
 
       function drawPolyline(...draw) /* TODO (Lapys) */ {}
-      function drawPolygon(...draw) /* TODO (Lapys) -> drawPolyline() */ {}
+      function drawPolygon(...draw) /* TODO (Lapys) ->> See `drawPolyline(…)` */ {}
+
+      function drawQuadrant(origin, target, ...draw) /* TODO (Lapys) ->> See `drawEllipse(…)`  */ {
+        var width  = abs(origin.x - target.x);
+        var height = abs(origin.y - target.y);
+        var axis   = height * width;
+
+        for (var count = 5000, x = 0, y = height; --count && x !== width && 0 <= y; ) {
+          drawPoint(xy(origin.x - (origin.x > target.x ? width - x : x), origin.y - (origin.y < target.y ? height - y : y)), ...draw);
+
+          if (axis > ((sqr(y) * width  * width) + (sqr(x + 1) * height * height)) / axis) { ++x; continue }
+          if (axis > ((sqr(x) * height * height) + (sqr(y - 1) * width * width)) / axis) { --y; continue }
+        }
+      }
 
       function drawRectangle(origin, target, ...draw) {
         if (origin.x > target.x || target.y > target.y)
@@ -330,8 +344,8 @@
             var origin = subcontrols[index + 0];
             var target = subcontrols[index + 1];
 
-            var distances = xy(abs(origin.x - target.x), abs(origin.y - target.y));
-            var slope     = imax  (abs(origin.x - target.x), abs(origin.y - target.y));
+            var distances = xy  (abs(origin.x - target.x), abs(origin.y - target.y));
+            var slope     = imax(abs(origin.x - target.x), abs(origin.y - target.y));
             var slopes    = xy(0, 0);
 
             // ...
@@ -392,13 +406,24 @@
       }
 
       // ... ->> Optimized for 32-bit (signed) integers only unless otherwise specified
-      function abs(integer) {
-        var mask = ~(integer >>> 31) + 1;
-        return (integer ^ mask) - mask
+      function abs(number) {
+        return number < +0 ? -number : +number
       }
 
       function b(color) {
-        return (color >>> 0x00) & 0xFF
+        return ib(color) / 0xFF
+      }
+
+      function clamp(number, minimum, maximum) /* ->> Inclusive */ {
+        return number > maximum ? maximum : number < minimum ? number : minimum
+      }
+
+      function colorlerp(colorA, colorB, ratio) {
+        return irgb(
+          lerp(ir(colorA), ir(colorB), ratio),
+          lerp(ig(colorA), ig(colorB), ratio),
+          lerp(ib(colorA), ib(colorB), ratio)
+        )
       }
 
       function float(number) {
@@ -406,14 +431,44 @@
       }
 
       function g(color) {
-        return (color >>> 0x08) & 0xFF
+        return ig(color) / 0xFF
       }
 
       function I(data) /* ->> Identity function/ matrix */ {
         return data
-      };
+      }
 
-      function int8_t(number) /* ->> Treated as a C-style cast, whereas it is actually a truncation function */ {
+      function iabs(integer) {
+        var mask = ~(integer >>> 31) + 1;
+        return (integer ^ mask) - mask
+      }
+
+      function iavg(integerA, integerB) {
+        return (integerA + integerB) >> 1
+      }
+
+      function ib(color) {
+        return (color >>> 0x00) & 0xFF
+      }
+
+      function iclamp(integer, minimum, maximum) /* ->> Inclusive */ {
+        var integer = integer - ((integer - maximum) & ((maximum - integer) >>> 31));
+        return integer - ((integer - minimum) & ((integer - minimum) >>> 31))
+      }
+
+      function ig(color) {
+        return (color >>> 0x08) & 0xFF
+      }
+
+      function imod2(integer, divisor) /* ->> `is_ipow2(divisor) === true` */ {
+        return integer & (divisor - 1)
+      }
+
+      function int(number) /* ->> Treated as a C-style cast, whereas it is actually a truncation function */ {
+        return number | 0
+      }
+
+      function int8_t(number) {
         return number & 0x000000FF
       }
 
@@ -422,12 +477,12 @@
       }
 
       function int32_t(number) {
-        return (number | 0) /* --> `… & 0xFFFFFFFF` */
+        return number & 0xFFFFFFFF
       }
 
-      function ipow(base, exponent) /* ->> `exponent` is a positive integer */ {
+      function ipow(base, exponent) /* ->> `(uint) exponent` */ {
         for (var base = base, product = 1; ; base *= base) {
-          product    *= exponent & 1 /* --> exponent % 2 */ ? base : 1;
+          product    *= is_iodd(exponent) /* --> exponent % 2 */ ? base : 1;
           exponent >>>= 1; // --> exponent / 2
 
           if (0 === exponent)
@@ -436,20 +491,92 @@
       }
 
       function imax(integerA, integerB) {
-        var difference = integerA - integerB;
-        return integerA - (difference * (difference >>> 31))
+        return (integerA ^ ((integerA ^ integerB) & -(integerA < integerB)))
+      }
+
+      function imin(integerA, integerB) {
+        return (integerB ^ ((integerA ^ integerB) & -(integerA < integerB)))
+      }
+
+      function ir(color) {
+        return (color >>> 0x10) & 0xFF
       }
 
       function irgb(red, green, blue) /* ->> Specified for integer channels between `0x00` and `0xFF` */ {
         return (blue << 0x00) | (green << 0x08) | (red << 0x10)
       }
 
+      function is_ieven(integer) {
+        return integer & 1 === 0
+      }
+
+      function is_iodd(integer) {
+        return integer & 1 === 1
+      }
+
+      function is_ipow2(integer) /* ->> Determines if `integer` is a dyadic power */ {
+        return 0 !== integer && 0 === (integer & (integer - 1))
+      }
+
+      function is_isamesign(integerA, integerB) {
+        return (integerA ^ integerB) >= 0
+      }
+
+      function lerp(begin, end, ratio) {
+        return begin + ((end - begin) * ratio)
+      }
+
+      function max(numberA, numberB) {
+        return numberB > numberA ? numberB : numberA
+      }
+
+      function min(numberA, numberB) {
+        return numberB < numberA ? numberB : numberA
+      }
+
+      function next_upow2(integer) {
+        --integer;
+        integer |= integer >>> 1;
+        integer |= integer >>> 2;
+        integer |= integer >>> 4;
+        integer |= integer >>> 8;
+        integer |= integer >>> 16;
+        ++integer;
+
+        return integer
+      }
+
+      function perc(percentage) {
+        return percentage / 100.0
+      }
+
+      function percof(number, percentage) {
+        return min(number, percentage) * (max(number, percentage) / 100.0)
+      }
+
+      function popcount(number) {
+        var number = number;
+
+        number = number - ((number >>> 1) & 0x55555555);
+        number = (number & 0x33333333) + ((number >>> 2) & 0x33333333);
+
+        return ((number + (number >>> 4) & 0xF0F0F0F) * 0x1010101) >>> 24
+      }
+
       function r(color) {
-        return (color >>> 0x10) & 0xFF
+        return ir(color) / 0xFF
       }
 
       function rgb(red, green, blue) /* ->> Specified for floating-point channels between `+0.0` and `1.0` */ {
         return (((uint32_t) (blue * 0xFF)) << 0x00) | (((uint32_t) (green * 0xFF)) << 0x08) | (((uint32_t) (red * 0xFF)) << 0x10)
+      }
+
+      function sign(number) {
+        return (number > -0) - (number < +0)
+      }
+
+      function slerp(begin, end, ratio) {
+        return lerp(begin, end, (ipow(1.0 - ratio, 2) * ratio * 0.30) + (ipow(ratio, 2) * (1.0 - ratio) * 0.75) + ipow(ratio, 3))
       }
 
       function sqr(number) {
@@ -470,34 +597,41 @@
         return new vec2(width, height)
       }
 
-      function uint8_t(number) /* ->> See `int8_t(…)` */ {
-        return (number >>> 0) & 0x000000FF
+      function uint(number) /* ->> See `int(…)` */ {
+        return number >>> 0
+      }
+
+      function uint8_t(number) {
+        return (uint) (number) & 0x000000FF
       }
 
       function uint16_t(number) {
-        return (number >>> 0) & 0x0000FFFF
+        return (uint) (number) & 0x0000FFFF
       }
 
       function uint24_t(number) {
-        return (number >>> 0) & 0x00FFFFFF
+        return (uint) (number) & 0x00FFFFFF
       }
 
       function uint32_t(number) {
-        return (number >>> 0) /* --> `… & 0xFFFFFFFF` */
+        return (uint) (number)  & 0xFFFFFFFF
       }
 
+      function vector() {}
+        vector.prototype = {
+          x: 0.0, y: 0.0, z: 0.0, w: 0.0,
+          get height() { return this.y }, set height(value) { this.y = value },
+          get width () { return this.x }, set width (value) { this.x = value }
+        };
+
       function vec2(x, y) {
-        if (false === this instanceof vec2) return new vec2(x, y);                 // ->> Static construct
-        if (false !== x    instanceof vec2) { this.x = x.x; this.y = x.y; return } // ->> Copy   construct
+        if (false === this instanceof vector) return new vec2(x, y);                 // ->> Static construct
+        if (false !== x    instanceof vector) { this.x = x.x; this.y = x.y; return } // ->> Copy   construct
 
         this.x = (int32_t) (x);
         this.y = (int32_t) (y)
       }
-        vec2.prototype = {
-          x: 0, y: 0,
-          get height() { return this.y }, set height(value) { this.y = value },
-          get width () { return this.x }, set width (value) { this.x = value }
-        };
+        vec2.prototype = vector.prototype;
 
       function xy(x, y) {
         return new vec2(x, y)
@@ -505,19 +639,50 @@
 
       // ...
       function render() {
-        drawCircle   (xy(400, 250), 200,          colors.grey);
-        drawEllipse  (xy(400, 250), sz(400, 200), colors.red);
-        // drawLine     (xy(20,  20), xy(980, 750), colors.blue);
-        // drawRectangle(xy(20,  20), xy(980, 750), colors.green);
-        // drawSquare   (xy(145, 20), 750 - 20,     colors.orange);
+        var size   = imin(canvas.height, canvas.width);
+        var center = size / 2;
+
+        // …
+        // drawCircle (xy(center, center), percof(size, 20),                       colors.gray); // ✅
+        // drawEllipse(xy(center, center), sz(percof(size, 20), percof(size, 40)), colors.gray); // ✅
+        // drawEllipse(xy(center, center), sz(percof(size, 40), percof(size, 20)), colors.gray); // ✅
+
+        drawLine(xy(center, center), xy(center - percof(center, 75), center - percof(center, 25)), colors.red);
+          drawQuadrant(xy(center - percof(center, 75), center - percof(center, 25)), xy(center, center), colorlerp(colors.red, colors.white, 0.5));
+          drawQuadrant(xy(center, center), xy(center - percof(center, 75), center - percof(center, 25)), colors.red);
+        drawLine(xy(center, center), xy(center - percof(center, 25), center - percof(center, 75)), colors.orange);
+          drawQuadrant(xy(center - percof(center, 25), center - percof(center, 75)), xy(center, center), colorlerp(colors.orange, colors.white, 0.5));
+          drawQuadrant(xy(center, center), xy(center - percof(center, 25), center - percof(center, 75)), colors.orange);
+        drawLine(xy(center, center), xy(center + percof(center, 25), center - percof(center, 75)), colors.yellow);
+          drawQuadrant(xy(center + percof(center, 25), center - percof(center, 75)), xy(center, center), colorlerp(colors.yellow, colors.white, 0.5));
+          drawQuadrant(xy(center, center), xy(center + percof(center, 25), center - percof(center, 75)), colors.yellow);
+        drawLine(xy(center, center), xy(center + percof(center, 75), center - percof(center, 25)), colors.green);
+          drawQuadrant(xy(center + percof(center, 75), center - percof(center, 25)), xy(center, center), colorlerp(colors.green, colors.white, 0.5));
+          drawQuadrant(xy(center, center), xy(center + percof(center, 75), center - percof(center, 25)), colors.green);
+        drawLine(xy(center, center), xy(center + percof(center, 75), center + percof(center, 25)), colors.blue);
+          drawQuadrant(xy(center + percof(center, 75), center + percof(center, 25)), xy(center, center), colorlerp(colors.blue, colors.white, 0.5));
+          drawQuadrant(xy(center, center), xy(center + percof(center, 75), center + percof(center, 25)), colors.blue);
+        drawLine(xy(center, center), xy(center + percof(center, 25), center + percof(center, 75)), colors.indigo);
+          drawQuadrant(xy(center + percof(center, 25), center + percof(center, 75)), xy(center, center), colorlerp(colors.indigo, colors.white, 0.5));
+          drawQuadrant(xy(center, center), xy(center + percof(center, 25), center + percof(center, 75)), colors.indigo);
+        drawLine(xy(center, center), xy(center - percof(center, 25), center + percof(center, 75)), colors.violet);
+          drawQuadrant(xy(center - percof(center, 25), center + percof(center, 75)), xy(center, center), colorlerp(colors.violet, colors.white, 0.5));
+          drawQuadrant(xy(center, center), xy(center - percof(center, 25), center + percof(center, 75)), colors.violet);
+        drawLine(xy(center, center), xy(center - percof(center, 75), center + percof(center, 25)), colors.white);
+          drawQuadrant(xy(center - percof(center, 75), center + percof(center, 25)), xy(center, center), colorlerp(colors.white, colors.black, 0.5));
+          drawQuadrant(xy(center, center), xy(center - percof(center, 75), center + percof(center, 25)), colors.white);
+
+        // drawLine     (xy(20,  20), xy(980, 750), colors.blue);   // ⚠️
+        // drawRectangle(xy(20,  20), xy(980, 750), colors.cyan);   // ⚠️
+        // drawSquare   (xy(145, 20), 750 - 20,     colors.orange); // ⚠️
 
         // drawLine  (   xy(20, 20),                                        xy(980, 980));
-        // drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.blue);
-        // drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.red);
-        // drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);
-        // drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.orange);
+        // drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.blue);   // ⚠️
+        // drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.red);    // ⚠️
+        // drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);  // ⚠️
+        // drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.orange); // ⚠️
 
-        // drawGlyph(xy(20, 20), xy(980, 980), 'A', "font.ttf");
+        // drawGlyph(xy(20, 20), xy(980, 980), 'A', "font.ttf"); // 🚫
 
         context.drawImage(offscreenContext.canvas, 0, 0)
       }
