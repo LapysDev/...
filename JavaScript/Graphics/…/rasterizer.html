@@ -250,7 +250,7 @@
         entrySelector = Math.log2(searchRange / 16);
         rangeShift    = ((tableCount * 16) - searchRange);
 
-        console.log("…",            font);
+        console.log("...",           font);
         console.log("sfntVersion",   scalableSplineFontVersion);
         console.log("numTables",     tableCount);
         console.log("searchRange",   searchRange);
@@ -261,23 +261,21 @@
       function drawHeart(...draw) /* TODO (Lapys) -> Cardioid */ {}
       function drawImage(...draw) /* TODO (Lapys) -> APNG, AVIF, BMP, GIF, HEIF, ICO, JFIF/ JPEG, JPEG 2000, JPEG XL, JPEG XR, PBM, PGM, PNG, PPM, RGBE, SVG, TIFF, TinyVG, WebP, XBM, XPM */ {}
 
-      function drawLine(origin, target, ...draw) /* TODO (Lapys) */ {
-        var distances = xy  (abs(origin.x - target.x), abs(origin.y - target.y));
-        var slope     = imax(abs(origin.x - target.x), abs(origin.y - target.y));
-        var slopes    = xy  (0, 0);
-        var x         = origin.x;
-        var y         = origin.y;
+      function drawLine(origin, target, ...draw) {
+        var slope     = xy  (0, 0);
+        var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
+        var distance  = xy  (abs (origin.x - target.x), abs (origin.y - target.y));
+        var axis      = imax(distance.x, distance.y);
 
         // ...
-        while (
-          (origin.x == target.x || x != target.x) &&
-          (origin.y == target.y || y != target.y)
-        ) {
-          if (slope <= slopes.x) { slopes.x -= slope; origin.x < target.x ? ++x : --x }
-          if (slope <= slopes.y) { slopes.y -= slope; origin.y < target.y ? ++y : --y }
+        if (origin.x !== target.x || origin.y !== target.y)
+        for (var x = origin.x, y = origin.y; (origin.x === target.x || x !== target.x) && (origin.y === target.y || y !== target.y); ) {
+          if (axis <= slope.x) { slope.x -= axis; x -= direction.x }
+          if (axis <= slope.y) { slope.y -= axis; y -= direction.y }
 
-          slopes.x += distances.x;
-          slopes.y += distances.y;
+          slope.x += distance.x;
+          slope.y += distance.y;
+
           drawPoint(xy(x, y), ...draw)
         }
       }
@@ -299,31 +297,31 @@
       function drawPolygon(...draw) /* TODO (Lapys) ->> See `drawPolyline(…)` */ {}
 
       function drawQuadrant(origin, target, ...draw) /* ->> See `drawEllipse(…)`  */ {
-        var direction = xy(-sign(origin.x - target.x), -sign(origin.y - target.y));
-        var size      = sz(+abs (origin.x - target.x), +abs (origin.y - target.y));
-        var squared   = {height: sqr(size.height), width: sqr(size.width)};
-        var squared   = {height: squared.height,   width: squared.width, current: xy(0, squared.height), next: xy(0, squared.height - (size.height + size.height - 1))};
-        var axis      = size.height * size.width;
+        var direction = xy(sign(origin.x - target.x), sign(origin.y - target.y));
+        var distance  = sz(abs (origin.x - target.x), abs (origin.y - target.y));
+        var squared   = {height: sqr(distance.y), width: sqr(distance.x)};
+        var squared   = {height: squared.height,   width: squared.width, current: xy(0, squared.height), next: xy(0, squared.height - (distance.y + distance.y - 1))};
+        var axis      = distance.x * distance.y;
 
         // …
-        for (var x = 0, y = size.height; x !== size.width && 0 <= y; ) {
-          drawPoint(xy(origin.x + (direction.x * (size.width - x)), origin.y + (direction.y * y)), ...draw);
+        for (var x = 0, y = distance.y; x !== distance.x && 0 <= y; ) {
+          drawPoint(xy(origin.x - (direction.x * (distance.x - x)), origin.y - (direction.y * y)), ...draw);
 
           if (axis > ((squared.current.y * squared.width)  + (squared.next.x * squared.height)) / axis) { squared.current.x += x + ++x; squared.next.x += x + x + 1; continue }
           if (axis > ((squared.current.x * squared.height) + (squared.next.y * squared.width))  / axis) { squared.current.y -= y + --y; squared.next.y -= y + y - 1; continue }
         }
       }
 
-      function drawRectangle(origin, target, ...draw) {
-        if (origin.x > target.x || target.y > target.y)
-          return;
+      function drawRectangle(origin, size, ...draw) {
+        var target = xy(origin.x + size.width, origin.y + size.height);
 
-        for (var x = target.x; origin.x !== --x; ) {
+        // …
+        for (var x = target.x; origin.x !== x--; ) {
           drawPoint(xy(x, origin.y), ...draw);
           drawPoint(xy(x, target.y), ...draw)
         }
 
-        for (var y = target.y; origin.y !== --y; ) {
+        for (var y = target.y; origin.y !== y--; ) {
           drawPoint(xy(origin.x, y), ...draw);
           drawPoint(xy(target.x, y), ...draw)
         }
@@ -331,8 +329,8 @@
 
       function drawRoundedRect(...draw) /* TODO (Lapys) */ {}
 
-      function drawSpline(degree, origin, ...draw) {
-        var degree = (uint32_t) (degree);
+      function drawSpline(degree, origin, ...draw) /* TODO (Lapys) */ {
+        var degree = (uint) (degree);
 
         // ...
         if (0 === degree)
@@ -389,8 +387,15 @@
         }
       }
 
-      function drawSquare(coordinates, size, ...draw) {
-        drawRectangle(coordinates, xy(size + coordinates.x, size + coordinates.y), ...draw)
+      function drawSquare(origin, size, ...draw) /* ->> See `drawRectangle(origin, sz(size, size), ...draw)` */ {
+        var target = xy(origin.x + size, origin.y + size);
+
+        for (var size = size; size--; ) {
+          drawPoint(xy(origin.x + size, origin.y), ...draw);
+          drawPoint(xy(origin.x, origin.y + size), ...draw);
+          drawPoint(xy(target.x - size, target.y), ...draw);
+          drawPoint(xy(target.x, target.y - size), ...draw)
+        }
       }
 
       function drawStar(...draw) /* TODO (Lapys) -> Astroid, Rose Curve, … */ {}
@@ -585,7 +590,7 @@
       }
 
       function rgb(red, green, blue) /* ->> Specified for floating-point channels between `+0.0` and `1.0` */ {
-        return (((uint32_t) (blue * 0xFF)) << 0x00) | (((uint32_t) (green * 0xFF)) << 0x08) | (((uint32_t) (red * 0xFF)) << 0x10)
+        return (((uint) (blue * 0xFF)) << 0x00) | (((uint) (green * 0xFF)) << 0x08) | (((uint) (red * 0xFF)) << 0x10)
       }
 
       function sign(number) {
@@ -611,7 +616,7 @@
       }
 
       function sz(width, height) {
-        return new vec2(width, height)
+        return new vec2((uint) (width), (uint) (height))
       }
 
       function uint(number) /* ->> See `int(…)` */ {
@@ -645,8 +650,8 @@
         if (false === this instanceof vector) return new vec2(x, y);                 // ->> Static construct
         if (false !== x    instanceof vector) { this.x = x.x; this.y = x.y; return } // ->> Copy   construct
 
-        this.x = (int32_t) (x);
-        this.y = (int32_t) (y)
+        this.x = (int) (x);
+        this.y = (int) (y)
       }
         vec2.prototype = vector.prototype;
 
@@ -654,9 +659,9 @@
         if (false === this instanceof vector) return new vec3(x, y, z);                            // ->> Static construct
         if (false !== x    instanceof vector) { this.x = x.x; this.y = x.y; this.z = x.z; return } // ->> Copy   construct
 
-        this.x = (int32_t) (x);
-        this.y = (int32_t) (y);
-        this.z = (int32_t) (z)
+        this.x = (int) (x);
+        this.y = (int) (y);
+        this.z = (int) (z)
       }
         vec3.prototype = vector.prototype;
 
@@ -666,15 +671,11 @@
 
       // ...
       function render() {
-        drawLine     (xy(20,  20), xy(980, 750), colors.blue);   // ⚠️
-        drawRectangle(xy(20,  20), xy(980, 750), colors.cyan);   // ⚠️
-        drawSquare   (xy(145, 20), 750 - 20,     colors.orange); // ⚠️
-
-        // drawLine  (   xy(20, 20),                                        xy(980, 980));
-        // drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.blue);   // ⚠️
-        // drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.red);    // ⚠️
-        // drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);  // ⚠️
-        // drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.orange); // ⚠️
+        drawLine  (   xy(20, 20),                                        xy(980, 980));
+        drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.blue);   // ⚠️
+        drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.red);    // ⚠️
+        drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);  // ⚠️
+        drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.orange); // ⚠️
 
         // drawGlyph(xy(20, 20), xy(980, 980), 'A', "font.ttf"); // 🚫
 
