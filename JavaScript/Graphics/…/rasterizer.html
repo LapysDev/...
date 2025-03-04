@@ -55,8 +55,8 @@
   <body>
     <canvas id=canvas> </canvas>
 
-    <input accept=".dfont, .otc, .otf, .ttc, .tte, .ttf, application/font-sfnt, application/x-font-ttf, font/otf, font/sfnt, font/ttf" id=file type="file"/>
-    <input id=text maxlength=1 minlength=1 size=1 type=text value='A'/>
+    <input accept=".dfont, .otc, .otf, .ttc, .tte, .ttf, application/font-sfnt, application/x-font-ttf, font/otf, font/sfnt, font/ttf" id=file tabindex=-1 type="file"/>
+    <input id=text maxlength=1 minlength=1 size=1 tabindex=-1 type=text value='A'/>
 
     <!-- Document Script -->
     <script defer language=javascript type=text/javascript>
@@ -72,7 +72,6 @@
         gray   : rgb(0.5, 0.5, 0.5),
         green  : rgb(0.0, 1.0, 0.0),
         indigo : rgb(0.5, 0.5, 1.0),
-        lime   : rgb(0.0, 1.0, 0.0),
         magenta: rgb(1.0, 0.0, 0.5),
         orange : rgb(1.0, 0.5, 0.0),
         pink   : rgb(1.0, 0.0, 1.0),
@@ -263,12 +262,14 @@
 
       function drawLine(origin, target, ...draw) {
         var slope     = xy  (0, 0);
+        var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
         var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
-        var distance  = xy  (abs (origin.x - target.x), abs (origin.y - target.y));
         var axis      = imax(distance.x, distance.y);
 
         // ...
-        if (origin.x !== target.x || origin.y !== target.y)
+        if (origin.x === target.x && origin.y === target.y)
+        return void drawPoint(origin, ...draw);
+
         for (var x = origin.x, y = origin.y; (origin.x === target.x || x !== target.x) && (origin.y === target.y || y !== target.y); ) {
           if (axis <= slope.x) { slope.x -= axis; x -= direction.x }
           if (axis <= slope.y) { slope.y -= axis; y -= direction.y }
@@ -288,7 +289,7 @@
         var color       = filter   (color);
         var coordinates = transform(coordinates);
 
-        // ... ->> `…CanvasRenderingContext2d.prototype.putImage(…)` is terribly non-performant compared to `…CanvasRenderingContext2d.prototype.fillRect(…)`
+        // ... ->> `…CanvasRenderingContext2d.prototype.putImage(…)` could be terribly non-performant compared to `…CanvasRenderingContext2d.prototype.fillRect(…)`
         offscreenContext.fillStyle = "rgb(" + ir(color) + ", " + ig(color) + ", " + ib(color) + ')';
         offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
       }
@@ -298,7 +299,7 @@
 
       function drawQuadrant(origin, target, ...draw) /* ->> See `drawEllipse(…)`  */ {
         var direction = xy(sign(origin.x - target.x), sign(origin.y - target.y));
-        var distance  = sz(abs (origin.x - target.x), abs (origin.y - target.y));
+        var distance  = sz(iabs(origin.x - target.x), iabs(origin.y - target.y));
         var squared   = {height: sqr(distance.y), width: sqr(distance.x)};
         var squared   = {height: squared.height,   width: squared.width, current: xy(0, squared.height), next: xy(0, squared.height - (distance.y + distance.y - 1))};
         var axis      = distance.x * distance.y;
@@ -330,61 +331,190 @@
       function drawRoundedRect(...draw) /* TODO (Lapys) */ {}
 
       function drawSpline(degree, origin, ...draw) /* TODO (Lapys) */ {
-        var degree = (uint) (degree);
+        var anchor       = origin;
+        var controlCount = degree + gauss_sum(degree);
+        var controls     = [anchor, ...new Array(controlCount)];
+        var iterations   = 5; // 256
+        var limits       = new Array(controlCount - degree);
+        var subcontrols  = new Array(degree + 1); // ->> Intermediate control points
+        var x, y;
 
         // ...
         if (0 === degree)
-        return drawPoint(origin, ...draw.slice(degree));
+        return void drawPoint(origin, ...draw.slice(degree));
 
-        var anchor      = origin;
-        var controls    = [anchor, ...new Array(degree)];
-        var subcontrols = new Array(degree + 1); // ->> Intermediate set of control points
-        var x;
-        var y;
+        // console.log = function() {}; iterations = 1024; // DEBUG ->> Set to high number to see problem with algorithm
+        for (var index = 1; controlCount >= index; ++index) {
+          controls[index] = xy(0, 0);
 
-        // ...
-        for (var index = degree; index; --index)
-        controls[index] = arguments[index + 1];
-
-        draw.splice(0, degree);
-
-        for (var totalSamples = 256, currentSamples = totalSamples; currentSamples--; ) {
-          for (var index = degree + 1; index--; )
-          subcontrols[index] = (xy) (controls[index]);
-
-          // ... ->> See `drawLine(…)`
-          for (var subdegree = degree + 1; --subdegree; )
-          for (var index = 0; index !== subdegree; ++index) {
-            var origin = subcontrols[index + 0];
-            var target = subcontrols[index + 1];
-
-            var distances = xy  (abs(origin.x - target.x), abs(origin.y - target.y));
-            var slope     = imax(abs(origin.x - target.x), abs(origin.y - target.y));
-            var slopes    = xy(0, 0);
-
-            // ...
-            x = origin.x;
-            y = origin.y;
-
-            for (var totalLength = distances.x + distances.y, currentLength = totalLength; (origin.x == target.x || x != target.x) && (origin.y == target.y || y != target.y); ) {
-              if (slope <= slopes.x) { --currentLength; slopes.x -= slope; origin.x < target.x ? ++x : --x }
-              if (slope <= slopes.y) { --currentLength; slopes.y -= slope; origin.y < target.y ? ++y : --y }
-
-              slopes.x += distances.x;
-              slopes.y += distances.y;
-
-              if ((float) (currentLength / totalLength) <= (float) (currentSamples / totalSamples)) {
-                origin.x = x;
-                origin.y = y;
-
-                break
-              }
-            }
+          if (degree >= index) {
+            controls[index] = draw[index - 1];
+            limits  [index] = 0
           }
 
-          drawLine(xy(x, y), anchor, ...draw);
-          anchor = xy(x, y)
+          //// DEBUG ////
+            controls[0]    ['#'] = /0/;
+            controls[index]['#'] = new RegExp(index)
+          //// DEBUG ////
         }
+
+        draw.splice(0, degree); // ->> Retain `draw` information only; Remove `controls` points
+        limits[0] = 0;
+
+        //// DEBUG ////
+          var coleslaw = [];
+          var color    = colors.white;
+          for (var index = degree + 1; --index; ) drawLine(controls[index - 1], controls[index - 0], color);
+
+          vec2.prototype.toString = function toString() { return `${'#' in this ? this['#'].source : ""}(${this.x}, ${this.y})` };
+          console.log(`(${controls.length}) [${controls.join(" · ")}]\n(${limits .length}) [${limits.join(" · ")}]`); console.log('\n');
+          function recolor() {
+            coleslaw = 0 !== coleslaw.length ? coleslaw : [colors.blue, colors.cyan, colors.green, colors.magenta, colors.orange, colors.pink, colors.red, colors.violet, colors.yellow];
+            color    = (index => coleslaw.splice((int) (index), 1)[0])(Math.random() * coleslaw.length)
+          }
+        //// DEBUG ////
+
+        A:
+        for (var iteration = iterations; iteration; --iteration) {
+          console.log(`%cITERATION ${iterations - iteration + 1}`, "color: cyan; font-size: 26px")
+
+          B:
+          for (var count = degree, offset = 0; count; offset += count--) {
+            C:
+            // for (var index = count + 1; --index; ) {
+            for (var index = 1; count >= index; ++index) {
+              var target    = controls[offset + (index - 0) + (degree - count)];
+              var slope     = xy(0, 0);
+              var origin    = controls[offset + (index - 1) + (degree - count)];
+              var length    = (iabs(origin.x - target.x) + iabs(origin.y - target.y)) / iteration;
+              var limit     = limits[offset + (index - 1)];
+              var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
+              var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
+              var axis      = imax(distance.x, distance.y);
+
+              console.log(`{${index - 1}} ${origin} => ${target} @ limit ${offset + (index - 1)}`);
+
+              // ...
+              while (true) {
+                if (axis <= slope.x) { ++limit; origin.x -= direction.x; slope.x -= axis }
+                if (axis <= slope.y) { ++limit; origin.y -= direction.y; slope.y -= axis }
+
+                if (length <= limit) {
+                  var suborigin = controls[count + offset + index + (degree - count)];
+
+                  // …
+                  limits[offset + (index - 1)] = limit - length;
+
+                  limit     = count === index ? 0 : limits[count + offset + (index - 1)];
+                  length    = (iabs(origin.x - target.x) + iabs(origin.y - target.y)) / iteration;
+                  distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
+                  direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
+                  axis      = imax(distance.x, distance.y);
+
+                  // …
+                  slope.x = slope.y = 0;
+                  suborigin.x = origin.x;
+                  suborigin.y = origin.y;
+
+                  while (true) {
+                    if (axis <= slope.x) { ++limit; suborigin.x -= direction.x; slope.x -= axis }
+                    if (axis <= slope.y) { ++limit; suborigin.y -= direction.y; slope.y -= axis }
+
+                    if (length <= limit) {
+                      if (count !== index)
+                      limits[count + offset + (index - 1)] = limit - length;
+
+                      break
+                    }
+
+                    slope.x += distance.x;
+                    slope.y += distance.y
+                  }
+
+                  console.log(`{${index - 1}} UPDATE point ${count + offset + index + (degree - count)}\n{${index - 1}}  [${controls.join(" · ")}]\n{${index - 1}}  [${limits.map((_, i) => `${i}-${_}`).join(" · ")}]`); // DEBUG
+
+                  // if (iteration === iterations - 1)
+                  // break A; // TODO: Kinda works? Fix skew towards origin
+
+                  break
+                }
+
+                slope.x += distance.x;
+                slope.y += distance.y
+              }
+            }
+
+            console.log(`%cDEGREE ${count} COMPLETE`, "font-size: 26px"); console.log('\n')
+          }
+
+          //// DEBUG ////
+            var offset = 0;
+
+            recolor();
+            for (var index = degree + 1; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree + 1; recolor();
+            // for (var index = degree + 0; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree + 0; recolor();
+            // for (var index = degree - 1; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree - 1; recolor();
+            // for (var index = degree - 2; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree - 2; recolor();
+            drawCircle(controls[offset], 3, colors.white);
+          //// DEBUG ////
+        }
+
+        // // ...
+        // if (origin.x === target.x && origin.y === target.y)
+        // return void drawPoint(origin, ...draw);
+
+        // for (var x = origin.x, y = origin.y; (origin.x === target.x || x !== target.x) && (origin.y === target.y || y !== target.y); ) {
+        //   if (axis <= slope.x) { slope.x -= axis; x -= direction.x }
+        //   if (axis <= slope.y) { slope.y -= axis; y -= direction.y }
+
+        //   slope.x += distance.x;
+        //   slope.y += distance.y;
+
+        //   drawPoint(xy(x, y), ...draw)
+        // }
+        /* ========================================================== */
+        // for (var iterations = 256, iteration = iterations; iteration--; ) {
+        //   // ... ->> `subcontrols = controls` reset because it's modified afterward; See `origin` or `target`
+        //   for (var index = degree + 1; index--; )
+        //     subcontrols[index] = (xy) (controls[index]);
+
+        //   // ... ->> See `drawLine(…)`
+        //   for (var subdegree = degree + 1; --subdegree; )
+        //   for (var index = 0; index !== subdegree; ++index) {
+        //     var origin = subcontrols[index + 0];
+        //     var target = subcontrols[index + 1];
+
+        //     var slope     = xy  (0, 0);
+        //     var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
+        //     var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
+        //     var axis      = imax(distance.x, distance.y);
+
+        //     // ...
+        //     x = origin.x;
+        //     y = origin.y;
+
+        //     if (origin.x !== target.x || origin.y !== target.y)
+        //     for (var totalLength = distance.x + distance.y, currentLength = totalLength; (origin.x == target.x || x != target.x) && (origin.y == target.y || y != target.y); ) {
+        //       if (axis <= slope.x) { --currentLength; slope.x -= axis; x -= direction.x }
+        //       if (axis <= slope.y) { --currentLength; slope.y -= axis; y -= direction.y }
+
+        //       slope.x += distance.x;
+        //       slope.y += distance.y;
+
+        //       if ((float) (currentLength / totalLength) <= (float) (iteration / iterations)) {
+        //         // ->> Run the line algorithm until this point
+        //         origin.x = x;
+        //         origin.y = y;
+
+        //         // drawPoint(xy(origin.x, origin.y), ...draw); // ->> Traces the continuation
+        //         break
+        //       }
+        //     }
+        //   }
+
+        //   drawLine(xy(x, y), anchor, ...draw);
+        //   anchor = xy(x, y)
+        // }
       }
 
       function drawSquare(origin, size, ...draw) /* ->> See `drawRectangle(origin, sz(size, size), ...draw)` */ {
@@ -407,7 +537,7 @@
       function brightness  (intensity, filter = I) /* TODO (Lapys) */ { return null }
       function contrast    (intensity, filter = I) /* TODO (Lapys) */ { return null }
       function grayscale   (intensity, filter = I) /* TODO (Lapys) */ { return null }
-      function guassianBlur(spread,    filter = I) /* TODO (Lapys) */ { return null }
+      function gaussianBlur(spread,    filter = I) /* TODO (Lapys) */ { return null }
       function hueRotate   (angle,     filter = I) /* TODO (Lapys) */ { return null }
       function invert      (intensity, filter = I) /* TODO (Lapys) */ { return null }
       function opacity     (intensity, filter = I) /* TODO (Lapys) */ { return null }
@@ -429,7 +559,7 @@
 
       // ... ->> Optimized for 32-bit (signed) integers only unless otherwise specified
       function abs(number) {
-        return number < +0 ? -number : +number
+        return number < +0.0 ? -number : +number
       }
 
       function b(color) {
@@ -454,6 +584,10 @@
 
       function g(color) {
         return ig(color) / 0xFF
+      }
+
+      function gauss_sum(count) /* ->> Summation of `(uint) 1` through `(uint) count` */ {
+        return ((count + 0) * (count + 1)) >>> 1 // --> … / 2
       }
 
       function I(data) /* ->> Identity function/ matrix */ {
@@ -504,7 +638,7 @@
 
       function ipow(base, exponent) /* ->> `(uint) exponent` */ {
         for (var base = base, product = 1; ; base *= base) {
-          product    *= is_iodd(exponent) /* --> exponent % 2 */ ? base : 1;
+          product    *= is_iodd(exponent) ? base : 1;
           exponent >>>= 1; // --> exponent / 2
 
           if (0 === exponent)
@@ -593,12 +727,16 @@
         return (((uint) (blue * 0xFF)) << 0x00) | (((uint) (green * 0xFF)) << 0x08) | (((uint) (red * 0xFF)) << 0x10)
       }
 
+      function series_sum(count, begin, end) /* ->> Summation of `begin` through `end` */ {
+        return (count * (begin + end)) / 2
+      }
+
       function sign(number) {
-        return (number > -0) - (number < +0)
+        return (number > -0.0) - (number < +0.0)
       }
 
       function slerp(begin, end, ratio) {
-        return lerp(begin, end, (ipow(1.0 - ratio, 2) * ratio * 0.30) + (ipow(ratio, 2) * (1.0 - ratio) * 0.75) + ipow(ratio, 3))
+        return lerp(begin, end, (ipow(1.00 - ratio, 2) * ratio * 0.30) + (ipow(ratio, 2) * (1.00 - ratio) * 0.75) + ipow(ratio, 3))
       }
 
       function sqr(number) {
@@ -610,7 +748,7 @@
 
         // …
         for (var index = 0, length = properties.length; length - index > 1; )
-        object[properties[index++]] = properties[index++];
+        object[properties[index++]] = properties[index++]; // ->> Left-to-Right evaluation order
 
         return object
       }
@@ -671,11 +809,15 @@
 
       // ...
       function render() {
-        drawLine  (   xy(20, 20),                                        xy(980, 980));
-        drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.blue);   // ⚠️
-        drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.red);    // ⚠️
-        drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);  // ⚠️
-        drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.orange); // ⚠️
+        // drawLine  (   xy(20, 20),                                        xy(980, 980), colors.white);
+        // drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.blue);   // ⚠️
+        // drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);  // ⚠️
+        // drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.yellow); // ⚠️
+        // drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.red);    // ⚠️
+
+        // drawSpline(4, xy(100, 1000), xy(100, 200), xy(550, 100), xy(1000, 200), xy(1000, 1000), colors.yellow);  // ⚠️
+        // drawSpline(3, xy(100, 1000), xy(100, 100), xy(1000, 100), xy(1000, 1000), colors.yellow);  // ⚠️
+        drawSpline(2, xy(100, 1000), xy(550, 100), xy(1000, 1000), colors.yellow);  // ⚠️
 
         // drawGlyph(xy(20, 20), xy(980, 980), 'A', "font.ttf"); // 🚫
 

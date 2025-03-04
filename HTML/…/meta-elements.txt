@@ -119,11 +119,71 @@ HTML Link Tags
   • <link href=javascript:history.go(-1)                                  rel=prev      title="Preload previous Web document in series"/>
   • <link href=javascript:history.go(+1)                                  rel=next      title="Preload next Web document in series"/>
 
-Open Graph Meta Tags
-  The Open Graph protocol enables any web page to become a rich object in a social graph
-  For instance, this is used on Facebook to allow any web page to have the same functionality as any other object on Facebook
+Dublin Core
+  Types
+    • DC.abstract
+    • DC.accessRights
+    • DC.accrualMethod
+    • DC.accrualPeriodicity
+    • DC.accrualPolicy
+    • DC.alternative
+    • DC.audience
+    • DC.available
+    • DC.bibliographicCitation
+    • DC.conformsTo
+    • DC.contributor
+    • DC.coverage
+    • DC.created
+    • DC.creator
+    • DC.date
+    • DC.dateAccepted
+    • DC.dateCopyrighted
+    • DC.dateSubmitted
+    • DC.description
+    • DC.educationLevel
+    • DC.extent
+    • DC.format
+    • DC.hasFormat
+    • DC.hasPart
+    • DC.hasVersion
+    • DC.identifier
+    • DC.instructionalMethod
+    • DC.isFormatOf
+    • DC.isPartOf
+    • DC.isReferencedBy
+    • DC.isReplacedBy
+    • DC.isRequiredBy
+    • DC.issued
+    • DC.isVersionOf
+    • DC.language
+    • DC.license
+    • DC.mediator
+    • DC.medium
+    • DC.modified
+    • DC.provenance
+    • DC.publisher
+    • DC.references
+    • DC.relation
+    • DC.replaces
+    • DC.requires
+    • DC.rights
+    • DC.rightsHolder
+    • DC.source
+    • DC.spatial
+    • DC.subject
+    • DC.tableOfContents
+    • DC.temporal
+    • DC.title
+    • DC.type
+    • DC.valid
 
-  Open Graph Type Values
+  …
+    • <meta content="…" name="DC.…"/>
+
+Open Graph
+  The Open Graph protocol enables any Web page to become a rich object in a social graph.
+
+  Types
     Article [http://ogp.me/ns/article]
       • article:author          [profile array] → Writers of the article
       • article:expiration_time [datetime]      → When the article is out of date after
