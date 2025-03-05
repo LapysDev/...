@@ -62,7 +62,6 @@
     <script defer language=javascript type=text/javascript>
       var context          = canvas.getContext("2d", {"alpha": false, "colorSpace": "srgb", "desynchronized": true, "willReadFrequently": false});
       var imageData        = null;
-      var imageDataProxied = false;
       var offscreenCanvas  = canvas; // ->> Access named element
       var offscreenContext = context;
 
@@ -287,31 +286,28 @@
       function drawMetaballs(...draw) /* TODO (Lapys) */ {}
       function drawNgon(...draw) /* TODO (Lapys) */ {}
 
-      function drawPoint(coordinates, color = colors.white, transform = I, filter = I) {
-        var color       = filter   (color);
+      function drawPoint(coordinates, color = colors.white, transform = I, filter = I) /* ->> Comparatively slow compared to direct bit-block transfers (bit-blt) */ {
+        var width       = canvas.width;
+        var height      = canvas.height;
         var coordinates = transform(coordinates);
+        var color       = filter   (color);
+        var channels    = {blue: ib(color), green: ig(color), red: ir(color)};
 
-        // …
-        if (null !== imageData) {
-          var data   = imageData.data;
-          var height = canvas   .height;
-          var width  = canvas   .width;
+        // ...
+        if (null !== imageData)
+        if (coordinates.x >= 0 && coordinates.x < width && coordinates.y >= 0 && coordinates.y < height) {
+          var index = (coordinates.x + (coordinates.y * width)) * 4;
 
-          // …
-          if (coordinates.x >= 0 && coordinates.x < width && coordinates.y >= 0 && coordinates.y < height) {
-            var index = (coordinates.x + (coordinates.y * canvas.width)) * 4;
+          // ...
+          imageData.data[index + 0] = channels.red;
+          imageData.data[index + 1] = channels.green;
+          imageData.data[index + 2] = channels.blue;
 
-            // …
-            data[index + 0] = ir(color);
-            data[index + 1] = ig(color);
-            data[index + 2] = ib(color)
-          }
+          return
         }
 
-        else {
-          offscreenContext.fillStyle = "rgb(" + ir(color) + ", " + ig(color) + ", " + ib(color) + ')';
-          offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
-        }
+        offscreenContext.fillStyle = "rgb(" + channels.red + ", " + channels.green + ", " + channels.blue + ')';
+        offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
       }
 
       function drawPolyline(...draw) /* TODO (Lapys) */ {}
@@ -324,7 +320,7 @@
         var squared   = {height: squared.height,   width: squared.width, current: xy(0, squared.height), next: xy(0, squared.height - (distance.y + distance.y - 1))};
         var axis      = distance.x * distance.y;
 
-        // …
+        // ...
         for (var x = 0, y = distance.y; x !== distance.x && 0 <= y; ) {
           drawPoint(xy(origin.x - (direction.x * (distance.x - x)), origin.y - (direction.y * y)), ...draw);
 
@@ -336,7 +332,7 @@
       function drawRectangle(origin, size, ...draw) {
         var target = xy(origin.x + size.width, origin.y + size.height);
 
-        // …
+        // ...
         for (var x = target.x; origin.x !== x--; ) {
           drawPoint(xy(x, origin.y), ...draw);
           drawPoint(xy(x, target.y), ...draw)
@@ -422,7 +418,7 @@
         //         if (length <= limit) {
         //           var suborigin = controls[count + offset + index + (degree - count)];
 
-        //           // …
+        //           // ...
         //           limits[offset + (index - 1)] = limit - length;
 
         //           limit     = count === index ? 0 : limits[count + offset + (index - 1)];
@@ -431,7 +427,7 @@
         //           direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
         //           axis      = imax(distance.x, distance.y);
 
-        //           // …
+        //           // ...
         //           slope.x = slope.y = 0;
         //           suborigin.x = origin.x;
         //           suborigin.y = origin.y;
@@ -766,7 +762,7 @@
       function struct(...properties) {
         var object = Object.create(null); // --> {[properties[… + 0]]: properties[… + 1], …}
 
-        // …
+        // ...
         for (var index = 0, length = properties.length; length - index > 1; )
         object[properties[index++]] = properties[index++]; // ->> Left-to-Right evaluation order
 
@@ -833,24 +829,18 @@
         var width  = canvas.width;
 
         // ... ->> Clear previous render
-        if (null !== imageData && !imageDataProxied) imageData.data.fill(0x00); // ->> Unneeded for `resize(…)` events
-        offscreenContext.clearRect(0, 0, width, height);                        // ->> Unneeded for non-proxied `imageData`
+        if (null === imageData) offscreenContext.clearRect(0, 0, width, height);              // ->> Unneeded for non-proxied `imageData`
+        else { for (var index = height * width * 4; index; ) imageData.data[--index] = 0x00 } // ->> Unneeded for `resize(…)` events
 
         // ...
-        // drawLine  (   xy(20, 20),                                        xy(980, 980), colors.white);
-        // drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.blue);   // ⚠️
-        // drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);  // ⚠️
-        // drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.yellow); // ⚠️
-        // drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.red);    // ⚠️
-
         // drawSpline(4, xy(100, height - 100), xy(100, 200), xy(width / 2, 100), xy(width - 100, 200), xy(width - 100, height - 100), colors.yellow);  // ⚠️
-        // drawSpline(3, xy(100, height - 100), xy(100, 100), xy(width - 100, 100), xy(width - 100, height - 100), colors.yellow);  // ⚠️
-        drawSpline(2, xy(100, height - 100), xy(width / 2, 100), xy(width - 100, height - 100), colors.yellow);  // ⚠️
+        // drawSpline(3, xy(100, height - 100), xy(100, 200),                     xy(width - 100, 200), xy(width - 100, height - 100), colors.yellow);  // ⚠️
+        drawSpline(2, xy(100, height - 100),               xy(width / 2, 100),                       xy(width - 100, height - 100), colors.yellow);  // ⚠️
 
-        // drawGlyph(xy(20, 20), xy(980, 980), 'A', "font.ttf"); // 🚫
+        // drawGlyph(xy(100, 100), xy(width - 100, height - 100), 'A', "font.ttf"); // 🚫
 
         // ... ->> Display current render
-        if (null !== imageData && !imageDataProxied) { offscreenContext.putImageData(imageData, 0, 0) }
+        if (null !== imageData) offscreenContext.putImageData(imageData, 0, 0);
         context.drawImage(offscreenCanvas, 0, 0)
       }
 
@@ -886,12 +876,12 @@
           catch (error) {}
         }
 
-        if (null === imageData && typeof Proxy === "function") {
-          imageDataProxied = true;
-          imageData        = (struct) ("data", new Proxy([], {
-            get: function get(data, index) { return undefined },
-            has: function has(data, index) { return index >= 0 && index < (canvas.height * canvas.width) << 2 /* --> index < (…) * 4 */ },
-            set: function set(data, index, value) {
+        if (false && null === imageData && typeof Proxy === "function")
+        imageData = (struct) ("data", new Proxy([], {
+          get: function(data, index) { return undefined },
+          has: function(data, index) { return index >= 0 && index < (canvas.height * canvas.width) << 2 /* --> index < (…) * 4 */ },
+          set: function(data, index, value) {
+            if (this.has(data, index)) {
               var width       = canvas.width;
               var subindex    = index >>> 2 /* --> … / 4 */;
               var style       = canvas.getAttribute("style");
@@ -899,7 +889,7 @@
               var channel     = index - ((coordinates.x + (coordinates.y * width)) << 2 /* --> … * 4 */) + 1;
               var color;
 
-              // …
+              // ...
               canvas.setAttribute("style", (style ? style + "; " : "") + "color: " + offscreenContext.fillStyle + " !important");
 
               color                      = getComputedStyle(canvas).getPropertyValue("color").match(/(\d+), (\d+), (\d+)/) || [, 0x00, 0x00, 0x00];
@@ -909,15 +899,15 @@
               canvas.setAttribute("style", style);
               offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
             }
-          }), /* "colorSpace", ‥, "height", ‥, "", "width", ‥, "", … */)
-        }
+          }
+        }), /* "colorSpace", ‥, "height", ‥, "", "width", ‥, "", … */);
 
         render()
       }
 
       /* ... */
       document.onreadystatechange = function() { if (this.readyState === "complete") resize() };
-      file    .oninput            = function() { var file = this.files.item(0); if (null !== file) { var reader = new FileReader(); reader.onloadend = function() { drawGlyph(xy(0, 0), xy(canvas.width, canvas.height), text.value || ' ', this.result) }; reader.readAsText(file) } };
+      file    .oninput            = function() { var file = this.files.item(0); if (null !== file) { var reader = new FileReader; reader.onloadend = function() { drawGlyph(xy(0, 0), sz(canvas.width, canvas.height), text.value || ' ', this.result) }; reader.readAsText(file) } };
       window  .onresize           = function() { resize() }
     </script>
   </body>
