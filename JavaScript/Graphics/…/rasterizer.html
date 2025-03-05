@@ -60,8 +60,10 @@
 
     <!-- Document Script -->
     <script defer language=javascript type=text/javascript>
-      var context          = canvas.getContext("2d", {alpha: false, desynchronized: true});
-      var offscreenCanvas  = canvas;
+      var context          = canvas.getContext("2d", {"alpha": false, "colorSpace": "srgb", "desynchronized": true, "willReadFrequently": false});
+      var imageData        = null;
+      var imageDataProxied = false;
+      var offscreenCanvas  = canvas; // ->> Access named element
       var offscreenContext = context;
 
       /* Constant */
@@ -289,9 +291,27 @@
         var color       = filter   (color);
         var coordinates = transform(coordinates);
 
-        // ... ->> `…CanvasRenderingContext2d.prototype.putImage(…)` could be terribly non-performant compared to `…CanvasRenderingContext2d.prototype.fillRect(…)`
-        offscreenContext.fillStyle = "rgb(" + ir(color) + ", " + ig(color) + ", " + ib(color) + ')';
-        offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
+        // …
+        if (null !== imageData) {
+          var data   = imageData.data;
+          var height = canvas   .height;
+          var width  = canvas   .width;
+
+          // …
+          if (coordinates.x >= 0 && coordinates.x < width && coordinates.y >= 0 && coordinates.y < height) {
+            var index = (coordinates.x + (coordinates.y * canvas.width)) * 4;
+
+            // …
+            data[index + 0] = ir(color);
+            data[index + 1] = ig(color);
+            data[index + 2] = ib(color)
+          }
+        }
+
+        else {
+          offscreenContext.fillStyle = "rgb(" + ir(color) + ", " + ig(color) + ", " + ib(color) + ')';
+          offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
+        }
       }
 
       function drawPolyline(...draw) /* TODO (Lapys) */ {}
@@ -361,105 +381,105 @@
         draw.splice(0, degree); // ->> Retain `draw` information only; Remove `controls` points
         limits[0] = 0;
 
-        //// DEBUG ////
-          var coleslaw = [];
-          var color    = colors.white;
-          for (var index = degree + 1; --index; ) drawLine(controls[index - 1], controls[index - 0], color);
+        // //// DEBUG ////
+        //   var coleslaw = [];
+        //   var color    = colors.white;
+        //   for (var index = degree + 1; --index; ) drawLine(controls[index - 1], controls[index - 0], color);
 
-          vec2.prototype.toString = function toString() { return `${'#' in this ? this['#'].source : ""}(${this.x}, ${this.y})` };
-          console.log(`(${controls.length}) [${controls.join(" · ")}]\n(${limits .length}) [${limits.join(" · ")}]`); console.log('\n');
-          function recolor() {
-            coleslaw = 0 !== coleslaw.length ? coleslaw : [colors.blue, colors.cyan, colors.green, colors.magenta, colors.orange, colors.pink, colors.red, colors.violet, colors.yellow];
-            color    = (index => coleslaw.splice((int) (index), 1)[0])(Math.random() * coleslaw.length)
-          }
-        //// DEBUG ////
+        //   vec2.prototype.toString = function toString() { return `${'#' in this ? this['#'].source : ""}(${this.x}, ${this.y})` };
+        //   console.log(`(${controls.length}) [${controls.join(" · ")}]\n(${limits .length}) [${limits.join(" · ")}]`); console.log('\n');
+        //   function recolor() {
+        //     coleslaw = 0 !== coleslaw.length ? coleslaw : [colors.blue, colors.cyan, colors.green, colors.magenta, colors.orange, colors.pink, colors.red, colors.violet, colors.yellow];
+        //     color    = (index => coleslaw.splice((int) (index), 1)[0])(Math.random() * coleslaw.length)
+        //   }
+        // //// DEBUG ////
 
-        A:
-        for (var iteration = iterations; iteration; --iteration) {
-          console.log(`%cITERATION ${iterations - iteration + 1}`, "color: cyan; font-size: 26px")
+        // A:
+        // for (var iteration = iterations; iteration; --iteration) {
+        //   console.log(`%cITERATION ${iterations - iteration + 1}`, "color: cyan; font-size: 26px")
 
-          B:
-          for (var count = degree, offset = 0; count; offset += count--) {
-            C:
-            // for (var index = count + 1; --index; ) {
-            for (var index = 1; count >= index; ++index) {
-              var target    = controls[offset + (index - 0) + (degree - count)];
-              var slope     = xy(0, 0);
-              var origin    = controls[offset + (index - 1) + (degree - count)];
-              var length    = (iabs(origin.x - target.x) + iabs(origin.y - target.y)) / iteration;
-              var limit     = limits[offset + (index - 1)];
-              var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
-              var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
-              var axis      = imax(distance.x, distance.y);
+        //   B:
+        //   for (var count = degree, offset = 0; count; offset += count--) {
+        //     C:
+        //     // for (var index = count + 1; --index; ) {
+        //     for (var index = 1; count >= index; ++index) {
+        //       var target    = controls[offset + (index - 0) + (degree - count)];
+        //       var slope     = xy(0, 0);
+        //       var origin    = controls[offset + (index - 1) + (degree - count)];
+        //       var length    = (iabs(origin.x - target.x) + iabs(origin.y - target.y)) / iteration;
+        //       var limit     = limits[offset + (index - 1)];
+        //       var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
+        //       var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
+        //       var axis      = imax(distance.x, distance.y);
 
-              console.log(`{${index - 1}} ${origin} => ${target} @ limit ${offset + (index - 1)}`);
+        //       console.log(`{${index - 1}} ${origin} => ${target} @ limit ${offset + (index - 1)}`);
 
-              // ...
-              while (true) {
-                if (axis <= slope.x) { ++limit; origin.x -= direction.x; slope.x -= axis }
-                if (axis <= slope.y) { ++limit; origin.y -= direction.y; slope.y -= axis }
+        //       // ...
+        //       while (true) {
+        //         if (axis <= slope.x) { ++limit; origin.x -= direction.x; slope.x -= axis }
+        //         if (axis <= slope.y) { ++limit; origin.y -= direction.y; slope.y -= axis }
 
-                if (length <= limit) {
-                  var suborigin = controls[count + offset + index + (degree - count)];
+        //         if (length <= limit) {
+        //           var suborigin = controls[count + offset + index + (degree - count)];
 
-                  // …
-                  limits[offset + (index - 1)] = limit - length;
+        //           // …
+        //           limits[offset + (index - 1)] = limit - length;
 
-                  limit     = count === index ? 0 : limits[count + offset + (index - 1)];
-                  length    = (iabs(origin.x - target.x) + iabs(origin.y - target.y)) / iteration;
-                  distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
-                  direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
-                  axis      = imax(distance.x, distance.y);
+        //           limit     = count === index ? 0 : limits[count + offset + (index - 1)];
+        //           length    = (iabs(origin.x - target.x) + iabs(origin.y - target.y)) / iteration;
+        //           distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
+        //           direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
+        //           axis      = imax(distance.x, distance.y);
 
-                  // …
-                  slope.x = slope.y = 0;
-                  suborigin.x = origin.x;
-                  suborigin.y = origin.y;
+        //           // …
+        //           slope.x = slope.y = 0;
+        //           suborigin.x = origin.x;
+        //           suborigin.y = origin.y;
 
-                  while (true) {
-                    if (axis <= slope.x) { ++limit; suborigin.x -= direction.x; slope.x -= axis }
-                    if (axis <= slope.y) { ++limit; suborigin.y -= direction.y; slope.y -= axis }
+        //           while (true) {
+        //             if (axis <= slope.x) { ++limit; suborigin.x -= direction.x; slope.x -= axis }
+        //             if (axis <= slope.y) { ++limit; suborigin.y -= direction.y; slope.y -= axis }
 
-                    if (length <= limit) {
-                      if (count !== index)
-                      limits[count + offset + (index - 1)] = limit - length;
+        //             if (length <= limit) {
+        //               if (count !== index)
+        //               limits[count + offset + (index - 1)] = limit - length;
 
-                      break
-                    }
+        //               break
+        //             }
 
-                    slope.x += distance.x;
-                    slope.y += distance.y
-                  }
+        //             slope.x += distance.x;
+        //             slope.y += distance.y
+        //           }
 
-                  console.log(`{${index - 1}} UPDATE point ${count + offset + index + (degree - count)}\n{${index - 1}}  [${controls.join(" · ")}]\n{${index - 1}}  [${limits.map((_, i) => `${i}-${_}`).join(" · ")}]`); // DEBUG
+        //           console.log(`{${index - 1}} UPDATE point ${count + offset + index + (degree - count)}\n{${index - 1}}  [${controls.join(" · ")}]\n{${index - 1}}  [${limits.map((_, i) => `${i}-${_}`).join(" · ")}]`); // DEBUG
 
-                  // if (iteration === iterations - 1)
-                  // break A; // TODO: Kinda works? Fix skew towards origin
+        //           // if (iteration === iterations - 1)
+        //           // break A; // TODO: Kinda works? Fix skew towards origin
 
-                  break
-                }
+        //           break
+        //         }
 
-                slope.x += distance.x;
-                slope.y += distance.y
-              }
-            }
+        //         slope.x += distance.x;
+        //         slope.y += distance.y
+        //       }
+        //     }
 
-            console.log(`%cDEGREE ${count} COMPLETE`, "font-size: 26px"); console.log('\n')
-          }
+        //     console.log(`%cDEGREE ${count} COMPLETE`, "font-size: 26px"); console.log('\n')
+        //   }
 
-          //// DEBUG ////
-            var offset = 0;
+        //   //// DEBUG ////
+        //     var offset = 0;
 
-            recolor();
-            for (var index = degree + 1; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree + 1; recolor();
-            // for (var index = degree + 0; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree + 0; recolor();
-            // for (var index = degree - 1; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree - 1; recolor();
-            // for (var index = degree - 2; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree - 2; recolor();
-            drawCircle(controls[offset], 3, colors.white);
-          //// DEBUG ////
-        }
+        //     recolor();
+        //     for (var index = degree + 1; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree + 1; recolor();
+        //     for (var index = degree + 0; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree + 0; recolor();
+        //     // for (var index = degree - 1; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree - 1; recolor();
+        //     // for (var index = degree - 2; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree - 2; recolor();
+        //     drawCircle(controls[offset], 3, colors.white);
+        //   //// DEBUG ////
+        // }
 
-        // // ...
+        // // ..............................................................
         // if (origin.x === target.x && origin.y === target.y)
         // return void drawPoint(origin, ...draw);
 
@@ -473,48 +493,48 @@
         //   drawPoint(xy(x, y), ...draw)
         // }
         /* ========================================================== */
-        // for (var iterations = 256, iteration = iterations; iteration--; ) {
-        //   // ... ->> `subcontrols = controls` reset because it's modified afterward; See `origin` or `target`
-        //   for (var index = degree + 1; index--; )
-        //     subcontrols[index] = (xy) (controls[index]);
+        for (var iterations = 256, iteration = iterations; iteration--; ) {
+          // ... ->> `subcontrols = controls` reset because it's modified afterward; See `origin` or `target`
+          for (var index = degree + 1; index--; )
+            subcontrols[index] = (xy) (controls[index]);
 
-        //   // ... ->> See `drawLine(…)`
-        //   for (var subdegree = degree + 1; --subdegree; )
-        //   for (var index = 0; index !== subdegree; ++index) {
-        //     var origin = subcontrols[index + 0];
-        //     var target = subcontrols[index + 1];
+          // ... ->> See `drawLine(…)`
+          for (var subdegree = degree + 1; --subdegree; )
+          for (var index = 0; index !== subdegree; ++index) {
+            var origin = subcontrols[index + 0];
+            var target = subcontrols[index + 1];
 
-        //     var slope     = xy  (0, 0);
-        //     var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
-        //     var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
-        //     var axis      = imax(distance.x, distance.y);
+            var slope     = xy  (0, 0);
+            var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
+            var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
+            var axis      = imax(distance.x, distance.y);
 
-        //     // ...
-        //     x = origin.x;
-        //     y = origin.y;
+            // ...
+            x = origin.x;
+            y = origin.y;
 
-        //     if (origin.x !== target.x || origin.y !== target.y)
-        //     for (var totalLength = distance.x + distance.y, currentLength = totalLength; (origin.x == target.x || x != target.x) && (origin.y == target.y || y != target.y); ) {
-        //       if (axis <= slope.x) { --currentLength; slope.x -= axis; x -= direction.x }
-        //       if (axis <= slope.y) { --currentLength; slope.y -= axis; y -= direction.y }
+            if (origin.x !== target.x || origin.y !== target.y)
+            for (var totalLength = distance.x + distance.y, currentLength = totalLength; (origin.x == target.x || x != target.x) && (origin.y == target.y || y != target.y); ) {
+              if (axis <= slope.x) { --currentLength; slope.x -= axis; x -= direction.x }
+              if (axis <= slope.y) { --currentLength; slope.y -= axis; y -= direction.y }
 
-        //       slope.x += distance.x;
-        //       slope.y += distance.y;
+              slope.x += distance.x;
+              slope.y += distance.y;
 
-        //       if ((float) (currentLength / totalLength) <= (float) (iteration / iterations)) {
-        //         // ->> Run the line algorithm until this point
-        //         origin.x = x;
-        //         origin.y = y;
+              if ((float) (currentLength / totalLength) <= (float) (iteration / iterations)) {
+                // ->> Run the line algorithm until this point
+                origin.x = x;
+                origin.y = y;
 
-        //         // drawPoint(xy(origin.x, origin.y), ...draw); // ->> Traces the continuation
-        //         break
-        //       }
-        //     }
-        //   }
+                // drawPoint(xy(origin.x, origin.y), ...draw); // ->> Traces the continuation
+                break
+              }
+            }
+          }
 
-        //   drawLine(xy(x, y), anchor, ...draw);
-        //   anchor = xy(x, y)
-        // }
+          drawLine(xy(x, y), anchor, ...draw);
+          anchor = xy(x, y)
+        }
       }
 
       function drawSquare(origin, size, ...draw) /* ->> See `drawRectangle(origin, sz(size, size), ...draw)` */ {
@@ -809,19 +829,29 @@
 
       // ...
       function render() {
+        var height = canvas.height;
+        var width  = canvas.width;
+
+        // ... ->> Clear previous render
+        if (null !== imageData && !imageDataProxied) imageData.data.fill(0x00); // ->> Unneeded for `resize(…)` events
+        offscreenContext.clearRect(0, 0, width, height);                        // ->> Unneeded for non-proxied `imageData`
+
+        // ...
         // drawLine  (   xy(20, 20),                                        xy(980, 980), colors.white);
         // drawSpline(4, xy(20, 20), xy(980, 20), xy(980, 20), xy(980, 20), xy(980, 980), colors.blue);   // ⚠️
         // drawSpline(3, xy(20, 20), xy(980, 20), xy(980, 20),              xy(980, 980), colors.green);  // ⚠️
         // drawSpline(2, xy(20, 20), xy(980, 20),                           xy(980, 980), colors.yellow); // ⚠️
         // drawSpline(1, xy(20, 20),                                        xy(980, 980), colors.red);    // ⚠️
 
-        // drawSpline(4, xy(100, 1000), xy(100, 200), xy(550, 100), xy(1000, 200), xy(1000, 1000), colors.yellow);  // ⚠️
-        // drawSpline(3, xy(100, 1000), xy(100, 100), xy(1000, 100), xy(1000, 1000), colors.yellow);  // ⚠️
-        drawSpline(2, xy(100, 1000), xy(550, 100), xy(1000, 1000), colors.yellow);  // ⚠️
+        // drawSpline(4, xy(100, height - 100), xy(100, 200), xy(width / 2, 100), xy(width - 100, 200), xy(width - 100, height - 100), colors.yellow);  // ⚠️
+        // drawSpline(3, xy(100, height - 100), xy(100, 100), xy(width - 100, 100), xy(width - 100, height - 100), colors.yellow);  // ⚠️
+        drawSpline(2, xy(100, height - 100), xy(width / 2, 100), xy(width - 100, height - 100), colors.yellow);  // ⚠️
 
         // drawGlyph(xy(20, 20), xy(980, 980), 'A', "font.ttf"); // 🚫
 
-        context.drawImage(offscreenContext.canvas, 0, 0)
+        // ... ->> Display current render
+        if (null !== imageData && !imageDataProxied) { offscreenContext.putImageData(imageData, 0, 0) }
+        context.drawImage(offscreenCanvas, 0, 0)
       }
 
       function resize() {
@@ -840,17 +870,48 @@
         style  .height                = size + "px";
         style  .width                 = size + "px";
 
-        if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen === "function") {
+        if (canvas === offscreenCanvas && typeof HTMLCanvasElement.prototype.transferControlToOffscreen === "function") {
           offscreenCanvas  = canvas.ownerDocument.createElement("canvas").transferControlToOffscreen();
-          offscreenContext = offscreenCanvas.getContext("2d");
+          offscreenContext = offscreenCanvas.getContext("2d", {"alpha": false, "willReadFrequently": false});
 
-          offscreenCanvas .height                = canvas.height;
-          offscreenCanvas .width                 = canvas.width;
           offscreenContext.imageSmoothingEnabled = false;
           offscreenContext.imageSmoothingQuality = "low"
         }
 
-        // ...
+        offscreenCanvas.height = canvas.height;
+        offscreenCanvas.width  = canvas.width;
+
+        if (typeof CanvasRenderingContext2D.prototype.getImageData === "function" && typeof CanvasRenderingContext2D.prototype.putImageData === "function") {
+          try { imageData = offscreenContext.getImageData(0, 0, canvas.width, canvas.height, {"colorSpace": "srgb"}) }
+          catch (error) {}
+        }
+
+        if (null === imageData && typeof Proxy === "function") {
+          imageDataProxied = true;
+          imageData        = (struct) ("data", new Proxy([], {
+            get: function get(data, index) { return undefined },
+            has: function has(data, index) { return index >= 0 && index < (canvas.height * canvas.width) << 2 /* --> index < (…) * 4 */ },
+            set: function set(data, index, value) {
+              var width       = canvas.width;
+              var subindex    = index >>> 2 /* --> … / 4 */;
+              var style       = canvas.getAttribute("style");
+              var coordinates = {x: (subindex % width) >>> 0, y: (subindex / width) >>> 0}; // --> xy((uint) …, (uint) …)
+              var channel     = index - ((coordinates.x + (coordinates.y * width)) << 2 /* --> … * 4 */) + 1;
+              var color;
+
+              // …
+              canvas.setAttribute("style", (style ? style + "; " : "") + "color: " + offscreenContext.fillStyle + " !important");
+
+              color                      = getComputedStyle(canvas).getPropertyValue("color").match(/(\d+), (\d+), (\d+)/) || [, 0x00, 0x00, 0x00];
+              color[channel]             = value & 0xFF;
+              offscreenContext.fillStyle = "rgb(" + color[1] + ", " + color[2] + ", " + color[3] + ')';
+
+              canvas.setAttribute("style", style);
+              offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
+            }
+          }), /* "colorSpace", ‥, "height", ‥, "", "width", ‥, "", … */)
+        }
+
         render()
       }
 
