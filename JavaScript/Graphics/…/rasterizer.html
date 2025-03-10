@@ -66,21 +66,21 @@
       var offscreenContext = context;
 
       /* Constant */
-      var colors = {
-        black  : rgb(0.0, 0.0, 0.0),
-        blue   : rgb(0.0, 0.0, 1.0),
-        cyan   : rgb(0.0, 1.0, 1.0),
-        gray   : rgb(0.5, 0.5, 0.5),
-        green  : rgb(0.0, 1.0, 0.0),
-        indigo : rgb(0.5, 0.5, 1.0),
-        magenta: rgb(1.0, 0.0, 0.5),
-        orange : rgb(1.0, 0.5, 0.0),
-        pink   : rgb(1.0, 0.0, 1.0),
-        red    : rgb(1.0, 0.0, 0.0),
-        violet : rgb(0.5, 0.0, 1.0),
-        white  : rgb(1.0, 1.0, 1.0),
-        yellow : rgb(1.0, 1.0, 0.0)
-      };
+      var colors = (struct) (
+        "black",   rgb(0.0, 0.0, 0.0),
+        "blue",    rgb(0.0, 0.0, 1.0),
+        "cyan",    rgb(0.0, 1.0, 1.0),
+        "gray",    rgb(0.5, 0.5, 0.5),
+        "green",   rgb(0.0, 1.0, 0.0),
+        "indigo",  rgb(0.5, 0.5, 1.0),
+        "magenta", rgb(1.0, 0.0, 0.5),
+        "orange",  rgb(1.0, 0.5, 0.0),
+        "pink",    rgb(1.0, 0.0, 1.0),
+        "red",     rgb(1.0, 0.0, 0.0),
+        "violet",  rgb(0.5, 0.0, 1.0),
+        "white",   rgb(1.0, 1.0, 1.0),
+        "yellow",  rgb(1.0, 1.0, 0.0)
+      );
 
       /* Function */
       // [Draw] ... ->> Sub-pixel coordinates unsupported, Transparency unsupported
@@ -346,7 +346,7 @@
 
       function drawRoundedRect(...draw) /* TODO (Lapys) */ {}
 
-      function drawSpline(degree, origin, ...draw) /* TODO (Lapys) */ {
+      function drawSpline(degree, origin, ...draw) /* TODO (Lapys) -> Just optimize, man */ {
         var anchor       = origin;
         var controlCount = degree + gauss_sum(degree);
         var controls     = [anchor, ...new Array(controlCount)];
@@ -359,7 +359,6 @@
         if (0 === degree)
         return void drawPoint(origin, ...draw.slice(degree));
 
-        // console.log = function() {}; iterations = 1024; // DEBUG ->> Set to high number to see problem with algorithm
         for (var index = 1; controlCount >= index; ++index) {
           controls[index] = xy(0, 0);
 
@@ -367,128 +366,11 @@
             controls[index] = draw[index - 1];
             limits  [index] = 0
           }
-
-          //// DEBUG ////
-            controls[0]    ['#'] = /0/;
-            controls[index]['#'] = new RegExp(index)
-          //// DEBUG ////
         }
 
         draw.splice(0, degree); // ->> Retain `draw` information only; Remove `controls` points
         limits[0] = 0;
 
-        // //// DEBUG ////
-        //   var coleslaw = [];
-        //   var color    = colors.white;
-        //   for (var index = degree + 1; --index; ) drawLine(controls[index - 1], controls[index - 0], color);
-
-        //   vec2.prototype.toString = function toString() { return `${'#' in this ? this['#'].source : ""}(${this.x}, ${this.y})` };
-        //   console.log(`(${controls.length}) [${controls.join(" · ")}]\n(${limits .length}) [${limits.join(" · ")}]`); console.log('\n');
-        //   function recolor() {
-        //     coleslaw = 0 !== coleslaw.length ? coleslaw : [colors.blue, colors.cyan, colors.green, colors.magenta, colors.orange, colors.pink, colors.red, colors.violet, colors.yellow];
-        //     color    = (index => coleslaw.splice((int) (index), 1)[0])(Math.random() * coleslaw.length)
-        //   }
-        // //// DEBUG ////
-
-        // A:
-        // for (var iteration = iterations; iteration; --iteration) {
-        //   console.log(`%cITERATION ${iterations - iteration + 1}`, "color: cyan; font-size: 26px")
-
-        //   B:
-        //   for (var count = degree, offset = 0; count; offset += count--) {
-        //     C:
-        //     // for (var index = count + 1; --index; ) {
-        //     for (var index = 1; count >= index; ++index) {
-        //       var target    = controls[offset + (index - 0) + (degree - count)];
-        //       var slope     = xy(0, 0);
-        //       var origin    = controls[offset + (index - 1) + (degree - count)];
-        //       var length    = (iabs(origin.x - target.x) + iabs(origin.y - target.y)) / iteration;
-        //       var limit     = limits[offset + (index - 1)];
-        //       var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
-        //       var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
-        //       var axis      = imax(distance.x, distance.y);
-
-        //       console.log(`{${index - 1}} ${origin} => ${target} @ limit ${offset + (index - 1)}`);
-
-        //       // ...
-        //       while (true) {
-        //         if (axis <= slope.x) { ++limit; origin.x -= direction.x; slope.x -= axis }
-        //         if (axis <= slope.y) { ++limit; origin.y -= direction.y; slope.y -= axis }
-
-        //         if (length <= limit) {
-        //           var suborigin = controls[count + offset + index + (degree - count)];
-
-        //           // ...
-        //           limits[offset + (index - 1)] = limit - length;
-
-        //           limit     = count === index ? 0 : limits[count + offset + (index - 1)];
-        //           length    = (iabs(origin.x - target.x) + iabs(origin.y - target.y)) / iteration;
-        //           distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
-        //           direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
-        //           axis      = imax(distance.x, distance.y);
-
-        //           // ...
-        //           slope.x = slope.y = 0;
-        //           suborigin.x = origin.x;
-        //           suborigin.y = origin.y;
-
-        //           while (true) {
-        //             if (axis <= slope.x) { ++limit; suborigin.x -= direction.x; slope.x -= axis }
-        //             if (axis <= slope.y) { ++limit; suborigin.y -= direction.y; slope.y -= axis }
-
-        //             if (length <= limit) {
-        //               if (count !== index)
-        //               limits[count + offset + (index - 1)] = limit - length;
-
-        //               break
-        //             }
-
-        //             slope.x += distance.x;
-        //             slope.y += distance.y
-        //           }
-
-        //           console.log(`{${index - 1}} UPDATE point ${count + offset + index + (degree - count)}\n{${index - 1}}  [${controls.join(" · ")}]\n{${index - 1}}  [${limits.map((_, i) => `${i}-${_}`).join(" · ")}]`); // DEBUG
-
-        //           // if (iteration === iterations - 1)
-        //           // break A; // TODO: Kinda works? Fix skew towards origin
-
-        //           break
-        //         }
-
-        //         slope.x += distance.x;
-        //         slope.y += distance.y
-        //       }
-        //     }
-
-        //     console.log(`%cDEGREE ${count} COMPLETE`, "font-size: 26px"); console.log('\n')
-        //   }
-
-        //   //// DEBUG ////
-        //     var offset = 0;
-
-        //     recolor();
-        //     for (var index = degree + 1; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree + 1; recolor();
-        //     for (var index = degree + 0; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree + 0; recolor();
-        //     // for (var index = degree - 1; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree - 1; recolor();
-        //     // for (var index = degree - 2; --index; ) { drawLine(controls[offset + (index - 1)], controls[offset + (index - 0)], color) } offset += degree - 2; recolor();
-        //     drawCircle(controls[offset], 3, colors.white);
-        //   //// DEBUG ////
-        // }
-
-        // // ..............................................................
-        // if (origin.x === target.x && origin.y === target.y)
-        // return void drawPoint(origin, ...draw);
-
-        // for (var x = origin.x, y = origin.y; (origin.x === target.x || x !== target.x) && (origin.y === target.y || y !== target.y); ) {
-        //   if (axis <= slope.x) { slope.x -= axis; x -= direction.x }
-        //   if (axis <= slope.y) { slope.y -= axis; y -= direction.y }
-
-        //   slope.x += distance.x;
-        //   slope.y += distance.y;
-
-        //   drawPoint(xy(x, y), ...draw)
-        // }
-        /* ========================================================== */
         for (var iteration = iterations; iteration--; ) {
           // ... ->> `subcontrols = controls` reset because it's modified afterward; See `origin` or `target`
           for (var index = degree + 1; index--; )
@@ -740,7 +622,7 @@
         if (false === this instanceof ptr)
         return new ptr(value);
 
-        this.ref = new Object(value)
+        this.ref = value
       }
         ptr.prototype = (struct) ("ref", null);
 
@@ -776,18 +658,20 @@
           var name  = properties[index++];
           var value = properties[index++];
 
-          value instanceof ptr ? value.ref(object, name) : object[name] = value
+          // ...
+          object[name] = value;
+
+          if (value instanceof ptr)
+          (function(reference) { Object.defineProperty(object, name, {
+            configurable: false,
+            enumerable  : false,
+            get         : function()      { return this[reference] },
+            set         : function(value) { this[reference] = value }
+          }) })(value.ref)
         }
 
         return object
       }
-        function get(accessor) {
-          return (ptr) (function(object, name) {
-            Object.defineProperty(object, name, {configurable: true, enumerable: true, get: accessor, set: (Object.getOwnPropertyDescriptor(object, name) || {set: undefined}).set})
-          })
-        }
-        function set(mutator) {}
-          set.prototype = (struct) ("set", null);
 
       function sz(width, height) {
         return new vec2((uint) (width), (uint) (height))
@@ -814,18 +698,15 @@
       }
 
       function vector() {}
-        // (struct) (
-        //   'x', 0.0, 'y', 0.0, 'z', 0.0, 'w', 0.0,
-        //   "height", (get) (function() { return this.y }), "height", (set) (function(value) { this.y = value }),
-        //   "toString", function() {}
-        // );
-
-        vector.prototype = {
-          x: 0.0, y: 0.0, z: 0.0, w: 0.0,
-          get height() { return this.y }, set height(value) { this.y = value },
-          get width () { return this.x }, set width (value) { this.x = value },
-          toString() {}
-        };
+        vector.prototype = (struct) (
+          'x', null, // --> '0', (ptr) 'x',
+          'y', null, // --> '1', (ptr) 'y',
+          'z', null, // --> '2', (ptr) 'z',
+          'w', null, // --> '3', (ptr) 'w',
+          "height",   (ptr) ('y'),
+          "toString", function toString() { return '(' + (null !== this.x ? this.x.toPrecision(2) + (null !== this.y ? ", " + this.y.toPrecision(2) + (null !== this.z ? ", " + this.z.toPrecision(2) + (null !== this.w ? ", " + this.w.toPrecision(2) : "") : "") : "") : "…") + ')' },
+          "width",    (ptr) ('x')
+        );
 
       function vec2(x, y) {
         if (false === this instanceof vector) return new vec2(x, y);                 // ->> Static construct
