@@ -34,6 +34,7 @@ Basic HTML Meta Tags
 • <meta content=all                                                                                                                                      name="target"/>
 • <meta content=#0000FF                                                                                                                                  name="theme-color"/>
 • <meta content=""                                                                                                                                       name="topic"/>
+• <meta content=on                                                                                                                                       name="uri-translation"/>
 • <meta content=https://lapys.dev                                                                                                                        name="url"/>
 
 Company/ Service Meta Tags
@@ -105,6 +106,62 @@ HTML Link Tags
   • <link href=base.css media="only screen and (max-device-width: 480px)" rel=stylesheet          type="text/css"/>
   • <link href=fluid-icon.png                                             rel=fluid-icon          type="image/png"/>
   • <link href=http://feeds.lapys.com/                                    rel=alternate title=RSS type="application/rss+xml"/>
+  • <link href=https://af.lapys.dev hreflang=af                           rel="alternate"/>
+  • <link href=https://ar.lapys.dev hreflang=ar                           rel="alternate"/>
+  • <link href=https://be.lapys.dev hreflang=be                           rel="alternate"/>
+  • <link href=https://bg.lapys.dev hreflang=bg                           rel="alternate"/>
+  • <link href=https://bn.lapys.dev hreflang=bn                           rel="alternate"/>
+  • <link href=https://bs.lapys.dev hreflang=bs                           rel="alternate"/>
+  • <link href=https://ca.lapys.dev hreflang=ca                           rel="alternate"/>
+  • <link href=https://cs.lapys.dev hreflang=cs                           rel="alternate"/>
+  • <link href=https://da.lapys.dev hreflang=da                           rel="alternate"/>
+  • <link href=https://de.lapys.dev hreflang=de                           rel="alternate"/>
+  • <link href=https://el.lapys.dev hreflang=el                           rel="alternate"/>
+  • <link href=https://en.lapys.dev hreflang=en                           rel="alternate"/>
+  • <link href=https://es.lapys.dev hreflang=es                           rel="alternate"/>
+  • <link href=https://et.lapys.dev hreflang=et                           rel="alternate"/>
+  • <link href=https://fa.lapys.dev hreflang=fa                           rel="alternate"/>
+  • <link href=https://fi.lapys.dev hreflang=fi                           rel="alternate"/>
+  • <link href=https://fr.lapys.dev hreflang=fr                           rel="alternate"/>
+  • <link href=https://hi.lapys.dev hreflang=hi                           rel="alternate"/>
+  • <link href=https://hr.lapys.dev hreflang=hr                           rel="alternate"/>
+  • <link href=https://hu.lapys.dev hreflang=hu                           rel="alternate"/>
+  • <link href=https://id.lapys.dev hreflang=id                           rel="alternate"/>
+  • <link href=https://it.lapys.dev hreflang=it                           rel="alternate"/>
+  • <link href=https://iw.lapys.dev hreflang=he                           rel="alternate"/>
+  • <link href=https://ja.lapys.dev hreflang=ja                           rel="alternate"/>
+  • <link href=https://jw.lapys.dev hreflang=jv                           rel="alternate"/>
+  • <link href=https://ka.lapys.dev hreflang=ka                           rel="alternate"/>
+  • <link href=https://ko.lapys.dev hreflang=ko                           rel="alternate"/>
+  • <link href=https://ku.lapys.dev hreflang=ku                           rel="alternate"/>
+  • <link href=https://lt.lapys.dev hreflang=lt                           rel="alternate"/>
+  • <link href=https://lv.lapys.dev hreflang=lv                           rel="alternate"/>
+  • <link href=https://mn.lapys.dev hreflang=mn                           rel="alternate"/>
+  • <link href=https://ms.lapys.dev hreflang=ms                           rel="alternate"/>
+  • <link href=https://my.lapys.dev hreflang=my                           rel="alternate"/>
+  • <link href=https://ne.lapys.dev hreflang=ne                           rel="alternate"/>
+  • <link href=https://nl.lapys.dev hreflang=nl                           rel="alternate"/>
+  • <link href=https://no.lapys.dev hreflang=no                           rel="alternate"/>
+  • <link href=https://pa.lapys.dev hreflang=pa                           rel="alternate"/>
+  • <link href=https://pl.lapys.dev hreflang=pl                           rel="alternate"/>
+  • <link href=https://ps.lapys.dev hreflang=ps                           rel="alternate"/>
+  • <link href=https://pt.lapys.dev hreflang=pt                           rel="alternate"/>
+  • <link href=https://ro.lapys.dev hreflang=ro                           rel="alternate"/>
+  • <link href=https://ru.lapys.dev hreflang=ru                           rel="alternate"/>
+  • <link href=https://sk.lapys.dev hreflang=sk                           rel="alternate"/>
+  • <link href=https://sl.lapys.dev hreflang=sl                           rel="alternate"/>
+  • <link href=https://sr.lapys.dev hreflang=sr                           rel="alternate"/>
+  • <link href=https://sv.lapys.dev hreflang=sv                           rel="alternate"/>
+  • <link href=https://ta.lapys.dev hreflang=ta                           rel="alternate"/>
+  • <link href=https://te.lapys.dev hreflang=te                           rel="alternate"/>
+  • <link href=https://th.lapys.dev hreflang=th                           rel="alternate"/>
+  • <link href=https://tl.lapys.dev hreflang=tl                           rel="alternate"/>
+  • <link href=https://tr.lapys.dev hreflang=tr                           rel="alternate"/>
+  • <link href=https://uk.lapys.dev hreflang=uk                           rel="alternate"/>
+  • <link href=https://ur.lapys.dev hreflang=ur                           rel="alternate"/>
+  • <link href=https://vi.lapys.dev hreflang=vi                           rel="alternate"/>
+  • <link href=https://zh-lapys.dev hreflang=zh-CN                        rel="alternate"/>
+  • <link href=https://zh-lapys.dev hreflang=zh-TW                        rel="alternate"/>
   • <link href=https://www.lapys/                                         rel=me                  type="text/html"/>
   • <link href=https://www.lapys/*.php?                                   rel=self                type="application/atom+xml"/>
   • <link href=https://www.lapys/archives/                                rel=archives  title="May 2003"/>

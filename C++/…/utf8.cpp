@@ -34,7 +34,7 @@ uint_least32_t get_utf8_codepoint_value(char const units[]) {
       case 2u: if (0xC0u != (value & 0xE0u)) return static_cast<uint_least32_t>(-1); value &= 0x1Fu; break;
       case 3u: if (0xE0u != (value & 0xF0u)) return static_cast<uint_least32_t>(-1); value &= 0x0Fu; break;
       case 4u: if (0xF0u != (value & 0xF8u)) return static_cast<uint_least32_t>(-1); value &= 0x07u; break;
-      default: return static_cast<uint_least32_t>(-1);
+      default:                               return static_cast<uint_least32_t>(-1);
     }
 
     for (++units; --length; ++units) { // ->> parse continuation bytes

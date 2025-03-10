@@ -60,8 +60,8 @@
 
     <!-- Document Script -->
     <script defer language=javascript type=text/javascript>
+      var canvasData       = null;
       var context          = canvas.getContext("2d", {"alpha": false, "colorSpace": "srgb", "desynchronized": true, "willReadFrequently": false});
-      var imageData        = null;
       var offscreenCanvas  = canvas; // ->> Access named element
       var offscreenContext = context;
 
@@ -294,14 +294,14 @@
         var channels    = {blue: ib(color), green: ig(color), red: ir(color)};
 
         // ...
-        if (null !== imageData)
+        if (null !== canvasData)
         if (coordinates.x >= 0 && coordinates.x < width && coordinates.y >= 0 && coordinates.y < height) {
           var index = (coordinates.x + (coordinates.y * width)) * 4;
 
           // ...
-          imageData.data[index + 0] = channels.red;
-          imageData.data[index + 1] = channels.green;
-          imageData.data[index + 2] = channels.blue;
+          canvasData.data[index + 0] = channels.red;
+          canvasData.data[index + 1] = channels.green;
+          canvasData.data[index + 2] = channels.blue;
 
           return
         }
@@ -489,7 +489,7 @@
         //   drawPoint(xy(x, y), ...draw)
         // }
         /* ========================================================== */
-        for (var iterations = 256, iteration = iterations; iteration--; ) {
+        for (var iteration = iterations; iteration--; ) {
           // ... ->> `subcontrols = controls` reset because it's modified afterward; See `origin` or `target`
           for (var index = degree + 1; index--; )
             subcontrols[index] = (xy) (controls[index]);
@@ -539,6 +539,7 @@
         for (var size = size; size--; ) {
           drawPoint(xy(origin.x + size, origin.y), ...draw);
           drawPoint(xy(origin.x, origin.y + size), ...draw);
+
           drawPoint(xy(target.x - size, target.y), ...draw);
           drawPoint(xy(target.x, target.y - size), ...draw)
         }
@@ -735,6 +736,14 @@
         return ((number + (number >>> 4) & 0xF0F0F0F) * 0x1010101) >>> 24
       }
 
+      function ptr(value) {
+        if (false === this instanceof ptr)
+        return new ptr(value);
+
+        this.ref = new Object(value)
+      }
+        ptr.prototype = (struct) ("ref", null);
+
       function r(color) {
         return ir(color) / 0xFF
       }
@@ -763,11 +772,22 @@
         var object = Object.create(null); // --> {[properties[… + 0]]: properties[… + 1], …}
 
         // ...
-        for (var index = 0, length = properties.length; length - index > 1; )
-        object[properties[index++]] = properties[index++]; // ->> Left-to-Right evaluation order
+        for (var index = 0, length = properties.length - 1; index < length; ) {
+          var name  = properties[index++];
+          var value = properties[index++];
+
+          value instanceof ptr ? value.ref(object, name) : object[name] = value
+        }
 
         return object
       }
+        function get(accessor) {
+          return (ptr) (function(object, name) {
+            Object.defineProperty(object, name, {configurable: true, enumerable: true, get: accessor, set: (Object.getOwnPropertyDescriptor(object, name) || {set: undefined}).set})
+          })
+        }
+        function set(mutator) {}
+          set.prototype = (struct) ("set", null);
 
       function sz(width, height) {
         return new vec2((uint) (width), (uint) (height))
@@ -794,10 +814,17 @@
       }
 
       function vector() {}
+        // (struct) (
+        //   'x', 0.0, 'y', 0.0, 'z', 0.0, 'w', 0.0,
+        //   "height", (get) (function() { return this.y }), "height", (set) (function(value) { this.y = value }),
+        //   "toString", function() {}
+        // );
+
         vector.prototype = {
           x: 0.0, y: 0.0, z: 0.0, w: 0.0,
           get height() { return this.y }, set height(value) { this.y = value },
-          get width () { return this.x }, set width (value) { this.x = value }
+          get width () { return this.x }, set width (value) { this.x = value },
+          toString() {}
         };
 
       function vec2(x, y) {
@@ -829,8 +856,8 @@
         var width  = canvas.width;
 
         // ... ->> Clear previous render
-        if (null === imageData) offscreenContext.clearRect(0, 0, width, height);              // ->> Unneeded for non-proxied `imageData`
-        else { for (var index = height * width * 4; index; ) imageData.data[--index] = 0x00 } // ->> Unneeded for `resize(…)` events
+        if (null === canvasData) offscreenContext.clearRect(0, 0, width, height);              // ->> Unneeded for non-proxied `canvasData`
+        else { for (var index = height * width * 4; index; ) canvasData.data[--index] = 0x00 } // ->> Unneeded for `resize(…)` events
 
         // ...
         // drawSpline(4, xy(100, height - 100), xy(100, 200), xy(width / 2, 100), xy(width - 100, 200), xy(width - 100, height - 100), colors.yellow);  // ⚠️
@@ -840,7 +867,7 @@
         // drawGlyph(xy(100, 100), xy(width - 100, height - 100), 'A', "font.ttf"); // 🚫
 
         // ... ->> Display current render
-        if (null !== imageData) offscreenContext.putImageData(imageData, 0, 0);
+        if (null !== canvasData) offscreenContext.putImageData(canvasData, 0, 0);
         context.drawImage(offscreenCanvas, 0, 0)
       }
 
@@ -872,21 +899,22 @@
         offscreenCanvas.width  = canvas.width;
 
         if (typeof CanvasRenderingContext2D.prototype.getImageData === "function" && typeof CanvasRenderingContext2D.prototype.putImageData === "function") {
-          try { imageData = offscreenContext.getImageData(0, 0, canvas.width, canvas.height, {"colorSpace": "srgb"}) }
+          try { canvasData = offscreenContext.getImageData(0, 0, canvas.width, canvas.height, {"colorSpace": "srgb"}) }
           catch (error) {}
         }
 
-        if (false && null === imageData && typeof Proxy === "function")
-        imageData = (struct) ("data", new Proxy([], {
+        if (false && null === canvasData && typeof Proxy === "function")
+        canvasData = (struct) ("data", new Proxy([], {
           get: function(data, index) { return undefined },
-          has: function(data, index) { return index >= 0 && index < (canvas.height * canvas.width) << 2 /* --> index < (…) * 4 */ },
+          has: function(data, index) { return index >= 0 && index < (canvas.height * canvas.width) * 4 },
           set: function(data, index, value) {
+            // ... ->> Polyfill `ImageData` slower than modifying actual `ImageData` or direct `CanvasRenderingContext2D::fillRect(…)`
             if (this.has(data, index)) {
               var width       = canvas.width;
-              var subindex    = index >>> 2 /* --> … / 4 */;
+              var subindex    = (uint) (index / 4);
               var style       = canvas.getAttribute("style");
-              var coordinates = {x: (subindex % width) >>> 0, y: (subindex / width) >>> 0}; // --> xy((uint) …, (uint) …)
-              var channel     = index - ((coordinates.x + (coordinates.y * width)) << 2 /* --> … * 4 */) + 1;
+              var coordinates = xy((uint) (subindex % width), (uint) (subindex / width));
+              var channel     = index - ((coordinates.x + (coordinates.y * width)) * 4) + 1;
               var color;
 
               // ...
@@ -906,9 +934,10 @@
       }
 
       /* ... */
-      document.onreadystatechange = function() { if (this.readyState === "complete") resize() };
-      file    .oninput            = function() { var file = this.files.item(0); if (null !== file) { var reader = new FileReader; reader.onloadend = function() { drawGlyph(xy(0, 0), sz(canvas.width, canvas.height), text.value || ' ', this.result) }; reader.readAsText(file) } };
-      window  .onresize           = function() { resize() }
+      document.onreadystatechange                                  = function() { if (this.readyState === "complete") resize() };
+      file    .oninput                                             = function() { var file = this.files.item(0); if (null !== file) { var reader = new FileReader; reader.onloadend = function() { drawGlyph(xy(0, 0), sz(canvas.width, canvas.height), text.value || ' ', this.result) }; reader.readAsText(file) } };
+      window  .onresize                                            = function() { resize() };
+      document.scripts.item(document.scripts.length - 1).outerHTML = "" // ->> Remove this evaluated script
     </script>
   </body>
 </html>
