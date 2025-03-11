@@ -348,7 +348,7 @@
 
       function drawSpline(degree, origin, ...draw) /* TODO (Lapys) -> Just optimize, man */ {
         var anchor       = origin;
-        var controlCount = degree + gauss_sum(degree);
+        var controlCount = degree;
         var controls     = [anchor, ...new Array(controlCount)];
         var iterations   = 5; // 256
         var limits       = new Array(controlCount - degree);
@@ -413,6 +413,57 @@
           drawLine(xy(x, y), anchor, ...draw);
           anchor = xy(x, y)
         }
+
+        // var degree = (uint32_t) (degree);
+        // var anchor      = origin;
+        // var controls    = [anchor, ...new Array(degree)];
+        // var subcontrols = new Array(degree + 1); // ->> Intermediate set of control points
+        // var x;
+        // var y;
+
+        // // ...
+        // for (var index = degree; index; --index)
+        // controls[index] = arguments[index + 1];
+
+        // draw.splice(0, degree);
+
+        // for (var totalSamples = 256, currentSamples = totalSamples; currentSamples--; ) {
+        //   for (var index = degree + 1; index--; )
+        //   subcontrols[index] = (xy) (controls[index]);
+
+        //   // ... ->> See `drawLine(…)`
+        //   for (var subdegree = degree + 1; --subdegree; )
+        //   for (var index = 0; index !== subdegree; ++index) {
+        //     var origin = subcontrols[index + 0];
+        //     var target = subcontrols[index + 1];
+
+        //     var distances = new xy(abs(origin.x - target.x), abs(origin.y - target.y));
+        //     var slope     = max   (abs(origin.x - target.x), abs(origin.y - target.y));
+        //     var slopes    = new xy(0, 0);
+
+        //     // ...
+        //     x = origin.x;
+        //     y = origin.y;
+
+        //     for (var totalLength = distances.x + distances.y, currentLength = totalLength; (origin.x == target.x || x != target.x) && (origin.y == target.y || y != target.y); ) {
+        //       if (slope <= slopes.x) { --currentLength; slopes.x -= slope; origin.x < target.x ? ++x : --x }
+        //       if (slope <= slopes.y) { --currentLength; slopes.y -= slope; origin.y < target.y ? ++y : --y }
+
+        //       slopes.x += distances.x;
+        //       slopes.y += distances.y;
+
+        //       if ((float) (currentLength / totalLength) <= (float) (currentSamples / totalSamples)) {
+        //         origin.x = x;
+        //         origin.y = y;
+
+        //         break
+        //       }
+        //     }
+        //   }
+
+        //   drawLine(new xy(x, y), anchor, ...draw);
+        //   anchor = new xy(x, y)
+        // }
       }
 
       function drawSquare(origin, size, ...draw) /* ->> See `drawRectangle(origin, sz(size, size), ...draw)` */ {
@@ -741,8 +792,8 @@
         else { for (var index = height * width * 4; index; ) canvasData.data[--index] = 0x00 } // ->> Unneeded for `resize(…)` events
 
         // ...
-        // drawSpline(4, xy(100, height - 100), xy(100, 200), xy(width / 2, 100), xy(width - 100, 200), xy(width - 100, height - 100), colors.yellow);  // ⚠️
-        // drawSpline(3, xy(100, height - 100), xy(100, 200),                     xy(width - 100, 200), xy(width - 100, height - 100), colors.yellow);  // ⚠️
+        drawSpline(4, xy(100, height - 100), xy(100, 200), xy(width / 2, 100), xy(width - 100, 200), xy(width - 100, height - 100), colors.cyan);    // ⚠️
+        drawSpline(3, xy(100, height - 100), xy(100, 200),                     xy(width - 100, 200), xy(width - 100, height - 100), colors.magenta); // ⚠️
         drawSpline(2, xy(100, height - 100),               xy(width / 2, 100),                       xy(width - 100, height - 100), colors.yellow);  // ⚠️
 
         // drawGlyph(xy(100, 100), xy(width - 100, height - 100), 'A', "font.ttf"); // 🚫
