@@ -1,26 +1,45 @@
 public sealed class Unit : UnityEngine.MonoBehaviour {
-  public const float TARGET_DISTANCE_SQUARED = 2.0f;
+  public enum Kind : byte { _, Soldier, Zombie }
 
-  public float angularSpeed = 15.0f; // ⟶ In degrees°
-  public float speed        = 2.5f;
+  public partial struct SoldierComponent : Unity.Entities.IComponentData {}
+  public partial struct ZombieComponent : Unity.Entities.IComponentData {}
+
+  /* … */
+  public const float TARGET_GROUP_DISTANCE_SQUARED = 4.0f;
+  public const float TARGET_REACH_DISTANCE_SQUARED = 2.0f;
+
+  public float     angularSpeed = 15.0f; // ⟶ In degrees°
+  public Unit.Kind kind         = Unit.Kind._;
+  public float     speed        = 2.5f;
+
+  /* … */
+  private void Awake() {
+    UnityEngine.Debug.Log("Unexpected debug log.");
+  }
 }
-  public class UnitBaker : Unity.Entities.Baker<Unit> {
+  public sealed class UnitBaker : Unity.Entities.Baker<Unit> {
     public override void Bake(Unit unit) {
-      this.AddComponent(this.GetEntity(Unity.Entities.TransformUsageFlags.Dynamic), new UnitComponent() {
-        angularSpeed   = unit.angularSpeed,
-        speed          = unit.speed,
-        targetPosition = unit.transform.position
-      });
+      Unity.Entities.Entity entity = this.GetEntity(Unity.Entities.TransformUsageFlags.Dynamic);
+
+      // …
+      this.AddComponent(entity, new UnitComponent() {angularSpeed = unit.angularSpeed, kind = unit.kind, speed = unit.speed, targetPosition = unit.transform.position});
+      switch (unit.kind) {
+        case Unit.Kind.Soldier: this.AddComponent(entity, new Unit.SoldierComponent()); break;
+        case Unit.Kind.Zombie : this.AddComponent(entity, new Unit.ZombieComponent ()); break;
+        default: break;
+      }
     }
   }
 
   public struct UnitComponent : Unity.Entities.IComponentData {
     public float                    angularSpeed;
+    public Unit.Kind                kind;
     public float                    speed;
     public Unity.Mathematics.float3 targetPosition;
   }
 
   [Unity.Burst.BurstCompile]
+  // [Unity.Entities.UpdateBefore(typeof(SelectedSystem))]
   public partial struct UnitSystem : Unity.Entities.ISystem {
     [Unity.Burst.BurstCompile]
     private partial struct UnitJob : IJobEntity {
@@ -31,7 +50,7 @@ public sealed class Unit : UnityEngine.MonoBehaviour {
         Unity.Mathematics.float3 moveDirection = unit.targetPosition - localTransform.Position;
 
         // …
-        if (Unit.TARGET_DISTANCE_SQUARED >= Unity.Mathematics.math.lengthsq(moveDirection))
+        if (Unit.TARGET_REACH_DISTANCE_SQUARED >= Unity.Mathematics.math.lengthsq(moveDirection))
           physicsVelocity.Linear = Unity.Mathematics.float3.zero;
 
         else {
@@ -61,7 +80,7 @@ public sealed class Unit : UnityEngine.MonoBehaviour {
           Unity.Mathematics.float3 moveDirection = unit.ValueRO.targetPosition - localTransform.ValueRO.Position;
 
           // …
-          if (UnitComponent.TARGET_DISTANCE_SQUARED >= Unity.Mathematics.math.lengthsq(moveDirection))
+          if (UnitComponent.TARGET_REACH_DISTANCE_SQUARED >= Unity.Mathematics.math.lengthsq(moveDirection))
             physicsVelocity.ValueRW.Linear = Unity.Mathematics.float3.zero;
 
           else {
