@@ -82,7 +82,7 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
 
         // …
         if (physicsWorldCollisionWorld.CastRay(physicsWorldRaycastInput, out Unity.Physics.RaycastHit physicsWorldRaycastHit)) {
-          if (Game.ENTITY_MANAGER.HasComponent<UnitComponent>(physicsWorldRaycastHit.Entity))
+          if (Game.ENTITY_MANAGER.HasComponent<SelectableComponent>(physicsWorldRaycastHit.Entity))
           Game.ENTITY_MANAGER.SetComponentEnabled<SelectableComponent>(physicsWorldRaycastHit.Entity, true);
         }
       }

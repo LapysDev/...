@@ -4,7 +4,7 @@ public sealed class Finder : UnityEngine.MonoBehaviour {
 }
   public sealed class FinderBaker : Unity.Entities.Baker<Finder> {
     public override void Bake(Finder finder) {
-      this.AddComponent(this.GetEntity(Unity.Entities.TransformUsageFlags.Dynamic), new FinderComponent() {range = finder.range, targetKind = finder.targetKind});
+      this.AddComponent(this.GetEntity(Unity.Entities.TransformUsageFlags.Dynamic), new FinderComponent() {range = finder.range, targetEntity = Unity.Entities.Entity.Null, targetKind = finder.targetKind});
     }
   }
 
@@ -29,8 +29,10 @@ public sealed class Finder : UnityEngine.MonoBehaviour {
         foreach (Unity.Physics.DistanceHit collisionWorldDistanceHit in collisionWorldDistanceHits) {
           UnitComponent targetUnit = Unity.Entities.SystemAPI.GetComponent<UnitComponent>(collisionWorldDistanceHit.Entity);
 
-          if (finder.ValueRO.targetKind == targetUnit.kind)
-          finder.ValueRW.targetEntity = collisionWorldDistanceHit.Entity;
+          if (finder.ValueRO.targetKind == targetUnit.kind) {
+            finder.ValueRW.targetEntity = collisionWorldDistanceHit.Entity;
+            break;
+          }
         }
       }
     }
