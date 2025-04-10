@@ -333,12 +333,6 @@
       System.Console.WriteLine("ARM (Advanced RISC Machines) 64-bit processor architecture");
     #endif
 
-    #if X64
-      System.Console.WriteLine("Intel x64 processor architecture");
-    #elif X86
-      System.Console.WriteLine("Intel x86 processor architecture");
-    #endif
-
     // ...
     System.Console.WriteLine(System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);
   }

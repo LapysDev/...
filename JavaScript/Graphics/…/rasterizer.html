@@ -346,7 +346,7 @@
 
       function drawRoundedRect(...draw) /* TODO (Lapys) */ {}
 
-      function drawSpline(degree, origin, ...draw) /* TODO (Lapys) -> Just optimize, man */ {
+      function drawSpline(degree, origin, ...draw) /* TODO (Lapys) -> Just optimize, man. Also check this out in 20px width — lines ain't connected 😂 */ {
         var anchor       = origin;
         var controlCount = degree;
         var controls     = [anchor, ...new Array(controlCount)];
