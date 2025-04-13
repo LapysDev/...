@@ -2,13 +2,13 @@ global using Unity.Entities; // ⟶ Resolve Unity's code generation
 
 /* … */
 internal static class Game {
-  public   static ref      Unity.Entities.EntityManager                                                        ENTITY_MANAGER           { get { Game.ENTITY_MANAGER_UNCHECKED ??= new[] {Game.WORLD.EntityManager}; return ref Game.ENTITY_MANAGER_UNCHECKED[0]; } }
-  internal static          Unity.Entities.EntityManager[]?                                                     ENTITY_MANAGER_UNCHECKED = null;
-  public   static ref      UnityEngine.Camera                                                                  POINTER_CAMERA           { get { Game.POINTER_CAMERA_UNCHECKED ??= new[] {UnityEngine.Camera.main}; return ref Game.POINTER_CAMERA_UNCHECKED[0]; } }
-  internal static          UnityEngine.Camera[]?                                                               POINTER_CAMERA_UNCHECKED = null;
-  public   static readonly (uint _, uint Default, uint IgnoreRaycast, uint TransparentFX, uint UI, uint Water) PHYSICS_LAYERS           = (default, 1u << 0, 1u << 2, 1u << 1, 1u << 5, 1u << 4); // ⟶ `(default, UnityEngine.LayerMask.GetMask("Default"), …)`
-  public   static ref      Unity.Entities.World                                                                WORLD                    { get { Game.WORLD_UNCHECKED ??= new[] {Unity.Entities.World.DefaultGameObjectInjectionWorld}; return ref Game.WORLD_UNCHECKED[0]; } }
-  internal static          Unity.Entities.World[]?                                                             WORLD_UNCHECKED          = null;
+  public   static ref      UnityEngine.Camera                                                                  POINTER_CAMERA                 { get { Game.POINTER_CAMERA_UNCHECKED ??= new[] {UnityEngine.Camera.main}; return ref Game.POINTER_CAMERA_UNCHECKED[0]; } }
+  internal static          UnityEngine.Camera[]?                                                               POINTER_CAMERA_UNCHECKED       = null;
+  public   static readonly (uint _, uint Default, uint IgnoreRaycast, uint TransparentFX, uint UI, uint Water) PHYSICS_LAYERS                 = (default, 1u << 0, 1u << 2, 1u << 1, 1u << 5, 1u << 4); // ⟶ `(default, UnityEngine.LayerMask.GetMask("Default"), …)`
+  public   static ref      Unity.Entities.World                                                                WORLD                          { get { Game.WORLD_UNCHECKED ??= new[] {Unity.Entities.World.DefaultGameObjectInjectionWorld}; return ref Game.WORLD_UNCHECKED[0]; } }
+  internal static          Unity.Entities.World[]?                                                             WORLD_UNCHECKED                = null;
+  public   static ref      Unity.Entities.EntityManager                                                        WORLD_ENTITY_MANAGER           { get { Game.WORLD_ENTITY_MANAGER_UNCHECKED ??= new[] {Game.WORLD.EntityManager}; return ref Game.WORLD_ENTITY_MANAGER_UNCHECKED[0]; } }
+  internal static          Unity.Entities.EntityManager[]?                                                     WORLD_ENTITY_MANAGER_UNCHECKED = null;
 
   /* … */
   internal static void GetPositionsFromTargetPosition(Unity.Mathematics.float3 targetPosition, uint count, float radius, out Unity.Collections.NativeArray<Unity.Mathematics.float3> positions) {
@@ -50,7 +50,7 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
 
   /* … */
   private void OnDestroy() {
-    Game.ENTITY_MANAGER_UNCHECKED = null;
+    Game.WORLD_ENTITY_MANAGER_UNCHECKED = null;
     Game.WORLD_UNCHECKED          = null;
   }
 
@@ -62,18 +62,18 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
     this.selectionStartPosition = pointerPosition;
 
     if (UnityEngine.Input.GetMouseButtonUp(0)) {
-      Unity.Entities.EntityQuery entityDeselectionQuery = new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp).WithAll<SelectableComponent>().Build(Game.ENTITY_MANAGER);
+      Unity.Entities.EntityQuery entityDeselectionQuery = new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp).WithAll<SelectableComponent>().Build(Game.WORLD_ENTITY_MANAGER);
 
       // …
       Game.PositionsToArea(this.selectionStartPosition, pointerPosition, out UnityEngine.Rect selectionArea);
 
       foreach (Unity.Entities.Entity entity in entityDeselectionQuery.ToEntityArray(Unity.Collections.Allocator.Temp))
-      Game.ENTITY_MANAGER.SetComponentEnabled<SelectableComponent>(entity, false);
+      Game.WORLD_ENTITY_MANAGER.SetComponentEnabled<SelectableComponent>(entity, false);
 
       // … ⟶ Single-selection or multi-selection
       if (Selectable.SELECTION_AREA_THRESHOLD_SIZE >= selectionArea.height * selectionArea.width) {
         // ⟶ See shorter version of this in `FindableSystem.OnUpdate(…)` function
-        Unity.Entities.EntityQuery                             entitySelectionQuery       = Game.ENTITY_MANAGER.CreateEntityQuery(typeof(Unity.Physics.PhysicsWorldSingleton)); // ⟶ Same as what `EntityQueryBuilder..Build(…)` does
+        Unity.Entities.EntityQuery                             entitySelectionQuery       = Game.WORLD_ENTITY_MANAGER.CreateEntityQuery(typeof(Unity.Physics.PhysicsWorldSingleton)); // ⟶ Same as what `EntityQueryBuilder..Build(…)` does
         UnityEngine.Ray                                        pointerRay                 = Game.POINTER_CAMERA.ScreenPointToRay(pointerPosition); // ⟶ Not to be confused with `Unity.Physics.Ray`
         Unity.Physics.PhysicsWorldSingleton                    physicsWorld               = entitySelectionQuery.GetSingleton<Unity.Physics.PhysicsWorldSingleton>();
         Unity.Physics.CollisionWorld                           physicsWorldCollisionWorld = physicsWorld.CollisionWorld;
@@ -82,42 +82,42 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
 
         // …
         if (physicsWorldCollisionWorld.CastRay(physicsWorldRaycastInput, out Unity.Physics.RaycastHit physicsWorldRaycastHit)) {
-          if (Game.ENTITY_MANAGER.HasComponent<SelectableComponent>(physicsWorldRaycastHit.Entity))
-          Game.ENTITY_MANAGER.SetComponentEnabled<SelectableComponent>(physicsWorldRaycastHit.Entity, true);
+          if (Game.WORLD_ENTITY_MANAGER.HasComponent<SelectableComponent>(physicsWorldRaycastHit.Entity))
+          Game.WORLD_ENTITY_MANAGER.SetComponentEnabled<SelectableComponent>(physicsWorldRaycastHit.Entity, true);
         }
       }
 
       else {
-        Unity.Entities.EntityQuery                                     entitySelectionQuery = new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp).WithAll<Unity.Transforms.LocalTransform, UnitComponent>().WithPresent<SelectableComponent>().Build(Game.ENTITY_MANAGER);
+        Unity.Entities.EntityQuery                                     entitySelectionQuery = new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp).WithAll<Unity.Transforms.LocalTransform, UnitComponent>().WithPresent<SelectableComponent>().Build(Game.WORLD_ENTITY_MANAGER);
         Unity.Collections.NativeArray<Unity.Entities.Entity>           entities             = entitySelectionQuery.ToEntityArray                                        (Unity.Collections.Allocator.Temp);
         Unity.Collections.NativeArray<Unity.Transforms.LocalTransform> localTransforms      = entitySelectionQuery.ToComponentDataArray<Unity.Transforms.LocalTransform>(Unity.Collections.Allocator.Temp);
 
         // …
         for (int index = localTransforms.Length; 0 != index--; ) {
           if (selectionArea.Contains(Game.POINTER_CAMERA.WorldToScreenPoint(localTransforms[index].Position)))
-          Game.ENTITY_MANAGER.SetComponentEnabled<SelectableComponent>(entities[index], true);
+          Game.WORLD_ENTITY_MANAGER.SetComponentEnabled<SelectableComponent>(entities[index], true);
         }
       }
     }
 
     // … ⟶ Update all `UnitComponent.targetPosition`s on right mouse click
     if (UnityEngine.Input.GetMouseButtonDown(1)) {
-      Unity.Entities.EntityQuery                           entityQuery = new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp).WithAll<SelectableComponent, UnitComponent>().Build(Game.ENTITY_MANAGER);
-      Unity.Collections.NativeArray<Unity.Entities.Entity> entities    = entityQuery.ToEntityArray                      (Unity.Collections.Allocator.Temp);
-      Unity.Collections.NativeArray<UnitComponent>         units       = entityQuery.ToComponentDataArray<UnitComponent>(Unity.Collections.Allocator.Temp);
+      Unity.Entities.EntityQuery                           entityQuery     = new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp).WithAll<SelectableComponent, UnitComponent>().Build(Game.WORLD_ENTITY_MANAGER);
+      Unity.Collections.NativeArray<Unity.Entities.Entity> entities        = entityQuery.ToEntityArray                      (Unity.Collections.Allocator.Temp);
+      Unity.Collections.NativeArray<UnitComponent>         selectableUnits = entityQuery.ToComponentDataArray<UnitComponent>(Unity.Collections.Allocator.Temp);
 
       // …
       Game.ScreenToWorldPosition         (pointerPosition, out UnityEngine.Vector3 pointerWorldPosition);
       Game.GetPositionsFromTargetPosition(pointerWorldPosition, (uint) entityQuery.CalculateEntityCount() /* ⟶ not `.IsEmpty` */, Unit.TARGET_GROUP_DISTANCE_SQUARED, out Unity.Collections.NativeArray<Unity.Mathematics.float3> targetPositions);
 
-      for (int index = units.Length; 0 != index--; ) {
-        UnitComponent unit = units[index];
+      for (int index = selectableUnits.Length; 0 != index--; ) {
+        UnitComponent selectableUnit = selectableUnits[index];
 
-        unit.targetPosition = targetPositions[index];
-        units[index]        = unit; // ⟶ `Game.ENTITY_MANAGER.SetComponentData(entities[index], unit)`
+        selectableUnit.targetPosition = targetPositions[index];
+        selectableUnits[index]        = selectableUnit; // ⟶ `Game.WORLD_ENTITY_MANAGER.SetComponentData(entities[index], unit)`
       }
 
-      entityQuery.CopyFromComponentDataArray(units);
+      entityQuery.CopyFromComponentDataArray(selectableUnits);
     }
   }
 }

@@ -20,7 +20,7 @@ public sealed class Selectable : UnityEngine.MonoBehaviour {
   }
 
   [Unity.Burst.BurstCompile]
-  // [Unity.Entities.UpdateInGroup(typeof(Unity.Entities.LateSimulationSystemGroup))]
+  [Unity.Entities.UpdateInGroup(typeof(Unity.Entities.SimulationSystemGroup))]
   public partial struct SelectableSystem : Unity.Entities.ISystem {
     [Unity.Burst.BurstCompile]
     public void OnUpdate(ref Unity.Entities.SystemState state) {

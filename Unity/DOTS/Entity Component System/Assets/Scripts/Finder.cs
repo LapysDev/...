@@ -4,17 +4,18 @@ public sealed class Finder : UnityEngine.MonoBehaviour {
 }
   public sealed class FinderBaker : Unity.Entities.Baker<Finder> {
     public override void Bake(Finder finder) {
-      this.AddComponent(this.GetEntity(Unity.Entities.TransformUsageFlags.Dynamic), new FinderComponent() {range = finder.range, targetEntity = Unity.Entities.Entity.Null, targetKind = finder.targetKind});
+      this.AddComponent(this.GetEntity(Unity.Entities.TransformUsageFlags.Dynamic), new FinderComponent() {range = finder.range, target = Unity.Entities.Entity.Null, targetKind = finder.targetKind});
     }
   }
 
   public struct FinderComponent : Unity.Entities.IComponentData {
     public float                 range;
-    public Unity.Entities.Entity targetEntity;
+    public Unity.Entities.Entity target;
     public Unit.Kind             targetKind;
   }
 
   [Unity.Burst.BurstCompile]
+  [Unity.Entities.UpdateInGroup(typeof(Unity.Entities.SimulationSystemGroup))]
   public partial struct FinderSystem : Unity.Entities.ISystem {
     [Unity.Burst.BurstCompile]
     public void OnUpdate(ref Unity.Entities.SystemState state) {
@@ -22,6 +23,11 @@ public sealed class Finder : UnityEngine.MonoBehaviour {
       Unity.Collections.NativeList<Unity.Physics.DistanceHit> collisionWorldDistanceHits = new(Unity.Collections.Allocator.Temp);
 
       // …
+      foreach (var finder in Unity.Entities.SystemAPI.Query<Unity.Entities.RefRW<FinderComponent>>()) {
+        if (!Unity.Entities.SystemAPI.Exists(finder.ValueRO.target))
+        finder.ValueRW.target = Unity.Entities.Entity.Null;
+      }
+
       foreach (var (finder, localTransform) in Unity.Entities.SystemAPI.Query<Unity.Entities.RefRW<FinderComponent>, Unity.Entities.RefRO<Unity.Transforms.LocalTransform>>()) {
         collisionWorldDistanceHits.Clear();
 
@@ -30,7 +36,7 @@ public sealed class Finder : UnityEngine.MonoBehaviour {
           UnitComponent targetUnit = Unity.Entities.SystemAPI.GetComponent<UnitComponent>(collisionWorldDistanceHit.Entity);
 
           if (finder.ValueRO.targetKind == targetUnit.kind) {
-            finder.ValueRW.targetEntity = collisionWorldDistanceHit.Entity;
+            finder.ValueRW.target = collisionWorldDistanceHit.Entity;
             break;
           }
         }
