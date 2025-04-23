@@ -1,5 +1,3 @@
-// CONSIDER a `PatchDictionary` (and `PatchReadOnlyDictionary`) instead of `EditorDictionary`
-// ENSURE `EditorDictionary` `ref`s its internal `System.Array` fields
 namespace System {
   [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
   [System.Diagnostics.DebuggerNonUserCode]
@@ -10,11 +8,11 @@ namespace System {
     public           int          Value     => this.value < 0 ? ~this.value : this.value;
     private readonly int          value;
 
-    /* … */
+    /* ... */
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] private Index(int value)                       { this.value = value; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public  Index(int value, bool fromEnd = false) { if (value < 0) { throw new System.ArgumentOutOfRangeException(nameof(value)); } this.value = fromEnd ? ~value : value; }
 
-    /* … */
+    /* ... */
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public  override bool         Equals                         (object? value)  => value is Index index && this.Equals(index);
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public           bool         Equals                         (Index   index)  => index.value == this.value;
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public  static   System.Index FromEnd                        (int     value)  { if (value < 0) { throw new System.IndexOutOfRangeException(nameof(value)); } return new(~value); }
@@ -25,7 +23,7 @@ namespace System {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] private          string       ToStringFromEnd                ()               => $"^{this.Value.ToString()}";
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] bool                          System.IEquatable<Index>.Equals(Index index)    => this.Equals(index);
 
-    /* … */
+    /* ... */
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public static implicit operator System.Index(int value) => Index.FromStart(value);
   }
 
@@ -37,14 +35,14 @@ namespace System {
     public readonly System.Index End   { get; } = System.Index.End;
     public readonly System.Index Start { get; } = System.Index.Start;
 
-    /* … */
+    /* ... */
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public Range(System.Index start, System.Index end) {
       this.End   = end;
       this.Start = start;
     }
 
-    /* … */
+    /* ... */
     public static Range EndAt(System.Index end) {
       return new(System.Index.Start, end);
     }
@@ -58,7 +56,7 @@ namespace System {
       (System.Index endIndex, System.Index startIndex) = (this.End, this.Start);
       (int          end,      int          start)      = (endIndex.IsFromEnd ? length - endIndex.Value : endIndex.Value, startIndex.IsFromEnd ? length - startIndex.Value : startIndex.Value);
 
-      // …
+      // ...
       if ((uint) end > (uint) length || (uint) end < (uint) start)
       throw new System.ArgumentOutOfRangeException(nameof(length));
 
@@ -80,7 +78,7 @@ namespace System.Runtime.CompilerServices {
       (int offset, int length) = range.GetOffsetAndLength(array.Length);
       T[] subarray;
 
-      // …
+      // ...
       if (typeof(T[]) == array.GetType()) {
         if (0 == length)
         return System.Array.Empty<T>();
@@ -105,6 +103,7 @@ public static partial class Util {
   }
 }
 
+/* ... */
 public static class Program {
   public delegate void RefAction            <T>   (ref T value);
   public delegate int  RefComparison        <T>   (ref T a, ref T b);
@@ -126,14 +125,14 @@ public static class Program {
       T                                        System.Collections.Generic.IEnumerator<T>.Current => this.Current;
       object                                   System.Collections.IEnumerator.Current            => this.Current!;
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
       public Enumerator(RefReadOnlyList<T> list) {
         this.index = -1;
         this.list  = list;
       }
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public void Dispose                                () { /* Do nothing… */ }
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public bool MoveNext                               () => this.index < this.list.Count - 1 ? (++this.index, _: true)._ : false;
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public void Reset                                  () => this.index = -1;
@@ -142,13 +141,13 @@ public static class Program {
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] void        System.IDisposable.Dispose             () => this.Dispose ();
     }
 
-    /* … */
+    /* ... */
     public   uint Capacity                                                => this.Count;
     public   uint Count { get; protected set; }                           =  0u;
     internal T[]  Items                                                   =  System.Array.Empty<T>(); // ⟶ Faster with `System.GC.AllocateUninitializedArray<T>(…, false)`
     int           System.Collections.Generic.IReadOnlyCollection<T>.Count => ((int) this.Count);
 
-    /* … ⟶ Availability of `System.Runtime.InteropServices.CollectionMarshal.AsSpan(…)` would replace `RefReadOnlyList<T>`’s entire purpose */
+    /* ... ⟶ Availability of `System.Runtime.InteropServices.CollectionMarshal.AsSpan(…)` would replace `RefReadOnlyList<T>`’s entire purpose */
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public             RefReadOnlyList()                                                  {}
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] protected          RefReadOnlyList(uint               capacity)                       =>                                  this.Items = RefReadOnlyList<T>.CreateInstance(capacity);
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public             RefReadOnlyList(RefReadOnlyList<T> list)                           { this.Count = list.Count;          this.Items = (T[]) list.Items.Clone(); }
@@ -169,7 +168,7 @@ public static class Program {
       }
     }
 
-    /* … */
+    /* ... */
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public            RefReadOnlyList<T>            AsCopy        ()                                                                                                                                                             => new(this);
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public            RefReadOnlyList<T>            AsReadOnly    ()                                                                                                                                                             =>     this;
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public            int                           BinarySearch  (in T                               element)                                                                                                                   => System.Array.BinarySearch(this.Items, 0, (int) this.Count, element);
@@ -221,7 +220,7 @@ public static class Program {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] System.Collections.IEnumerator            System.Collections.IEnumerable.GetEnumerator           () => (System.Collections.IEnumerator)            this.GetEnumerator();
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] System.Collections.Generic.IEnumerator<T> System.Collections.Generic.IEnumerable<T>.GetEnumerator() => (System.Collections.Generic.IEnumerator<T>) this.GetEnumerator();
 
-    /* … */
+    /* ... */
     public ref readonly T                  this                                            [uint         index] => ref this.GetValue(index);
     public              RefReadOnlyList<T> this                                            [System.Range range] => new(this.Items[range]);
     T                                      System.Collections.Generic.IReadOnlyList<T>.this[int          index] => this[(uint) index];
@@ -234,13 +233,13 @@ public static class Program {
       T                                                 System.Collections.Generic.IEnumerator<T>.Current => this.Current;
       object                                            System.Collections.IEnumerator.Current            => this.Current!;
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
       public Enumerator(RefList<T> list) {
         this.enumerator = new(list);
       }
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public void Dispose                                () => this.enumerator.Dispose ();
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public bool MoveNext                               () => this.enumerator.MoveNext();
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public void Reset                                  () => this.enumerator.Reset   ();
@@ -249,7 +248,7 @@ public static class Program {
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] void        System.IDisposable.Dispose             () => this           .Dispose ();
     }
 
-    /* … */
+    /* ... */
     public  new uint Capacity                                             { get => this.capacity; set => this.EnsureCapacity(value); }
     private     uint capacity                                             =  0u;
     int              System.Collections.Generic.ICollection<T>.Count      => ((int) this.Count);
@@ -260,7 +259,7 @@ public static class Program {
     bool             System.Collections.IList.IsFixedSize                 => false;
     bool             System.Collections.IList.IsReadOnly                  => false;
 
-    /* … */
+    /* ... */
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public    RefList()                                    : base()                                            {}
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public    RefList(uint                       capacity) : base(capacity = RefList<T>.GetCapacity(capacity)) => this.capacity = capacity;
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public    RefList(RefList<T>                 list)     : this((Program.RefReadOnlyList<T>) list)           {}
@@ -282,7 +281,7 @@ public static class Program {
       }
     }
 
-    /* … */
+    /* ... */
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public                 void                  Add           (in T                                      element)                                                   => this.Insert     (this.Count, element);
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public    ref readonly T                     Append        (in T                                      element)                                                   {  this.Insert     (this.Count, element); return ref element; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public                 void                  AddRange      (System.Collections.Generic.IEnumerable<T> enumerable)                                                => this.InsertRange(this.Count, enumerable);
@@ -311,7 +310,7 @@ public static class Program {
         uint left    = (index * 2u) + 1u;
         uint right   = (index * 2u) + 2u;
 
-        // …
+        // ...
         largest = end > left  && comparison(ref list.GetValue(largest), ref list.GetValue(left))  < 0 ? left  : largest;
         largest = end > right && comparison(ref list.GetValue(largest), ref list.GetValue(right)) < 0 ? right : largest;
 
@@ -350,7 +349,7 @@ public static class Program {
         T   element  = this.GetValue(index);
         int subindex = ((int) index) - 1;
 
-        // …
+        // ...
         for (; subindex >= 0 && comparison(ref this.GetValue((uint) subindex), ref element) > 0; --subindex)
           this.SetValue(in this.GetValue((uint) subindex + 0u), (uint) subindex + 1u);
 
@@ -361,7 +360,7 @@ public static class Program {
     public void InsertRange(uint index, System.Collections.Generic.IEnumerable<T> enumerable) {
       uint count = Util.EnumerableCount(enumerable);
 
-      // …
+      // ...
       if (this.capacity < this.Count + count)
       this.EnsureCapacity(this.Count + count);
 
@@ -391,7 +390,7 @@ public static class Program {
         int   index = ((int) begin) - 1;
         ref T pivot = ref list.GetValue(end);
 
-        // …
+        // ...
         for (uint subindex = begin; end > subindex; ++subindex)
         if (comparison(ref list.GetValue(subindex), ref pivot) < 0) {
           ++index;
@@ -404,7 +403,7 @@ public static class Program {
         return (uint) index;
       }
 
-      // …
+      // ...
       if (begin < end) {
         uint index = Partition(this, begin, end, comparison);
 
@@ -450,7 +449,7 @@ public static class Program {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] void                   System.Collections.IList.Remove                   (object? element)                                                                                                  => this.Remove  ((T) element!);
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] void                   System.Collections.IList.RemoveAt                 (int     index)                                                                                                    => this.RemoveAt((uint) index);
 
-    /* … */
+    /* ... */
     public new ref T          this                                    [uint         index] => ref this.GetValue(index);
     public new     RefList<T> this                                    [System.Range range] => new(this.Items[range]);
     T                         System.Collections.Generic.IList<T>.this[int          index] { get => this[(uint) index]; set => this[(uint) index] = value; }
