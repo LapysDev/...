@@ -5,7 +5,7 @@ public static class Program {
 
 internal sealed class ProgramBehaviour : UnityEngine.MonoBehaviour {
   /* … */
-  private void Awake() {
+  private unsafe void Awake() {
     /* Do something… */
   }
 
