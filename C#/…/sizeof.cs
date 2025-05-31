@@ -10,7 +10,7 @@ public static class Program {
     unsafe { System.Console.WriteLine($"{sizeof(A)} {sizeof(B)} {sizeof(C)}"); }
     #pragma warning restore CS8500
 
-    // ... --> sizeof(void*) ->> Requires unmanaged type
+    // ... --> sizeof(void*) ->> Requires unmanaged/ marshaled managed type
     try { System.Console.WriteLine($"{System.Runtime.InteropServices.Marshal.SizeOf<A>()} {System.Runtime.InteropServices.Marshal.SizeOf<B>()} {System.Runtime.InteropServices.Marshal.SizeOf<C>()}"); }
     catch (System.ArgumentException) { System.Console.WriteLine("..."); }
 

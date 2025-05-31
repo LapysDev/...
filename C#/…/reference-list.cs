@@ -120,7 +120,7 @@ public static class Program {
   public class RefReadOnlyList<T> : System.Collections.Generic.IEnumerable<T>, System.Collections.Generic.IReadOnlyList<T> /* ⟶ Based on `System.Collections.Generic.List<T>` and `System.Collections.ObjectModel.ReadOnlyCollection<T>` */ {
     public struct Enumerator : System.Collections.Generic.IEnumerator<T> {
       public   ref readonly T                  Current => ref this.list.GetValue((uint) this.index);
-      internal              int                index;
+      internal              int                index; // use a class here T_T
       internal              RefReadOnlyList<T> list;
       T                                        System.Collections.Generic.IEnumerator<T>.Current => this.Current;
       object                                   System.Collections.IEnumerator.Current            => this.Current!;
@@ -134,7 +134,7 @@ public static class Program {
 
       /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public void Dispose                                () { /* Do nothing… */ }
-      [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public bool MoveNext                               () => this.index < this.list.Count - 1 ? (++this.index, _: true)._ : false;
+      [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public bool MoveNext                               () => this.index + 1 < this.list.Count ? (++this.index, _: true)._ : false;
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public void Reset                                  () => this.index = -1;
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] bool        System.Collections.IEnumerator.MoveNext() => this.MoveNext();
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] void        System.Collections.IEnumerator.Reset   () => this.Reset   ();

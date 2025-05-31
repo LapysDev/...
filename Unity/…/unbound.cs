@@ -26,7 +26,7 @@ internal sealed class ProgramBehaviour : UnityEngine.MonoBehaviour {
   }
 
   /* ... */
-  class A { public int n; }
+  struct A { public int n; }
 
   private unsafe void Awake() {
     A[]   array = new[] {new A{n = 1}, new A{n = 2}, new A{n = 3}, new A{n = 4}, new A{n = 5}}; // ->> Could also be `stackalloc`’d
