@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <!-- <Reference Include="System.Memory"> -->
+    <!--   <HintPath>System.Memory.dll</HintPath> -->
+    <!-- </Reference> -->
+
+    <!-- <Reference Include="System.Runtime.CompilerServices.Unsafe"> -->
+    <!--   <HintPath>System.Runtime.CompilerServices.Unsafe.dll</HintPath> -->
+    <!-- </Reference> -->
+  </ItemGroup>
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>_</RootNamespace>
+    <TargetFramework>net9.0</TargetFramework>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
