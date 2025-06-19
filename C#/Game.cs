@@ -4,7 +4,7 @@
 // += new EventHandler(delegate(object target, EventArgs arguments) { … })
 global using Animation = Game.Animation;                                                             //
 global using Game.Collections;                                                                       // ->> Expose custom collections e.g. `GameObjectSharedList<T>`, `RefDictionary<T>`, …
-global using GameBurst = Unity.Burst.BurstCompileAttribute;                                          //
+global using GameBurst          = Unity.Burst.BurstCompileAttribute;                                 //
 global using GameExecutionOrder = UnityEngine.DefaultExecutionOrder;                                 //
 global using GameLayout         = System.Runtime.InteropServices.StructLayoutAttribute;              // ->> Un-manages the structure of class types
 global using GameMethod         = System.Runtime.CompilerServices.MethodImplAttribute;               // ->> Modify function with compile attributes e.g. inlined, optimized, unmanaged, …, e.t.c.
@@ -67,7 +67,7 @@ namespace System.Runtime.Versioning {
       public System.Type BuilderType { get; }
       public string      MethodName  { get; }
 
-      /* … */
+      /* ... */
       public CollectionBuilderAttribute(System.Type builderType, string methodName) {
         this.BuilderType = builderType;
         this.MethodName  = methodName;
@@ -99,11 +99,11 @@ namespace System.Runtime.Versioning {
       public  readonly int   Value     => this.value < 0 ? ~this.value : this.value;
       private readonly int   value;
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] private Index(int value)                       => this.value = value;
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public  Index(int value, bool fromEnd = false) {  this.value = fromEnd ? ~value : value; if (value < 0) { throw new System.ArgumentOutOfRangeException(nameof(value)); } }
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public  readonly override bool   Equals                         (object? value) => value is Index index && this.Equals(index);
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public  readonly          bool   Equals                         (Index   index) => index.value == this.value;
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public  static            Index  FromEnd                        (int     value) { if (value < 0) { throw new System.IndexOutOfRangeException(nameof(value)); } return new(~value); }
@@ -114,7 +114,7 @@ namespace System.Runtime.Versioning {
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] private readonly          string ToStringFromEnd                ()              => '^' + this.Value.ToString();
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] bool                             System.IEquatable<Index>.Equals(Index index)   => this.Equals(index);
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
       public static implicit operator Index(int value) => Index.FromStart(value);
     }
@@ -127,14 +127,14 @@ namespace System.Runtime.Versioning {
       public readonly System.Index End   { get; } =  System.Index.End;
       public readonly System.Index Start { get; } =  System.Index.Start;
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
       public Range(System.Index start, System.Index end) {
         this.End   = end;
         this.Start = start;
       }
 
-      /* … */
+      /* ... */
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public static            Range                    EndAt                          (System.Index end)    => new(System.Index.Start, end);
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public readonly override bool                     Equals                         (object?      value)  => value is Range range && this.Equals(range);
       [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)] public readonly          bool                     Equals                         (in Range     range)  => this.End.Equals(range.End) && this.Start.Equals(range.Start);
@@ -153,7 +153,7 @@ namespace System.Runtime.Versioning {
         (int offset, int length) = range.GetOffsetAndLength(array.Length);
         T[] subarray;
 
-        // …
+        // ...
         if (typeof(T[]) == array.GetType()) {
           if (0 == length)
           return System.Array.Empty<T>();
@@ -187,7 +187,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public  readonly bool HasValue => !this.Equals(in DeviceState.INVALID);
       private readonly byte value; // ->> Support for `operator` `ref` returns would replace `DeviceState::value`’s entire purpose
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)]
       private DeviceState(byte value) => this.value = value;
 
@@ -207,7 +207,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameMethod(Inlined)]   readonly bool                                       System.IEquatable<DeviceState>.Equals                                 (DeviceState     deviceState)                              => false;
       [GameMethod(Inlined)]   readonly string                                     System.IFormattable.ToString                                          (string?         format, System.IFormatProvider? provider) => this.ToString()!;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public static bool        operator false(in DeviceState state)                         => !state.HasValue;
       [GameMethod(Inlined)] public static bool        operator true (in DeviceState state)                         =>  state.HasValue;
       [GameMethod(Inlined)] public static DeviceState operator +    (in DeviceState state)                         =>  DeviceState.GetDeviceState((uint) +DeviceState.GetCode(in state));
@@ -265,7 +265,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameConstructor, GameMethod(Inlined)] public  EventHandler(EventHandler<T> events)                                                                 : this((Game.Collections.RefList<Game.Collections.HandlerInfo<T>>) events) {}
       [GameConstructor, GameMethod(Inlined)] private EventHandler(Game.Collections.RefReadOnlyList<Game.Collections.HandlerInfo<T>> list) : base(list)                                                                               {}
 
-      /* … ->> Keep some methods accessible for multicast queuing, “privately” inherit other `class Game.Collections.RefList` methods */
+      /* ... ->> Keep some methods accessible for multicast queuing, “privately” inherit other `class Game.Collections.RefList` methods */
       [GameMethod(Inlined), GameResolution(0)] public   new               void                                                                                 Add                                                                   (in Game.Collections.HandlerInfo<T>                                      handler)                                                                                                                                                                                                                  { if (Game.Collections.HandlerInfo<T>.DefaultValue != handler.value) base.Add(in handler); }
       [GameMethod(Inlined), GameResolution(0)] public   new               void                                                                                 AddRange                                                              (System.Collections.Generic.IEnumerable<Game.Collections.HandlerInfo<T>> handlers)                                                                                                                                                                                                                 { foreach (Game.Collections.HandlerInfo<T> handler in handlers)      this.Add(in handler); }
       [GameMethod(Inlined), GameResolution(0)] public   new               void                                                                                 AddRange                                                              (in System.ReadOnlyMemory              <Game.Collections.HandlerInfo<T>> handlers)                                                                                                                                                                                                                 => this.AddRange(handlers.Span);
@@ -375,7 +375,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameMethod(Inlined), GameResolution(0)] object                                                                                                          System.ICloneable.Clone                                               ()                                                                                                                                                                                                                                                                                                         => base.Clone      ();
       [GameMethod(Inlined), GameResolution(0)] bool                                                                                                            System.IEquatable<EventHandler<T>>.Equals                             (EventHandler<T> events)                                                                                                                                                                                                                                                                                   => this.Equals     (events);
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined), GameResolution(0)] public static EventHandler<T> operator +(EventHandler<T> events, in Game.Collections.HandlerInfo<T> handler) { EventHandler<T>.Combine(events, in handler); return events; }
       [GameMethod(Inlined), GameResolution(0)] public static EventHandler<T> operator -(EventHandler<T> events, in Game.Collections.HandlerInfo<T> handler) { EventHandler<T>.Remove (events, in handler); return events; }
 
@@ -396,7 +396,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       UnityEngine.GameObject                                                         System.Collections.Generic.IEnumerator<UnityEngine.GameObject>.Current => this.Current;
       object                                                                         System.Collections.IEnumerator.Current                                 => this.Current!;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       internal GameObjectIterator(GameObjectIterator.Kind kind, UnityEngine.Transform gameObjectTransform) {
         this.kind          = kind;
@@ -410,7 +410,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         }
       }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public void               Dispose      ()                                 { /* Do nothing… */ }
       [GameMethod(Inlined)] public bool               Equals       (in GameObjectIterator enumerator) => false;
       [GameMethod(Inlined)] public GameObjectIterator GetEnumerator()                                 => this;
@@ -472,11 +472,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       readonly object                                 Game.Collections.IHandlerInfo.metadata => this.metadata!;
       readonly object?                                Game.Collections.IHandlerInfo.target   => this.target;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] public HandlerInfo(in HandlerInfo<T>       handler) : this(handler.value, handler.target, handler.metadata) {}
       [GameConstructor, GameMethod(Inlined)] public HandlerInfo(Game.Handler<T> value, object? target, in T metadata)                            { this.metadata = metadata; this.target = target; this.value = value ?? this.value; }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] internal /* virtual */ readonly object            Clone                                                                ()                                    => new HandlerInfo<T>((Game.Handler<T>) this.value.Clone(), this.target, this.metadata);
       [GameMethod(Uninlined)]         internal static                 void              DefaultValue                                                         (object?           target, in T data) {}
       [GameMethod(Inlined)] internal               readonly void              DynamicInvoke                                                        (params object?[]? arguments)         => this.value.DynamicInvoke(new object?[] {this.target, this.metadata});
@@ -489,7 +489,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameMethod(Inlined)] readonly bool                                     Game.Collections.IRefReadOnlyEquatable<HandlerInfo<T>>.Equals(in HandlerInfo<T> handler)           => this.Equals(in handler);
       [GameMethod(Inlined)] readonly bool                                     System.IEquatable<HandlerInfo<T>>.Equals                             (HandlerInfo   <T> handler)           => this.Equals(handler);
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)]
       public static implicit operator Game.Handler<T>(in HandlerInfo<T> handler) => handler.value;
     }
@@ -514,11 +514,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
     internal struct IndexFor<T> : Game.Collections.IRefComparable<IndexFor<T>>, Game.Collections.IRefEquatable<IndexFor<T>>, System.IConvertible, System.IFormattable {
       internal uint value;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public IndexFor(uint value = default) => this.value = value;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public static            ulong                                         BigMul                                                                (in IndexFor<T> indexA, in IndexFor<T> indexB)                                                                                                                                 => (ulong) System.Math.BigMul((int) indexA.value, (int) indexB.value);
       [GameMethod(Inlined)] public static            IndexFor<T>                                   Clamp                                                                 (in IndexFor<T> index,  in IndexFor<T> minimum, in IndexFor<T> maximum)                                                                                                        => new    (System.Math.Clamp (index.value, minimum.value, maximum.value));
       [GameMethod(Inlined)] public          readonly int                                           CompareTo                                                             (in IndexFor<T> index)                                                                                                                                                         => this.value.CompareTo(index.value);
@@ -635,7 +635,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         readonly T                                                                                                          System.Collections.Generic.IEnumerator<T>.Current => this.Current;
         readonly object                                                                                                     System.Collections.IEnumerator.Current            => this.Current!;
 
-        /* … */
+        /* ... */
         [GameConstructor]
         public Enumerator(InputStateCollection<T> enumerable) => (this.enumerator = new Game.Collections.RefReadOnlyList<Game.Collections.RefList<T>>(
           !enumerable.states.IsEmpty()
@@ -643,7 +643,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           : new System.Collections.ObjectModel.ReadOnlyCollection<Game.Collections.RefList<T>>(new[] {new Game.Collections.RefList<T>()})
         ).ConvertAll([GameMethod(Inlined)] (in Game.Collections.RefList<T> state) => state.GetEnumerator()).GetEnumerator()).MoveNext();
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly void Dispose                                () { for (this.enumerator.Reset(); this.enumerator.MoveNext(); ) { this.enumerator.Current.Dispose(); } this.enumerator.Dispose(); }
         [GameMethod(Inlined)] public readonly bool MoveNext                               () { while (!this.enumerator.Current.MoveNext()) { if (!this.enumerator.MoveNext()) return false; } return true; }
         [GameMethod(Inlined)] public readonly void Reset                                  () { for (this.enumerator.Reset(); this.enumerator.MoveNext(); ) { this.enumerator.Current.Reset(); } this.enumerator.Reset(); }
@@ -652,16 +652,16 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         [GameMethod(Inlined)] readonly void        System.IDisposable.Dispose             () => this.Dispose ();
       }
 
-      /* … */
+      /* ... */
       public  uint                                                                                   Count { get { uint count = 0u; foreach (Game.Collections.RefList<T> state in states) { count += state.Count; } return count; } }
       private System.Collections.ObjectModel.ReadOnlyCollection<Game.Collections.RefList<T>> states;
       int                                                                                            System.Collections.Generic.IReadOnlyCollection<T>.Count => ((int) this.Count);
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public InputStateCollection(System.Collections.ObjectModel.ReadOnlyCollection<Game.Collections.RefList<T>> states) => this.states = states;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          InputStateCollection<T>.Enumerator GetEnumerator                                          () => new(this);
       [GameMethod(Inlined)] public override string?                            ToString                                               () { string value = ""; for (uint index = Game.Collections.DeviceState.BEGIN; ; ++index) { value += $"{Game.Collections.DeviceState.GetDeviceState(index).ToString()!.Substring(12 /* ->> `"DeviceState.".Length` */)} {states[(int) index]}"; if (Game.Collections.DeviceState.END == index) break; value += ", "; } return value; }
       [GameMethod(Inlined)] System.Collections.Generic.IEnumerator<T>          System.Collections.Generic.IEnumerable<T>.GetEnumerator() => this.GetEnumerator();
@@ -716,11 +716,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         readonly object?                                                          System.Collections.IDictionaryEnumerator.Value                                                           => this.enumerator.Value;
         readonly object                                                           System.Collections.IEnumerator.Current                                                                   => this           .Current;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         internal Enumerator(Keyframe keyframe) => this.enumerator = ((System.Collections.Specialized.ListDictionary) keyframe).GetEnumerator();
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly void Dispose                                () { /* Do nothing… */ }
         [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
         [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -732,11 +732,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public sealed class KeyCollection : System.Collections.Generic.IEnumerable<string> {
         private readonly Keyframe keyframe;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         internal KeyCollection(Keyframe keyframe) => this.keyframe = keyframe;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public Keyframe.KeyEnumerator                GetEnumerator                                               () => new(keyframe);
         [GameMethod(Inlined)] System.Collections.Generic.IEnumerator<string> System.Collections.Generic.IEnumerable<string>.GetEnumerator() => this.GetEnumerator();
         [GameMethod(Inlined)] System.Collections.IEnumerator                 System.Collections.IEnumerable.GetEnumerator                () => this.GetEnumerator();
@@ -748,11 +748,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         readonly string                                           System.Collections.Generic.IEnumerator<string>.Current => this.Current;
         readonly object                                           System.Collections.IEnumerator.Current                 => this.Current!;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         internal KeyEnumerator(Keyframe keyframe) => this.enumerator = ((System.Collections.Specialized.ListDictionary) keyframe).GetEnumerator();
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly void Dispose                                () { /* Do nothing… */ }
         [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
         [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -764,11 +764,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public sealed class ValueCollection : System.Collections.Generic.ICollection<object?> {
         private readonly Keyframe keyframe;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         internal ValueCollection(Keyframe keyframe) => this.keyframe = keyframe;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public Keyframe.ValueEnumerator        GetEnumerator                                                () => new(keyframe);
         [GameMethod(Inlined)] System.Collections.Generic.IEnumerator<object?> System.Collections.Generic.IEnumerable<object?>.GetEnumerator() => this.GetEnumerator();
         [GameMethod(Inlined)] System.Collections.IEnumerator                  System.Collections.IEnumerable.GetEnumerator                 () => this.GetEnumerator();
@@ -780,11 +780,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         readonly object?                                          System.Collections.Generic.IEnumerator<object?>.Current => this.Current;
         readonly object                                           System.Collections.IEnumerator.Current                  => this.Current!;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         internal ValueEnumerator(Keyframe keyframe) => this.enumerator = ((System.Collections.Specialized.ListDictionary) keyframe).GetEnumerator();
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly void Dispose                                () { /* Do nothing… */ }
         [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
         [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -793,7 +793,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         [GameMethod(Inlined)] readonly void        System.IDisposable.Dispose             () => this           .Dispose ();
       }
 
-      /* … */
+      /* ... */
       protected     readonly System.Collections.Specialized.ListDictionary? Begin                                                                                                          =  null;
       public    new          uint                                           Count                                                                                                          => ((uint) base.Count);
       protected              System.Collections.Specialized.ListDictionary? End                                                                                                            { get => this.properties; private init {} }
@@ -815,7 +815,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       System.Collections.ICollection                                        System.Collections.IDictionary.Keys                                                                            => base.Keys;
       System.Collections.ICollection                                        System.Collections.IDictionary.Values                                                                          => base.Values;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public Keyframe(string name, System.Collections.Generic.IReadOnlyDictionary<string, object?> properties) {
         this.name = name;
@@ -834,7 +834,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         foreach (System.Collections.Generic.KeyValuePair<string, object?> property in end)   { if (begin.ContainsKey(property.Key)) this.end  .Add(property.Key, property.Value); }
       }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] private new      void                                                                            Add                                                                                                           (string name, object? value)                                                           => throw new System.NotSupportedException("Keyframe can only modify existing properties, not add them");
       [GameMethod(Inlined)] private new      void                                                                            Clear                                                                                                         ()                                                                                     => throw new System.NotSupportedException("Keyframe can only modify existing properties, not remove them");
       [GameMethod(Inlined)] private new      void                                                                            Remove                                                                                                        (string name)                                                                          => throw new System.NotSupportedException("Keyframe can only modify existing properties, not remove them");
@@ -889,11 +889,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       bool                                                                 Game.Collections.InputInfo.polled { get => this.polled; set => this.polled = value; }
       Game.Collections.DeviceState                                 Game.Collections.InputInfo.state  { get => this.state;  set => this.state  = value; }
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public KeyInfo() {}
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool    Equals     (in KeyInfo                         key)   => key.codes == this.codes;
       [GameMethod(Inlined)] public          readonly bool    Equals     (Game.Collections.InputInfo input) => input is KeyInfo key && this.Equals(key);
       [GameMethod(Inlined)] public override readonly bool    Equals     (object?                            value) => value is KeyInfo key && this.Equals(key);
@@ -1165,11 +1165,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       readonly bool                      Game.Collections.IMono.HasValue => this.HasValue;
       readonly object?                   Game.Collections.IMono.Value    => this.HasValue ? this.Value : null;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] public  LazyMono(System.Func<T> initializer) => this.Init = initializer;
       [GameConstructor, GameMethod(Inlined)] private LazyMono(in T           value)       { this.lazy.hasValue = true; this.lazy.value = value; }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] private          readonly void    Ensure                                                                                 ()                                             { if (!this.lazy.hasValue) { T value = this.Init(); if (null != value) { this.lazy.hasValue = true; this.lazy.value = value; } } }
       [GameMethod(Inlined)] public           readonly bool    Equals                                                                                 (in T                                value)    {  this.Ensure();                    return this.lazy.hasValue ? Game.Collections.RefReadOnlyEqualityComparer<T>.Default.Equals(in this.lazy.value!, in value) : null == value; }
       [GameMethod(Inlined)] public           readonly bool    Equals                                                                                 (in LazyMono<T>                      lazyMono) {  this.Ensure(); lazyMono.Ensure(); return this.lazy.hasValue ? lazyMono.lazy.hasValue && Game.Collections.RefReadOnlyEqualityComparer<T>.Default.Equals(in this.lazy.value!, in lazyMono.lazy.value!) : !lazyMono.lazy.hasValue; }
@@ -1216,11 +1216,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       internal Game.Collections.EventHandler<Game.Events.LoadEvent> events  = new();
       internal object?                                                              payload = null;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public LoadInfo() {}
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool Equals                                                         (in  LoadInfo load)  => load.events == this.events;
       [GameMethod(Inlined)] public override readonly bool Equals                                                         (object?      value) => value is LoadInfo load && this.Equals(load);
       [GameMethod(Inlined)] public override readonly int  GetHashCode                                                    ()                   => this.events.GetHashCode();
@@ -1235,11 +1235,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       readonly bool               Game.Collections.IMono.HasValue => this.HasValue;
       readonly object?            Game.Collections.IMono.Value    => this.HasValue ? this.Value : null;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public  Mono()           {}
       [GameMethod(Inlined)] private Mono(in T value) { this.HasValue = true; this.Value = value; }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                               (in T                           value)    => this.HasValue ? Game.Collections.RefReadOnlyEqualityComparer<T>.Default.Equals(in this.Value!, in value) : null == value;
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                               (Game.Collections.IMono mono)     => this.HasValue ? mono.HasValue && this.Value!.Equals(mono.Value!)                                                                        : !mono.HasValue;
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                               (in Mono<T>                     mono)     => this.HasValue ? mono.HasValue && Game.Collections.RefReadOnlyEqualityComparer<T>.Default.Equals(in this.Value!, in mono.Value!) : !mono.HasValue;
@@ -1284,11 +1284,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public   readonly Game.Collections.DeviceState                                           pointerState { get { Game.Collections.DeviceState state = Game.Collections.DeviceState.UNKNOWN; foreach (ref readonly Game.Collections.PointerInfo pointer in this.pointersList) { state = pointer.state < state ? pointer.state : state; } return state; } }
       public            Game.Collections.DeviceState                                           state        { get; internal set; } = Game.Collections.DeviceState.UNKNOWN;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public PointedInfo() {}
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool    Equals                                                            (in PointedInfo pointed)  { PointedInfo subpointed = pointed; return subpointed.graphic == this.graphic && subpointed.pointersList.Count == this.pointersList.Count && subpointed.state == this.state && (subpointed.pointersList == this.pointersList || this.pointersList.TrueForAll((in Game.Collections.PointerInfo pointer) => subpointed.pointersList.Exists((Game.RefReadOnlyPredicate<Game.Collections.PointerInfo>) pointer.Equals))); }
       [GameMethod(Inlined)] public override readonly bool    Equals                                                            (object?        value)    => value is PointedInfo pointed && this.Equals(pointed);
       [GameMethod(Inlined)] public override readonly int     GetHashCode                                                       ()                        => System.HashCode.Combine(this.graphic, this.pointersList, this.state);
@@ -1327,7 +1327,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       bool                                                   Game.Collections.InputInfo.polled { get => this.polled; set => this.polled = value; }
       Game.Collections.DeviceState                   Game.Collections.InputInfo.state  { get => this.state;  set => this.state  = value; }
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public PointerInfo() {}
 
@@ -1354,21 +1354,128 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
     }
 
     internal static class ProxyObject {
-      static ;
+      internal static readonly System.Collections.Generic.Dictionary<(System.Type, System.Type), System.Reflection.MethodInfo> Methods = new();
 
-      [GameMethod(Inlined, Synchronized)]
-      internal static byte GetMethodPriorities(string name, System.Type typeA, System.Type typeB) {
-        return (System.Converter<System.Reflection.MethodInfo, byte>) GetMethodPriorities;
-      }
+      /* ... */
+      // bool
+      // byte
+      // char
+      // decimal
+      // double
+      // float
+      // int
+      // long
+      // nint
+      // nuint
+      // sbyte
+      // short
+      // string
+      // uint
+      // ulong
+      // ushort
+      // System.DateTime
+      // System.Enum
+      private static bool Add      (System.Type targetType, bool               target, object? operand, out object? value) { switch (operand)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               { case string operandString: value = target + operandString; return true; }                                                                                                                                                                                                                                                                                                                                                                                                                                                                         return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, byte               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.Add(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, char               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.Add(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, decimal            target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true;                                                                                                                                                case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                    return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, double             target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true;                                                                            case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                    return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, float              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true;                                                                            case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                    return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, int                target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                    return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, long               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                    return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, nint               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                    return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, nuint              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true;                                                                       case nuint operandUIntPtr: value = target + operandUIntPtr; return true;                                                                                                                                           case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.Add(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, sbyte              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                    return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, short              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                    return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, uint               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.Add(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, ulong              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true;                                                                       case nuint operandUIntPtr: value = target + operandUIntPtr; return true;                                                                                                                                           case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.Add(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, ushort             target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.Add(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, in System.DateTime target, object? operand, out object? value) { switch (operand)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               { case string operandString: value = target + operandString; return true; }                                                                                                                                                                                                                                                                                                                                                                                                                                                                         return ProxyObject.Add(targetType, (object) target, operand, out value); }
+      private static bool Add      (System.Type targetType, object             target, object? operand, out object? value) { if  (ProxyObject.GetMethod(targetType, target,          operand, "op_Addition", [GameMethod(Inlined)] static (method) => true) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool Add      (System.Type targetType, string             target, object? operand, out object? value) { if (!ProxyObject.Add      (targetType, (object) target, operand, out value)) value = target + operand; return true; }
+      private static bool Add      (System.Type targetType, System.Enum        target, object? operand, out object? value) { if (!ProxyObject.Add      (targetType, (object) target, operand, out value)) { if (operand is string operandString) { value = target + operandString; return true; } ulong enumeration = (ulong) System.Convert.ChangeType(target, typeof(ulong)); value = operand switch { byte operandByte => enumeration += operandByte, char operandChar => enumeration += operandChar, int operandInt32 => enumeration += operandInt32, long operandInt64 => enumeration += operandInt64, nuint operandUIntPtr => enumeration += operandUIntPtr, uint operandUInt32 => enumeration += operandUInt32, ulong operandUInt64 => enumeration += operandUInt64, ushort operandUInt16 => enumeration += operandUInt16, _ => null }; if (value is not null) { value = System.Enum.ToObject(targetType, enumeration); return true; } } return false; }
+      private static bool AddAssign(System.Type targetType, bool               target, object? operand, out object? value) => ProxyObject.AddAssign(targetType, (object) target, operand, out value);
+      private static bool AddAssign(System.Type targetType, byte               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true;                                                                                                                                                                                                                                                                                             case int operandInt32: value = target + operandInt32; return true; }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, char               target, object? operand, out object? value) { switch (operand) {                                                                   case char operandChar: value = target + operandChar; return true; }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, decimal            target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true;                                                                                                                                                case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                          return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
 
-      [GameMethod(Inlined, Synchronized)]
-      internal static byte GetMethodPriorities(System.Reflection.MethodInfo method) {
-        if (method.GetParameters().AtLeast(2u) is System.Reflection.ParameterInfo[] parameters) {
-          (System.Type typeA, System.Type typeB) = parameters.ConvertAll([GameMethod(Inlined)] static (parameter) => parameter.ParameterType.IsByRef ? parameter.ParameterType.GetElementType() : parameter.ParameterType).ToTuple();
-          return (byte) ((typeA == typeof(T) ? 5u : typeof(T).IsAssignableFrom(typeA) ? 2u : 0u) + (type == typeB ? 3u : type.IsAssignableFrom(typeB) ? 1u : 0u));
+      private static bool AddAssign(System.Type targetType, double             target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true;                                                                            case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                          return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, float              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true;                                                                            case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                          return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, int                target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                          return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, long               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                          return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, nint               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                          return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, nuint              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true;                                                                       case nuint operandUIntPtr: value = target + operandUIntPtr; return true;                                                                                                                                           case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.AddAssign(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, sbyte              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                          return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, short              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true;                                                                          case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true;                                                                        case ushort operandUInt16: value = target + operandUInt16; return true; }                                                                                                                                                                                                                                                          return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, uint               target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.AddAssign(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, ulong              target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true;                                                                       case nuint operandUIntPtr: value = target + operandUIntPtr; return true;                                                                                                                                           case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.AddAssign(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, ushort             target, object? operand, out object? value) { switch (operand) { case byte operandByte: value = target + operandByte; return true; case char operandChar: value = target + operandChar; return true; case decimal operandDecimal: value = target + operandDecimal; return true; case double operandDouble: value = target + operandDouble; return true; case float operandSingle: value = target + operandSingle; return true; case int operandInt32: value = target + operandInt32; return true; case long operandInt64: value = target + operandInt64; return true; case nint operandIntPtr: value = target + operandIntPtr; return true; case nuint operandUIntPtr: value = target + operandUIntPtr; return true; case sbyte operandSByte: value = target + operandSByte; return true; case short operandInt16: value = target + operandInt16; return true; case string operandString: value = target + operandString; return true; case uint operandUInt32: value = target + operandUInt32; return true; case ulong operandUInt64: value = target + operandUInt64; return true; case ushort operandUInt16: value = target + operandUInt16; return true; case System.Enum operandEnum: if (!ProxyObject.AddAssign(targetType, (object) target, operandEnum, out value)) value = System.Enum.ToObject(operandEnum.GetType(), target + (ulong) System.Convert.ChangeType(operandEnum, typeof(ulong))); return true; } return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, in System.DateTime target, object? operand, out object? value) { switch (operand)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               { case string operandString: value = target + operandString; return true; }                                                                                                                                                                                                                                                                                                                                                                                                                                                                               return ProxyObject.AddAssign(targetType, (object) target, operand, out value); }
+      private static bool AddAssign(System.Type targetType, object             target, object? operand, out object? value) { if  (ProxyObject.GetMethod(targetType, target,          operand, "op_Addition", [GameMethod(Inlined)] (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool AddAssign(System.Type targetType, string             target, object? operand, out object? value) { if (!ProxyObject.AddAssign(targetType, (object) target, operand, out value)) value = target + operand; return true; }
+      private static bool AddAssign(System.Type targetType, System.Enum        target, object? operand, out object? value) { if (!ProxyObject.AddAssign(targetType, (object) target, operand, out value)) { if (operand is string operandString) { value = target + operandString; return true; } ulong enumeration = (ulong) System.Convert.ChangeType(target, typeof(ulong)); value = operand switch { byte operandByte => enumeration += operandByte, char operandChar => enumeration += operandChar, int operandInt32 => enumeration += operandInt32, long operandInt64 => enumeration += operandInt64, nuint operandUIntPtr => enumeration += operandUIntPtr, uint operandUInt32 => enumeration += operandUInt32, ulong operandUInt64 => enumeration += operandUInt64, ushort operandUInt16 => enumeration += operandUInt16, _ => null }; if (value is not null) { value = System.Enum.ToObject(targetType, enumeration); return true; } } return false; }
+
+      private static bool And               (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_BitwiseAnd",         [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool AndAssign         (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_BitwiseAnd",         [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool Divide            (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Division",           [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool DivideAssign      (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Division",           [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool ExclusiveOr       (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_ExclusiveOr",        [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool ExclusiveOrAssign (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_ExclusiveOr",        [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool GreaterThan       (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_GreaterThan",        [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool GreaterThanOrEqual(System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_GreaterThanOrEqual", [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool LeftShift         (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_LeftShift",          [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool LeftShiftAssign   (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_LeftShift",          [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool LessThan          (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_LessThan",           [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool LessThanOrEqual   (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_LessThanOrEqual",    [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool Modulo            (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Modulus",            [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool ModuloAssign      (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Modulus",            [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool Multiply          (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Multiply",           [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool MultiplyAssign    (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Multiply",           [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool NotEqual          (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Inequality",         [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool Or                (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_BitwiseOr",          [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool OrAssign          (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_BitwiseOr",          [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool RightShift        (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_RightShift",         [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool RightShiftAssign  (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_RightShift",         [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool Subtract          (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Subtraction",        [GameMethod(Inlined)] static (method) => true)                                           is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+      private static bool SubtractAssign    (System.Type targetType, object target, object? operand, out object? value) { if (ProxyObject.GetMethod(target, operand, "op_Subtraction",        [GameMethod(Inlined)]        (method) => Util.CanConvert(method.ReturnType, targetType)) is System.Reflection.MethodInfo? method) { value = method.Invoke(null, new object?[] {target, operand}); return true; } value = null; return false; }
+
+      [GameMethod(Inlined)]
+      internal static System.Reflection.MethodInfo? GetMethod(System.Type targetType, object target, object? operand, string name, System.Predicate<System.Reflection.MethodInfo> predicate) {
+        System.Reflection.MethodInfo? method   = null;
+        (System.Type typeA, System.Type typeB) = (targetType, operand?.GetType() ?? typeof(object));
+
+        // ...
+        if (!ProxyObject.Methods.TryGetValue((typeA, typeB), out method) && Util.Array.From(
+          target  .GetType().GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static),
+          operand?.GetType().GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+        ).AtLeast(1u) is System.Reflection.MethodInfo[] methods) {
+          ref readonly System.Span<byte> methodPriorities = ref methods.DivertAll([GameMethod(Inlined)] (method) => {
+            if (predicate(method) && (method.Name.Equals(name) || method.Name.EndsWith('.' + name)) && method.GetParameters().AtLeast(2u) is System.Reflection.ParameterInfo[] parameters) {
+              (System.Type parameterTypeA, System.Type parameterTypeB) = parameters.ConvertAll(Util.ParameterTypeOf).ToTuple();
+              return (byte) (
+                (parameterTypeA == typeA ? 5u : typeA.IsAssignableFrom(parameterTypeA) ? 2u : 0u) +
+                (parameterTypeB == typeB ? 3u : typeB.IsAssignableFrom(parameterTypeB) ? 1u : 0u)
+              );
+            }
+
+            return 0u;
+          }, in stackalloc byte[methods.Length]);
+          int methodIndex = Util.Array.IndexOfMax(methodPriorities);
+
+          // ...
+          if (0u != Util.Array.At(methodPriorities, methodIndex)) {
+            method = Util.Array.At(methods, methodIndex);
+            ProxyObject.Methods.Add((typeA, typeB), method);
+          }
         }
 
-        return 0u;
+        return method;
+      }
+
+      [GameMethod(Inlined)]
+      private static bool Undefined(System.Type targetType, object target, object? operand, out object? value) {
+        value = null;
+        return false;
       }
     }
 
@@ -1376,113 +1483,62 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       private readonly Game.Referrer<T> Referrer;
       public           ref T            Value { [GameMethod(Inlined)] get => ref this.Referrer(); }
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public Proxy(Game.Referrer<T> referrer) : base() => this.Referrer = referrer;
 
-      /* … */
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, byte    valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, decimal valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, double  valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, float   valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, int     valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, long    valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, nint    valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, nuint   valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, sbyte   valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, short   valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, string  valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, uint    valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, ulong   valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(in byte valueA, ushort  valueB, out object? value) { value = valueA + valueB; return true; }
-      [GameMethod(Inlined)] public static bool Add(object? valueA, object? valueB, out object? value) {
-        if (valueA is not null) {
-          System.Type                    type             = valueB?.GetType() ?? typeof(object?);
-          System.Reflection.MethodInfo[] methods          = valueA.GetType().GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-          ref readonly System.Span<byte> methodPriorities = ref methods.DivertAll(ProxyObject.GetMethodPriorities("op_Addition", typeof(T), type), in stackalloc byte[methods.Length]);
-          int index = Util.Array.IndexOfMax(methodPriorities);
-
-          if (index != -1 && 0u != methodPriorities[index]) {
-            value = Util.Array.At(methods, index).Invoke(valueA, valueB);
-            return true;
-          }
-        }
-
-        value = null;
-
-        return false;
-      }
-
-      [GameMethod(Inlined)]
+      /* ... ->> Unfortunately cannot rely on `System.Numerics.*` robustly */
       public virtual bool TryBinaryOperation(System.Dynamic.BinaryOperationBinder binder, object operand, out object? value) {
-        if (value is null)                            ;
-        if (value is bool    boolean)                 ;
-        if (value is byte    bits)       ;
-        if (value is decimal numberA)                 ;
-        if (value is double  numberB)                 ;
-        if (value is float   numberC)                 ;
-        if (value is int  or nint or sbyte or short)  ;
-        if (value is long)                            ;
-        if (value is nuint or uint or ushort) ;
-        if (value is ulong)                           ;
-        if (value is System.DateTime)                 ;
-        if (value is System.Enum)                     ;
-        if (value is System.Exception)                ;
-        if (value is System.Index   subindex)         ;
-        if (value is System.IntPtr  pointerA)         ;
-        if (value is System.Range   range)            ;
-        if (value is System.Type    type)             ;
-        if (value is System.UIntPtr pointerB)         ;
-        if (value is System.Uri     uri)              ;
-        if (value is System.Runtime.CompilerServices.ITuple) {}
-        if (value is System.Collections.IEnumerable) {}
-        if (value is string) {}
-        switch (binder.Operation) {
-          case System.Linq.Expressions.ExpressionType.Add:                return operand is byte bits ? Proxy<T>.Add(in this.Value, bits, out value) : Proxy<T>.Add(ref this.Value, operand, out value);
-          case System.Linq.Expressions.ExpressionType.AddAssign:          return false; break; // a += b
-          case System.Linq.Expressions.ExpressionType.And:                return false; break; // a & b
-          case System.Linq.Expressions.ExpressionType.AndAssign:          return false; break; // a &= b
-          case System.Linq.Expressions.ExpressionType.Divide:             return false; break; // a / b
-          case System.Linq.Expressions.ExpressionType.DivideAssign:       return false; break; // a /= b
-          case System.Linq.Expressions.ExpressionType.ExclusiveOr:        return false; break; // a ^ b
-          case System.Linq.Expressions.ExpressionType.ExclusiveOrAssign:  return false; break; // a ^= b
-          case System.Linq.Expressions.ExpressionType.GreaterThan:        return false; break; // a > b
-          case System.Linq.Expressions.ExpressionType.GreaterThanOrEqual: return false; break; // a >= b
-          case System.Linq.Expressions.ExpressionType.LeftShift:          return false; break; // a << b
-          case System.Linq.Expressions.ExpressionType.LeftShiftAssign:    return false; break; // a <<= b
-          case System.Linq.Expressions.ExpressionType.LessThan:           return false; break; // a < b
-          case System.Linq.Expressions.ExpressionType.LessThanOrEqual:    return false; break; // a <= b
-          case System.Linq.Expressions.ExpressionType.Modulo:             return false; break; // a % b
-          case System.Linq.Expressions.ExpressionType.ModuloAssign:       return false; break; // a %= b
-          case System.Linq.Expressions.ExpressionType.Multiply:           return false; break; // a * b
-          case System.Linq.Expressions.ExpressionType.MultiplyAssign:     return false; break; // a *= b
-          case System.Linq.Expressions.ExpressionType.NotEqual:           return false; break; // a != b
-          case System.Linq.Expressions.ExpressionType.Or:                 return false; break; // a | b
-          case System.Linq.Expressions.ExpressionType.OrAssign:           return false; break; // a |= b
-          case System.Linq.Expressions.ExpressionType.Power:              return false; break; // a ^ b
-          case System.Linq.Expressions.ExpressionType.RightShift:         return false; break; // a >> b
-          case System.Linq.Expressions.ExpressionType.RightShiftAssign:   return false; break; // a >>= b
-          case System.Linq.Expressions.ExpressionType.Subtract:           return false; break; // a - b
-          case System.Linq.Expressions.ExpressionType.SubtractAssign:     return false; break; // a -= b
-        }
+        ref T target = ref this.Value;
 
-        return false;
+        // ...
+        switch (binder.Operation) {
+          case System.Linq.Expressions.ExpressionType.Add               : return target switch { bool targetBoolean => ProxyObject.Add      (typeof(T), targetBoolean, operand, out value), _ => ProxyObject.Add      (typeof(T), target, operand, out value) };                                                                                                                                                 // --> target +   operand
+          case System.Linq.Expressions.ExpressionType.AddAssign         : if    (target switch { bool targetBoolean => ProxyObject.AddAssign(typeof(T), targetBoolean, operand, out value), _ => ProxyObject.AddAssign(typeof(T), target, operand, out value) }) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false; // --> target +=  operand
+          case System.Linq.Expressions.ExpressionType.And               : return ProxyObject.And               (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target &   operand
+          case System.Linq.Expressions.ExpressionType.AndAssign         : if    (ProxyObject.AndAssign         (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target &=  operand
+          case System.Linq.Expressions.ExpressionType.Divide            : return ProxyObject.Divide            (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target /   operand
+          case System.Linq.Expressions.ExpressionType.DivideAssign      : if    (ProxyObject.DivideAssign      (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target /=  operand
+          case System.Linq.Expressions.ExpressionType.ExclusiveOr       : return ProxyObject.ExclusiveOr       (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target ^   operand
+          case System.Linq.Expressions.ExpressionType.ExclusiveOrAssign : if    (ProxyObject.ExclusiveOrAssign (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target ^=  operand
+          case System.Linq.Expressions.ExpressionType.GreaterThan       : return ProxyObject.GreaterThan       (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target >   operand
+          case System.Linq.Expressions.ExpressionType.GreaterThanOrEqual: return ProxyObject.GreaterThanOrEqual(typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target >=  operand
+          case System.Linq.Expressions.ExpressionType.LeftShift         : return ProxyObject.LeftShift         (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target <<  operand
+          case System.Linq.Expressions.ExpressionType.LeftShiftAssign   : if    (ProxyObject.LeftShiftAssign   (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target <<= operand
+          case System.Linq.Expressions.ExpressionType.LessThan          : return ProxyObject.LessThan          (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target <   operand
+          case System.Linq.Expressions.ExpressionType.LessThanOrEqual   : return ProxyObject.LessThanOrEqual   (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target <=  operand
+          case System.Linq.Expressions.ExpressionType.Modulo            : return ProxyObject.Modulo            (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target %   operand
+          case System.Linq.Expressions.ExpressionType.ModuloAssign      : if    (ProxyObject.ModuloAssign      (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target %=  operand
+          case System.Linq.Expressions.ExpressionType.Multiply          : return ProxyObject.Multiply          (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target *   operand
+          case System.Linq.Expressions.ExpressionType.MultiplyAssign    : if    (ProxyObject.MultiplyAssign    (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target *=  operand
+          case System.Linq.Expressions.ExpressionType.NotEqual          : return ProxyObject.NotEqual          (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target !=  operand
+          case System.Linq.Expressions.ExpressionType.Or                : return ProxyObject.Or                (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target |   operand
+          case System.Linq.Expressions.ExpressionType.OrAssign          : if    (ProxyObject.OrAssign          (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target |=  operand
+          case System.Linq.Expressions.ExpressionType.Power             : return ProxyObject.Undefined         (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // ->> Exclusive to Visual Basic .NET
+          case System.Linq.Expressions.ExpressionType.RightShift        : return ProxyObject.RightShift        (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target >>  operand
+          case System.Linq.Expressions.ExpressionType.RightShiftAssign  : if    (ProxyObject.RightShiftAssign  (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target >>= operand
+          case System.Linq.Expressions.ExpressionType.Subtract          : return ProxyObject.Subtract          (typeof(T), target, operand, out value);                                                                                                                                                                                                                                                          // --> target -   operand
+          case System.Linq.Expressions.ExpressionType.SubtractAssign    : if    (ProxyObject.SubtractAssign    (typeof(T), target, operand, out value)) { try { target = (T) Util.Convert(value, value?.GetType() ?? typeof(object), typeof(T)); return true; } catch { value = null; } } return false;                                                                                                          // --> target -=  operand
+        };
+
+
+        return base.TryBinaryOperation(binder, operand, out value);
       }
 
-      [GameMethod(Inlined)] public virtual bool TryConvert       (System.Dynamic.ConvertBinder binder, out object? value);
-      [GameMethod(Inlined)] public virtual bool TryCreateInstance(System.Dynamic.CreateInstanceBinder binder, object?[]? args, out object? result);
-      [GameMethod(Inlined)] public virtual bool TryDeleteIndex   (System.Dynamic.DeleteIndexBinder binder, object[] indexes);
-      [GameMethod(Inlined)] public virtual bool TryDeleteMember  (System.Dynamic.DeleteMemberBinder binder);
-      [GameMethod(Inlined)] public virtual bool TryGetIndex      (System.Dynamic.GetIndexBinder binder, object[] indexes, out object? result);
-      [GameMethod(Inlined)] public virtual bool TryGetMember     (System.Dynamic.GetMemberBinder binder, out object? result);
-      [GameMethod(Inlined)] public virtual bool TryInvoke        (System.Dynamic.InvokeBinder binder, object?[]? args, out object? result);
-      [GameMethod(Inlined)] public virtual bool TryInvokeMember  (System.Dynamic.InvokeMemberBinder binder, object?[]? args, out object? result);
-      [GameMethod(Inlined)] public virtual bool TrySetIndex      (System.Dynamic.SetIndexBinder binder, object[] indexes, object? value);
-      [GameMethod(Inlined)] public virtual bool TrySetMember     (System.Dynamic.SetMemberBinder binder, object? value);
-      [GameMethod(Inlined)] public virtual bool TryUnaryOperation(System.Dynamic.UnaryOperationBinder binder, out object? result);
+      public virtual bool TryConvert       (System.Dynamic.ConvertBinder binder, out object? value);
+      public virtual bool TryCreateInstance(System.Dynamic.CreateInstanceBinder binder, object?[]? args, out object? result);
+      public virtual bool TryDeleteIndex   (System.Dynamic.DeleteIndexBinder binder, object[] indexes);
+      public virtual bool TryDeleteMember  (System.Dynamic.DeleteMemberBinder binder);
+      public virtual bool TryGetIndex      (System.Dynamic.GetIndexBinder binder, object[] indexes, out object? result);
+      public virtual bool TryGetMember     (System.Dynamic.GetMemberBinder binder, out object? result);
+      public virtual bool TryInvoke        (System.Dynamic.InvokeBinder binder, object?[]? args, out object? result);
+      public virtual bool TryInvokeMember  (System.Dynamic.InvokeMemberBinder binder, object?[]? args, out object? result);
+      public virtual bool TrySetIndex      (System.Dynamic.SetIndexBinder binder, object[] indexes, object? value);
+      public virtual bool TrySetMember     (System.Dynamic.SetMemberBinder binder, object? value);
+      public virtual bool TryUnaryOperation(System.Dynamic.UnaryOperationBinder binder, out object? result);
 
       [GameMethod(Inlined)]
-      public static implicit operator T(in Proxy<T> proxy) => proxy.referrer();
+      public static implicit operator T(in ProxyObject<T> proxy) => proxy.referrer();
     }
 
     public /* sealed */ class RefComparer<T> : Game.Collections.RefReadOnlyComparer<T>, Game.Collections.IRefComparer<T> {
@@ -1493,7 +1549,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         int System.IComparable<Sentinel>.CompareTo                             (Sentinel     value) => default;
       }
 
-      /* … */
+      /* ... */
       private static readonly Game.RefComparison<T> CompareValue = (Game.RefComparison<T>) (
         typeof(Game.Collections.IRefComparable        <T>).IsAssignableFrom(typeof(T)) ? ((Game.RefComparison<RefComparer<T>.Sentinel>) RefComparer<RefComparer<T>.Sentinel>.RefComparableCompare)        .Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.RefComparison<T>)) :
         typeof(Game.Collections.IRefReadOnlyComparable<T>).IsAssignableFrom(typeof(T)) ? ((Game.RefComparison<RefComparer<T>.Sentinel>) RefComparer<RefComparer<T>.Sentinel>.RefReadOnlyComparableCompare).Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.RefComparison<T>)) :
@@ -1504,12 +1560,12 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       protected        new readonly Game.RefComparison<T> comparison       = RefComparer<T>.CompareValue;
       public    static new          RefComparer               <T> Default { get; } = new();
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] public    RefComparer()                                                 : base()           {}
       [GameConstructor, GameMethod(Inlined)] protected RefComparer(Game.RefComparison        <T> comparison) : base()           => this.comparison = comparison;
       [GameConstructor, GameMethod(Inlined)] protected RefComparer(Game.RefReadOnlyComparison<T> comparison) : base(comparison) {}
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] private          static int            ComparableCompare <U>                                   (ref U                                 a, ref U b) where U : System.IComparable<U>                                => a .CompareTo(b);
       [GameMethod(Inlined)] private          static int            ComparableCompare2<U>                                   (ref U                                 a, ref U b) where U : System.IComparable                                   => a!.CompareTo(b);
       [GameMethod(Inlined)] public  virtual         int            Compare                                                 (ref T                                 a, ref T b)                                                                { if (RefComparer<T>.CompareValue == this.comparison) { if (Game.Collections.RefEqualityComparer<T>.Default.Equals(ref a, ref b)) return 0; if (a is null) return b is null ? 0 : -1; if (b is null) return a is null ? 0 : +1; } return this.comparison(ref a, ref b); }
@@ -1531,11 +1587,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public new readonly struct AlternateLookup<TAlternateKey> {
         public readonly RefDictionary<TKey, TValue> Dictionary;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)]
         internal AlternateLookup(RefDictionary<TKey, TValue> dictionary) => this.Dictionary = dictionary;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly bool ContainsKey(in TAlternateKey key)                                         => false;
         [GameMethod(Inlined)] public readonly bool Remove     (in TAlternateKey key)                                         => false;
         [GameMethod(Inlined)] public readonly bool Remove     (in TAlternateKey key, out TKey   actualKey, out TValue value) { actualKey = default!; value = default!; return false; }
@@ -1557,11 +1613,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         readonly object?                                                                         System.Collections.IDictionaryEnumerator.Value                                                                 => ((this.enumerator as System.Collections.IDictionaryEnumerator)!.Value);
         readonly object                                                                          System.Collections.IEnumerator.Current                                                                         => this.Current;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public Enumerator(RefDictionary<TKey, TValue> dictionary) => this.enumerator = ((Game.Collections.RefReadOnlyDictionary<TKey, TValue>) dictionary).GetEnumerator();
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly void Dispose                                () => this.enumerator.Dispose ();
         [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
         [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -1580,11 +1636,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           readonly TKey                                           System.Collections.Generic.IEnumerator<TKey>.Current => this.Current;
           readonly object                                         System.Collections.IEnumerator.Current               => this.Current!;
 
-          /* … */
+          /* ... */
           [GameConstructor, GameMethod(Inlined)]
           internal Enumerator(in RefDictionary<TKey, TValue>.Enumerator enumerator) => this.enumerator = enumerator;
 
-          /* … */
+          /* ... */
           [GameMethod(Inlined)] public readonly void Dispose                                () => this.enumerator.Dispose ();
           [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
           [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -1596,7 +1652,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           public static implicit operator Game.Collections.RefReadOnlyDictionary<TKey, TValue>.KeyCollection.Enumerator(in Enumerator enumerator) => new((Game.Collections.RefReadOnlyDictionary<TKey, TValue>.Enumerator) enumerator.enumerator);
         }
 
-        /* … */
+        /* ... */
         private RefDictionary<TKey, TValue> dictionary                                                 =  default!;
         bool                                System.Collections.Generic.ICollection<TKey>.IsReadOnly    => true;
         int                                 System.Collections.Generic.ICollection<TKey>.Count         => ((int) base.Count);
@@ -1605,11 +1661,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         bool                                System.Collections.ICollection.IsSynchronized              => false;
         object                              System.Collections.ICollection.SyncRoot                    => this;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public KeyCollection(RefDictionary<TKey, TValue> dictionary) : base((Game.Collections.RefReadOnlyDictionary<TKey, TValue>) dictionary) => this.dictionary = dictionary;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public new KeyCollection.Enumerator          GetEnumerator                                             ()                              => new(this.dictionary.GetEnumerator());
         [GameMethod(Uninlined)]         void                                         System.Collections.Generic.ICollection<TKey>.Add          (TKey element)                  => throw new System.NotSupportedException("Dictionary key collection is read-only");
         [GameMethod(Uninlined)]         void                                         System.Collections.Generic.ICollection<TKey>.Clear        ()                              => throw new System.NotSupportedException("Dictionary key collection is read-only");
@@ -1628,11 +1684,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           readonly TValue                                         System.Collections.Generic.IEnumerator<TValue>.Current => this.Current;
           readonly object                                         System.Collections.IEnumerator.Current                 => this.Current!;
 
-          /* … */
+          /* ... */
           [GameConstructor, GameMethod(Inlined)]
           internal Enumerator(in RefDictionary<TKey, TValue>.Enumerator enumerator) => this.enumerator = enumerator;
 
-          /* … */
+          /* ... */
           [GameMethod(Inlined)] public readonly void Dispose                                () => this.enumerator.Dispose ();
           [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
           [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -1644,7 +1700,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           public static implicit operator Game.Collections.RefReadOnlyDictionary<TKey, TValue>.ValueCollection.Enumerator(in Enumerator enumerator) => new((Game.Collections.RefReadOnlyDictionary<TKey, TValue>.Enumerator) enumerator.enumerator);
         }
 
-        /* … */
+        /* ... */
         private RefDictionary<TKey, TValue> dictionary                                                   =  default!;
         bool                                System.Collections.Generic.ICollection<TValue>.IsReadOnly    => true;
         int                                 System.Collections.Generic.ICollection<TValue>.Count         => ((int) base.Count);
@@ -1653,11 +1709,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         bool                                System.Collections.ICollection.IsSynchronized                => false;
         object                              System.Collections.ICollection.SyncRoot                      => this;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public ValueCollection(RefDictionary<TKey, TValue> dictionary) : base((Game.Collections.RefReadOnlyDictionary<TKey, TValue>) dictionary) => this.dictionary = dictionary;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public new ValueCollection.Enumerator          GetEnumerator                                               ()                              => new(this.dictionary.GetEnumerator());
         [GameMethod(Uninlined)]         void                                           System.Collections.Generic.ICollection<TValue>.Add          (TValue element)                => throw new System.NotSupportedException("Dictionary value collection is read-only");
         [GameMethod(Uninlined)]         void                                           System.Collections.Generic.ICollection<TValue>.Clear        ()                              => throw new System.NotSupportedException("Dictionary value collection is read-only");
@@ -1669,7 +1725,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         [GameMethod(Inlined)] System.Collections.IEnumerator                 System.Collections.IEnumerable.GetEnumerator                ()                              => this.GetEnumerator();
       }
 
-      /* … */
+      /* ... */
       [UnityEngine.HideInInspector]                             public  new          RefDictionary<TKey, TValue>.KeyCollection   Keys   => new(this);
       [UnityEngine.HideInInspector, UnityEngine.SerializeField] private new readonly Game.Collections.RefList<TKey>      keys   =  new();
       [UnityEngine.HideInInspector]                             public  new          RefDictionary<TKey, TValue>.ValueCollection Values => new(this);
@@ -1688,7 +1744,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       System.Collections.ICollection                                                                                             System.Collections.IDictionary.Keys                                                                       => this.Keys;
       System.Collections.ICollection                                                                                             System.Collections.IDictionary.Values                                                                     => this.Values;
 
-      /* … ->> Availability of `System.Runtime.InteropServices.CollectionMarshal.GetValueRefOrNullRef(…)` would replace `RefDictionary<T…>`’s entire purpose */
+      /* ... ->> Availability of `System.Runtime.InteropServices.CollectionMarshal.GetValueRefOrNullRef(…)` would replace `RefDictionary<T…>`’s entire purpose */
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public RefDictionary()                                                                                                                                                                                                       : this(0u,                                Game.Collections.RefReadOnlyEqualityComparer<TKey>.Default) {}
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public RefDictionary(uint                                                                                                                  capacity)                                                                         : this(capacity,                          Game.Collections.RefReadOnlyEqualityComparer<TKey>.Default) {}
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public RefDictionary(Game.Collections.IRefReadOnlyEqualityComparer<TKey>                                                           comparer)                                                                         : this(2u,                                comparer)                                                           {}
@@ -1704,7 +1760,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public RefDictionary(System.Collections.Generic.IEnumerable               <System.Collections.Generic.KeyValuePair<TKey, TValue>>          enumerable, Game.Collections.IRefReadOnlyEqualityComparer<TKey> comparer) : this(Util.Enumerable.Count(enumerable), comparer)                                                           { this.AddRange(enumerable); }
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public RefDictionary(uint                                                                                                                  capacity,   Game.Collections.IRefReadOnlyEqualityComparer<TKey> comparer) : base()                                                                                                      { this.Comparer = comparer; base.values = (Game.Collections.RefReadOnlyList<TValue>) this.values; base.keys = (Game.Collections.RefReadOnlyList<TKey>) this.keys; this.EnsureCapacity(capacity); }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined), GameResolution(2)] public     void                                                                                           Add                                                                                                         (in Game.Collections.RefKeyValuePair        <TKey, TValue>                                      element)              => this.Add(in element.Key, in element.Value);
       [GameMethod(Inlined), GameResolution(1)] public     void                                                                                           Add                                                                                                         (in Game.Collections.RefReadOnlyKeyValuePair<TKey, TValue>                                      element)              => this.Add(in element.Key, in element.Value);
       [GameMethod(Inlined), GameResolution(0)] public     void                                                                                           Add                                                                                                         (in System.Collections.Generic.KeyValuePair         <TKey, TValue>                                      element)              => this.Add(element.Key,    element.Value);
@@ -1806,7 +1862,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         bool System.IEquatable<Sentinel>.Equals                             (Sentinel     value) => default;
       }
 
-      /* … */
+      /* ... */
       private static readonly Game.RefHasher            <T> GetHashCodeValue = [GameMethod(Inlined)] static (ref T value) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value);
       private static readonly Game.RefEqualityComparison<T> EqualsValue      = (Game.RefEqualityComparison<T>) (
         typeof(Game.Collections.IRefEquatable        <T>).IsAssignableFrom(typeof(T)) ? ((Game.RefEqualityComparison<RefEqualityComparer<T>.Sentinel>) RefEqualityComparer<RefEqualityComparer<T>.Sentinel>.RefEquatableEquals)        .Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.RefEqualityComparison<T>)) :
@@ -1818,14 +1874,14 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       protected        new readonly Game.RefHasher            <T> hasher           = RefEqualityComparer<T>.GetHashCodeValue;
       public    static new         RefEqualityComparer                <T> Default { get; } = new();
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public    RefEqualityComparer()                                                                                                    : base()                   {}
       [GameConstructor, GameMethod(Inlined), GameResolution(1)] protected RefEqualityComparer(Game.RefEqualityComparison        <T> comparison, Game.RefHasher        <T>? hasher) : base()                   { this.hasher = hasher ?? this.hasher; this.comparison = comparison; }
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] protected RefEqualityComparer(Game.RefEqualityComparison        <T> comparison, Game.RefReadOnlyHasher<T>? hasher) : base()                   { base.hasher = hasher ?? base.hasher; this.comparison = comparison; }
       [GameConstructor, GameMethod(Inlined), GameResolution(1)] protected RefEqualityComparer(Game.RefReadOnlyEqualityComparison<T> comparison, Game.RefHasher        <T>? hasher) : base(comparison, null)   { this.hasher = hasher ?? this.hasher; }
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] protected RefEqualityComparer(Game.RefReadOnlyEqualityComparison<T> comparison, Game.RefReadOnlyHasher<T>? hasher) : base(comparison, hasher) {}
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined), GameResolution(1)] public           static RefEqualityComparer<T> Create                                                              (Game.RefEqualityComparison        <T> comparison, Game.RefHasher        <T>? hasher = null)                    => new(comparison, hasher);
       [GameMethod(Inlined), GameResolution(0)] public           static RefEqualityComparer<T> Create                                                              (Game.RefEqualityComparison        <T> comparison, Game.RefReadOnlyHasher<T>? hasher = null)                    => new(comparison, hasher);
       [GameMethod(Inlined), GameResolution(1)] public           static RefEqualityComparer<T> Create                                                              (Game.RefReadOnlyEqualityComparison<T> comparison, Game.RefHasher        <T>? hasher = null)                    => new(comparison, hasher);
@@ -1857,11 +1913,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       readonly object                                                                          Game.Collections.IKeyValuePair.Key   => this.Key!;
       readonly object?                                                                         Game.Collections.IKeyValuePair.Value => this.Value;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] internal RefKeyValuePair(in Game.Collections.RefReadOnlyKeyValuePair<TKey, TValue> pair)                 => this.pair = pair;
       [GameConstructor, GameMethod(Inlined)] public   RefKeyValuePair(in TKey                                                           key, in TValue value) => this.pair = new(in key, in value);
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly void    Deconstruct(out TKey key, out TValue value) => this.pair.Deconstruct(out key, out value);
       [GameMethod(Inlined)] public override readonly string? ToString   ()                               => this.pair.ToString();
 
@@ -1880,11 +1936,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         readonly T                                                             System.Collections.Generic.IEnumerator<T>.Current => this.Current;
         readonly object                                                        System.Collections.IEnumerator.Current            => this.Current!;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public Enumerator(RefList<T> list) => this.enumerator = new(list);
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly void Dispose                                () => this.enumerator.Dispose ();
         [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
         [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -1893,7 +1949,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         [GameMethod(Inlined)] readonly void        System.IDisposable.Dispose             () => this           .Dispose ();
       }
 
-      /* … */
+      /* ... */
       [UnityEngine.HideInInspector]                             public  new uint Capacity                                             { get => this.capacity; set => this.EnsureCapacity(value); }
       [UnityEngine.HideInInspector, UnityEngine.SerializeField] private     uint capacity                                             =  0u;
       int                                                                        System.Collections.Generic.ICollection<T>.Count      => ((int) base.Count);
@@ -1904,7 +1960,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       bool                                                                       System.Collections.IList.IsFixedSize                 => false;
       bool                                                                       System.Collections.IList.IsReadOnly                  => false;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] public    RefList()                                                       : base()                                            {}
       [GameConstructor, GameMethod(Inlined)] public    RefList(uint                                        capacity)   : base(capacity = RefList<T>.GetCapacity(capacity)) => this.capacity = capacity;
       [GameConstructor, GameMethod(Inlined)] public    RefList(Game.Collections.RefReadOnlyList<T> list)       : this(list.Items, 0u, list.Count)                  {}
@@ -1918,7 +1974,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameConstructor, GameMethod(Inlined)] public    RefList(in Util.Array<T>.Copyable                   copyable)   : base()                                            { if (!copyable.IsEmpty()) copyable.CopyTo(base.Items = new T[this.capacity = RefList<T>.GetCapacity(base.Count = copyable.Count)], 0); }
       [GameConstructor, GameMethod(Inlined)] protected RefList(T[]                                         array, uint index, uint length)                                 => Util.Array<T>.Copy(array, index, base.Items = Util.Array<T>.Create(this.capacity = RefList<T>.GetCapacity(base.Count = length)), 0u, length);
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined), GameResolution(0)] public           void                  Add            (in T                                      element)                                                                                          => this.Insert     (base.Count, in element);
       [GameMethod(Inlined), GameResolution(0)] public           ref T                 Append         (in T                                      element)                                                                                          {  this.Insert     (base.Count, in element); return ref base.GetValue(base.Count - 1u); }
       [GameMethod(Inlined), GameResolution(0)] public           void                  AddRange       (System.Collections.Generic.ICollection<T> collection)                                                                                       => this.InsertRange(base.Count, collection);
@@ -1982,7 +2038,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           uint left    = (index * 2u) + 1u;
           uint right   = (index * 2u) + 2u;
 
-          // …
+          // ...
           largest = end > left  && comparison(ref list.GetValue(largest), ref list.GetValue(left))  < 0 ? left  : largest;
           largest = end > right && comparison(ref list.GetValue(largest), ref list.GetValue(right)) < 0 ? right : largest;
 
@@ -2020,7 +2076,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           T   element  = base.GetValue(index);
           int subindex = ((int) index) - 1;
 
-          // …
+          // ...
           for (; subindex >= 0 && comparison(ref base.GetValue((uint) subindex), ref element) > 0; --subindex)
             base.SetValue(in base.GetValue((uint) subindex + 0u), (uint) subindex + 1u);
 
@@ -2049,7 +2105,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           int   index = ((int) begin) - 1;
           ref T pivot = ref list.GetValue(end);
 
-          // …
+          // ...
           for (uint subindex = begin; end > subindex; ++subindex)
           if (comparison(ref list.GetValue(subindex), ref pivot) < 0) {
             ++index;
@@ -2062,7 +2118,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           return (uint) index;
         }
 
-        // …
+        // ...
         if (begin < end) {
           uint index = Partition(this, begin, end, comparison);
 
@@ -2125,7 +2181,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameMethod(Inlined), GameResolution(0)] object                 System.ICloneable.Clone                                          ()                                                                                                                                   => base    .Clone      ();
       [GameMethod(Inlined), GameResolution(0)] bool                   System.IEquatable<RefList<T>>.Equals                             (RefList<T> list)                                                                                                                    => this    .Equals     (list);
 
-      /* … */
+      /* ... */
       public new ref T          this                                    [uint         index] => ref base.GetValue(index);
       public new     RefList<T> this                                    [System.Range range] => new((System.ReadOnlyMemory<T>) this.Items[range]);
       T                         System.Collections.Generic.IList<T>.this[int          index] { get => this[(uint) index]; set => this[(uint) index] = value; }
@@ -2161,7 +2217,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         int System.IComparable<Sentinel>.CompareTo                             (Sentinel    value) => default;
       }
 
-      /* … */
+      /* ... */
       private static readonly Game.RefReadOnlyComparison<T> CompareValue = (Game.RefReadOnlyComparison<T>) (
         typeof(Game.Collections.IRefReadOnlyComparable<T>).IsAssignableFrom(typeof(T)) ? ((Game.RefReadOnlyComparison<RefReadOnlyComparer<T>.Sentinel>) RefReadOnlyComparer<RefReadOnlyComparer<T>.Sentinel>.RefReadOnlyComparableCompare).Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.RefReadOnlyComparison<T>)) :
         typeof(System.IComparable                             <T>).IsAssignableFrom(typeof(T)) ? ((Game.RefReadOnlyComparison<RefReadOnlyComparer<T>.Sentinel>) RefReadOnlyComparer<RefReadOnlyComparer<T>.Sentinel>.ComparableCompare)           .Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.RefReadOnlyComparison<T>)) :
@@ -2171,11 +2227,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       protected        readonly Game.RefReadOnlyComparison<T> comparison       = RefReadOnlyComparer<T>.CompareValue;
       public    static new      RefReadOnlyComparer               <T> Default { get; } = new();
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] public    RefReadOnlyComparer()                                                 : base() {}
       [GameConstructor, GameMethod(Inlined)] protected RefReadOnlyComparer(Game.RefReadOnlyComparison<T> comparison) : base() => this.comparison = comparison;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] private static   int                    ComparableCompare <U>                                   (in U                                  a, in U    b) where U : System.IComparable<U>                              => a .CompareTo(b);
       [GameMethod(Inlined)] private static   int                    ComparableCompare2<U>                                   (in U                                  a, in U    b) where U : System.IComparable                                 => a!.CompareTo(b);
       [GameMethod(Inlined)] public  virtual  int                    Compare                                                 (in T                                  a, in T    b)                                                              { if (RefReadOnlyComparer<T>.CompareValue == this.comparison) { if (Game.Collections.RefReadOnlyEqualityComparer<T>.Default.Equals(in a, in b)) return 0; if (a is null) return b is null ? 0 : -1; if (b is null) return a is null ? 0 : +1; } return this.comparison(in a, in b); }
@@ -2193,11 +2249,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public readonly struct AlternateLookup<TAlternateKey> /* ->> Based on `System.Collections.Generic.Dictionary<TKey, TValue>.AlternateLookup<TAlternateKey>` */ {
         public readonly RefReadOnlyDictionary<TKey, TValue> Dictionary;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)]
         internal AlternateLookup(RefReadOnlyDictionary<TKey, TValue> dictionary) => this.Dictionary = dictionary;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly bool ContainsKey(in TAlternateKey key)                                         => false;
         [GameMethod(Inlined)] public readonly bool Remove     (in TAlternateKey key)                                         => false;
         [GameMethod(Inlined)] public readonly bool Remove     (in TAlternateKey key, out TKey   actualKey, out TValue value) { actualKey = default!; value = default!; return false; }
@@ -2211,7 +2267,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public readonly struct Enumerator : System.Collections.Generic.IEnumerator<Game.Collections.RefReadOnlyKeyValuePair<TKey, TValue>>, System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<TKey, TValue>>, System.Collections.IDictionaryEnumerator /* ->> Based on `System.Collections.Generic.Dictionary<TKey, TValue>.Enumerator` */ {
         private sealed class Index { public int value; }
 
-        /* … */
+        /* ... */
         public  readonly Game.Collections.RefReadOnlyKeyValuePair<TKey, TValue> Current                                                                                                        => new(this.dictionary, (uint) this.index.value);
         private readonly RefReadOnlyDictionary<TKey, TValue>                            dictionary                                                                                                     =  default!;
         private readonly Enumerator.Index                                               index                                                                                                          =  new() {value = -1};
@@ -2222,14 +2278,14 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         readonly object?                                                                System.Collections.IDictionaryEnumerator.Value                                                                 => this.dictionary.values[(uint) this.index.value];
         readonly object                                                                 System.Collections.IEnumerator.Current                                                                         => this.Current;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public Enumerator(RefReadOnlyDictionary<TKey, TValue> dictionary) {
           this.Reset();
           this.dictionary = dictionary;
         }
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly void Dispose                                () { /* Do nothing… */ }
         [GameMethod(Inlined)] public readonly bool MoveNext                               () { if (this.index.value + 1 < this.dictionary.Count) { ++this.index.value; return true; } return false; }
         [GameMethod(Inlined)] public readonly void Reset                                  () => this.index.value = -1;
@@ -2245,11 +2301,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           readonly TKey                                                   System.Collections.Generic.IEnumerator<TKey>.Current => this.Current;
           readonly object                                                 System.Collections.IEnumerator.Current               => this.Current!;
 
-          /* … */
+          /* ... */
           [GameConstructor, GameMethod(Inlined)]
           internal Enumerator(in RefReadOnlyDictionary<TKey, TValue>.Enumerator enumerator) => this.enumerator = enumerator;
 
-          /* … */
+          /* ... */
           [GameMethod(Inlined)] public readonly void Dispose                                () => this.enumerator.Dispose ();
           [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
           [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -2258,16 +2314,16 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           [GameMethod(Inlined)] readonly void        System.IDisposable.Dispose             () => this           .Dispose ();
         }
 
-        /* … */
+        /* ... */
         public  uint                                Count                                                      => this.dictionary.Count;
         private RefReadOnlyDictionary<TKey, TValue> dictionary                                                 =  default!;
         int                                         System.Collections.Generic.IReadOnlyCollection<TKey>.Count => ((int) this.Count);
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public KeyCollection(RefReadOnlyDictionary<TKey, TValue> dictionary) => this.dictionary = dictionary;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public bool                                  Contains     (in TKey element)                               => this.dictionary.ContainsKey(in element);
         [GameMethod(Inlined)] public void                                  CopyTo       (TKey[]  array, uint index)                     { foreach (ref readonly TKey element in this) array[index++] = element; }
         [GameMethod(Inlined)] public KeyCollection.Enumerator              GetEnumerator()                                              => new(this.dictionary.GetEnumerator());
@@ -2282,11 +2338,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           readonly TValue                                                 System.Collections.Generic.IEnumerator<TValue>.Current => this.Current;
           readonly object                                                 System.Collections.IEnumerator.Current                 => this.Current!;
 
-          /* … */
+          /* ... */
           [GameConstructor, GameMethod(Inlined)]
           internal Enumerator(in RefReadOnlyDictionary<TKey, TValue>.Enumerator enumerator) => this.enumerator = enumerator;
 
-          /* … */
+          /* ... */
           [GameMethod(Inlined)] public readonly void Dispose                                () => this.enumerator.Dispose ();
           [GameMethod(Inlined)] public readonly bool MoveNext                               () => this.enumerator.MoveNext();
           [GameMethod(Inlined)] public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -2295,23 +2351,23 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           [GameMethod(Inlined)] readonly void        System.IDisposable.Dispose             () => this           .Dispose ();
         }
 
-        /* … */
+        /* ... */
         public  uint                                Count                                                        => this.dictionary.Count;
         private RefReadOnlyDictionary<TKey, TValue> dictionary                                                   =  default!;
         int                                         System.Collections.Generic.IReadOnlyCollection<TValue>.Count => ((int) this.Count);
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public ValueCollection(RefReadOnlyDictionary<TKey, TValue> dictionary) => this.dictionary = dictionary;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public void                                    CopyTo       (TValue[] array, uint index)                      { foreach (ref readonly TValue element in this) array[index++] = element; }
         [GameMethod(Inlined)] public ValueCollection.Enumerator              GetEnumerator()                                                => new(this.dictionary.GetEnumerator());
         [GameMethod(Inlined)] System.Collections.Generic.IEnumerator<TValue> System.Collections.Generic.IEnumerable<TValue>.GetEnumerator() => this.GetEnumerator();
         [GameMethod(Inlined)] System.Collections.IEnumerator                 System.Collections.IEnumerable.GetEnumerator                () => this.GetEnumerator();
       }
 
-      /* … */
+      /* ... */
       [UnityEngine.HideInInspector]                             public   uint                                                        Capacity                                                                                                             => this.keys.Capacity; // ->> or `this.values.Capacity`
       [UnityEngine.HideInInspector, UnityEngine.SerializeField] public   Game.Collections.IRefReadOnlyEqualityComparer<TKey> Comparer                                                                                                             =  Game.Collections.RefReadOnlyEqualityComparer<TKey>.Default;
       [UnityEngine.HideInInspector]                             public   uint                                                        Count                                                                                                                => this.keys.Count; // ->> or `this.values.Count`
@@ -2328,7 +2384,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
 
       public static readonly RefReadOnlyDictionary<TKey, TValue> Empty = new();
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public RefReadOnlyDictionary()                                                                                                                                                                                                         {}
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public RefReadOnlyDictionary(RefReadOnlyDictionary                 <TKey, TValue>                                                   dictionary) : this(dictionary, dictionary.Comparer)                                                {}
       [GameConstructor, GameMethod(Inlined), GameResolution(1)] public RefReadOnlyDictionary(System.Collections.Generic.IEnumerable<Game.Collections.RefReadOnlyKeyValuePair<TKey, TValue>> enumerable) : this(enumerable, Game.Collections.RefReadOnlyEqualityComparer<TKey>.Default) {}
@@ -2337,7 +2393,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameConstructor, GameMethod(Inlined), GameResolution(1)] public RefReadOnlyDictionary(System.Collections.Generic.IEnumerable<Game.Collections.RefReadOnlyKeyValuePair<TKey, TValue>> enumerable, Game.Collections.IRefReadOnlyEqualityComparer<TKey> comparer)                  { this.Comparer = comparer; if (!enumerable.IsEmpty()) { uint length = Util.Enumerable.Count(enumerable); this.keys = new(length); this.values = new(length); this.CopyTo(this.keys, 0u, this.values, 0u, enumerable);                                                                                                          this.keys.Count = this.values.Count = length; } }
       [GameConstructor, GameMethod(Inlined), GameResolution(0)] public RefReadOnlyDictionary(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TKey, TValue>>          enumerable, Game.Collections.IRefReadOnlyEqualityComparer<TKey> comparer)                  { this.Comparer = comparer; if (!enumerable.IsEmpty()) { uint length = Util.Enumerable.Count(enumerable); this.keys = new(length); this.values = new(length); this.CopyTo(this.keys, 0u, this.values, 0u, enumerable);                                                                                                          this.keys.Count = this.values.Count = length; } }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined), GameResolution(0)] public             RefReadOnlyDictionary<TKey, TValue>                                                 AsCopy                                                                                                              ()                                                                                                                                                                                                            => new(this);
       [GameMethod(Inlined), GameResolution(0)] public             RefReadOnlyDictionary<TKey, TValue>                                                 AsReadOnly                                                                                                          ()                                                                                                                                                                                                            => this;
       [GameMethod(Inlined), GameResolution(1)] public             bool                                                                                Contains                                                                                                            (in Game.Collections.RefReadOnlyKeyValuePair<TKey, TValue> element)                                                                                                                                   { int index = this.GetValue(in element.Key); return index != -1 && Game.Collections.RefReadOnlyEqualityComparer<TValue>.Default.Equals(in this.values[(uint) index], in element.Value); }
@@ -2402,7 +2458,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         bool System.IEquatable<Sentinel>.Equals                             (Sentinel    value) => default;
       }
 
-      /* … */
+      /* ... */
       private static readonly Game.RefReadOnlyHasher            <T> GetHashCodeValue = [GameMethod(Inlined)] static (in T value) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value);
       private static readonly Game.RefReadOnlyEqualityComparison<T> EqualsValue      = (Game.RefReadOnlyEqualityComparison<T>) (
         typeof(Game.Collections.IRefReadOnlyEquatable<T>).IsAssignableFrom(typeof(T)) ? ((Game.RefReadOnlyEqualityComparison<RefReadOnlyEqualityComparer<T>.Sentinel>) RefReadOnlyEqualityComparer<RefReadOnlyEqualityComparer<T>.Sentinel>.RefReadOnlyEquatableEquals).Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.RefReadOnlyEqualityComparison<T>)) :
@@ -2414,11 +2470,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       protected            Game.RefReadOnlyHasher                     <T> hasher           = RefReadOnlyEqualityComparer<T>.GetHashCodeValue;
       public    static new RefReadOnlyEqualityComparer                        <T> Default { get; } = new();
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] public    RefReadOnlyEqualityComparer()                                                                                                    : base() {}
       [GameConstructor, GameMethod(Inlined)] protected RefReadOnlyEqualityComparer(Game.RefReadOnlyEqualityComparison<T> comparison, Game.RefReadOnlyHasher<T>? hasher) : base() { this.comparison = comparison; this.hasher = hasher ?? this.hasher; }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public  static   RefReadOnlyEqualityComparer<T> Create                                                              (Game.RefReadOnlyEqualityComparison<T> comparison, Game.RefReadOnlyHasher<T>? hasher = null)                    => new(comparison, hasher);
       [GameMethod(Inlined)] public  virtual  bool                           Equals                                                              (in T                                          a, in T                                        b)                                => RefReadOnlyEqualityComparer<T>.EqualsValue == this.comparison && a is null ? b is null : this.comparison(in a, in b);
       [GameMethod(Inlined)] public  override bool                           Equals                                                              (T                                             a, T                                           b)                                => this.Equals(in a!, in b!);
@@ -2446,11 +2502,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       readonly object                                                                 Game.Collections.IKeyValuePair.Key   => this.Key!;
       readonly object?                                                                Game.Collections.IKeyValuePair.Value => this.Value;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] internal RefReadOnlyKeyValuePair(Game.Collections.RefReadOnlyDictionary<TKey, TValue> dictionary, uint      index) { this.dictionary = dictionary; this.index = index; }
       [GameConstructor, GameMethod(Inlined)] public   RefReadOnlyKeyValuePair(in TKey                                                      key,        in TValue value) => this.pair = new[] {(key, value)};
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly void    Deconstruct(out TKey key, out TValue value) { key = this.Key; value = this.Value; }
       [GameMethod(Inlined)] public override readonly string? ToString   ()                               => $"[{this.Key}, {this.Value}]";
 
@@ -2465,21 +2521,21 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public readonly struct Enumerator : System.Collections.Generic.IEnumerator<T> {
         internal sealed class Index { public int value; }
 
-        /* … */
+        /* ... */
         public   readonly ref readonly T     Current                                           => ref this.list.GetValue((uint) this.index.value);
         internal readonly Enumerator.Index   index                                             =  new() {value = -1};
         internal readonly RefReadOnlyList<T> list                                              =  default!;
         readonly T                           System.Collections.Generic.IEnumerator<T>.Current => this.Current;
         readonly object                      System.Collections.IEnumerator.Current            => this.Current!;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public Enumerator(RefReadOnlyList<T> list) {
           this.Reset();
           this.list = list;
         }
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly void Dispose                                () { /* Do nothing… */ }
         [GameMethod(Inlined)] public readonly bool MoveNext                               () { if (this.index.value + 1 < this.list.Count) { ++this.index.value; return true; } return false; }
         [GameMethod(Inlined)] public readonly void Reset                                  () => this.index.value = -1;
@@ -2493,7 +2549,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         [UnityEngine.SerializeField] public T value = default!;
       }
 
-      /* … */
+      /* ... */
       [UnityEngine.HideInInspector]                             public   uint   Capacity                                                => this.Count;
       [UnityEngine.HideInInspector, UnityEngine.SerializeField] public   uint   Count { get; internal set; }                            =  0u;
       [UnityEngine.HideInInspector]                             public   bool   IsPending                                               => RefReadOnlyList<T>.Pending.Contains(this);
@@ -2506,7 +2562,8 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public   static readonly RefReadOnlyList<T>                                                          Empty   = new();
       internal static readonly System.Collections.Generic.List<UnityEngine.ISerializationCallbackReceiver> Pending = new();
 
-      /* … ->> Availability of `System.Runtime.InteropServices.CollectionMarshal.AsSpan(…)` would replace `RefReadOnlyList<T>`’s entire purpose */
+      /* ... ->> Availability of `System.Runtime.InteropServices.CollectionMarshal.AsSpan(…)` would replace `RefReadOnlyList<T>`’s entire purpose */
+      // unsafe { *(int*) System.Runtime.InteropServices.Marshal.UnsafeAddrOfPinnedArrayElement(array, 1).ToPointer() = 15; }
       [GameConstructor, GameMethod(Inlined)] public             RefReadOnlyList()                                                                                     {}
       [GameConstructor, GameMethod(Inlined)] internal           RefReadOnlyList(uint                                      capacity)                                   => this.Items = Util.Array<T>.Create(capacity);
       [GameConstructor, GameMethod(Inlined)] public             RefReadOnlyList(RefReadOnlyList                       <T> list)                                       => this.Count = (uint) (this.Items = (T[]) list.Items.Clone()).Length;
@@ -2520,7 +2577,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameConstructor, GameMethod(Inlined)] protected internal RefReadOnlyList(T[]                                       array)                                      => this.Count = (uint) (this.Items = array)                                                                           .Length;
       [GameConstructor, GameMethod(Inlined)] protected          RefReadOnlyList(T[]                                       array, uint index, uint length)             => this.Count = (uint) (this.Items = Util.Array<T>.From(new System.ArraySegment<T>(array, (int) index, (int) length))).Length;
 
-      /* … */
+      /* ... */
       // ConvertAll --> int[] ints = { 1, 2, 3 }; uint[] uints = (uint[])(object)ints; // 🌟 legal at runtime under CLR for
       [GameMethod(Inlined), GameResolution(0)] public            RefReadOnlyList<T>            AsCopy                                                                   ()                                                                                                                                                 => new(this);
       [GameMethod(Inlined), GameResolution(0)] public            RefReadOnlyList<T>            AsReadOnly                                                               ()                                                                                                                                                 =>     this;
@@ -2605,7 +2662,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         int  index          = -1;
         bool isNonPrimitive = typeof(UnityEngine.Component).IsAssignableFrom(typeof(T)) || typeof(T) == typeof(UnityEngine.GameObject);
 
-        // …
+        // ...
         if (isNonPrimitive && Util.Game.Object is null) {
           if (!RefList<T>.Pending.Contains(this))
           RefList<T>.Pending.Add(this);
@@ -2617,11 +2674,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         this.Items = this.serializedData.Substring(this.serializedData.IndexOf('\x01') + 1).Split('\x02', System.StringSplitOptions.None).ConvertAll(datum => {
           RefList<T>.Serializable serializable = new();
 
-          // …
+          // ...
           ++index;
 
           if (isNonPrimitive && Util.Game.Object is not null) {
-            // … ->> Catch prematurely modified `::Items` before repeated attempt to de-serialize
+            // ... ->> Catch prematurely modified `::Items` before repeated attempt to de-serialize
             if (index < this.Items.Length && null != this.Items[index])
             return this.Items[index];
           }
@@ -2634,7 +2691,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
               string[]                          data  = datum.Split('\x04', System.StringSplitOptions.None);
               UnityEngine.SceneManagement.Scene scene = default;
 
-              // … ->> “UnItYeXcEpTiOn: GeTsCeNeByPaTh cAn oNlY Be cAlLeD FrOm tHe mAiN ThReAd.”, “UnItYeXcEpTiOn: GeTsCeNeByPaTh iS NoT AlLoWeD To bE CaLlEd dUrInG SeRiAlIzAtIoN, cAlL It fRoM AwAkE Or sTaRt iNsTeAd.”, …
+              // ... ->> “UnItYeXcEpTiOn: GeTsCeNeByPaTh cAn oNlY Be cAlLeD FrOm tHe mAiN ThReAd.”, “UnItYeXcEpTiOn: GeTsCeNeByPaTh iS NoT AlLoWeD To bE CaLlEd dUrInG SeRiAlIzAtIoN, cAlL It fRoM AwAkE Or sTaRt iNsTeAd.”, …
               #if UNITY_EDITOR
                 scene = UnityEditor.SceneManagement.EditorSceneManager.GetSceneByPath(Util.Reference<string>.First(data));
               #else
@@ -2645,7 +2702,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
                 UnityEngine.GameObject? gameObject = null;
                 bool                    rooted     = true;
 
-                // …
+                // ...
                 foreach (string hierarchy in Util.Reference<string>.Last(data).Split('\x05', System.StringSplitOptions.None)) {
                   data = hierarchy.Split('\x06', System.StringSplitOptions.None);
 
@@ -2667,7 +2724,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
             }
           }
 
-          // …
+          // ...
           return serializable.value!;
         });
         this.Count = uint.Parse(this.serializedData.Substring(0, this.serializedData.IndexOf('\x01')));
@@ -2676,23 +2733,23 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       void UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() {
         string serializedData = this.serializedData;
 
-        // …
+        // ...
         this.serializedData = this.Count.ToString() + '\x01';
 
         if (0u != this.Items.Length)
         for (uint index = 0u; ; this.serializedData += '\x02') {
           ref readonly T element = ref this.Items[index];
 
-          // …
+          // ...
           if (index < this.Count && null != element && !Game.Collections.RefReadOnlyEqualityComparer<T>.Default.Equals(in element, default(T)!)) {
             string                  data       = string.Empty;
             UnityEngine.GameObject? gameObject = null;
 
-            // …
+            // ...
             if      (element is UnityEngine.GameObject subGameObject) gameObject = subGameObject;
             else if (element is UnityEngine.Component  component)     gameObject = component.gameObject;
 
-            // …
+            // ...
             if (gameObject is null)
               data = UnityEngine.JsonUtility.ToJson(new RefList<T>.Serializable() {value = element});
 
@@ -2701,7 +2758,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
                 UnityEngine.Transform? hierarchyParent = hierarchy!.parent;
                 uint                   siblingIndex    = 0u; // ->> `hierarchy.GetSiblingIndex()`
 
-                // …
+                // ...
                 for (System.Collections.IEnumerator enumerator = null != hierarchyParent ? hierarchyParent.GetEnumerator() : gameObject.scene.GetRootGameObjects().ConvertAll([GameMethod(Inlined)] static (gameObject) => gameObject.transform).GetEnumerator(); enumerator.MoveNext(); ++siblingIndex) {
                   if (hierarchy == (UnityEngine.Transform) enumerator.Current)
                   break; // ->> `siblingIndex = …;`
@@ -2725,7 +2782,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         Util.Game.AskToSave();
       }
 
-      /* … */
+      /* ... */
       public ref readonly T     this                                            [uint         index] => ref this.GetValue(index);
       public RefReadOnlyList<T> this                                            [System.Range range] => new(this.Items[range]);
       T                         System.Collections.Generic.IReadOnlyList<T>.this[int          index] => this[(uint) index];
@@ -2769,7 +2826,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       bool                                                         System.Collections.IList.IsFixedSize                 => false;
       bool                                                         System.Collections.IList.IsReadOnly                  => false;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public RefSortedCollection()                                                                                                                                  : this(0u,                      null!)    {}
       [GameMethod(Inlined)] public RefSortedCollection(uint                                                    capacity)                                                                  : this(capacity,                null!)    {}
       [GameMethod(Inlined)] public RefSortedCollection(Game.Collections.IRefReadOnlyComparer<TSort>    comparer)                                                                  : this(2u,                      comparer) {}
@@ -2777,7 +2834,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameMethod(Inlined)] public RefSortedCollection(System.Collections.Generic.IDictionary       <TSort, T> dictionary, Game.Collections.IRefReadOnlyComparer<TSort> comparer) : this((uint) dictionary.Count, comparer) { foreach (System.Collections.Generic.KeyValuePair<TSort, T> element in dictionary) this.Add(element); }
       [GameMethod(Inlined)] public RefSortedCollection(uint                                                    capacity,   Game.Collections.IRefReadOnlyComparer<TSort> comparer)                                           { this.Comparer = comparer ?? this.Comparer; this.items.EnsureCapacity(capacity); this.ranks.EnsureCapacity(capacity); }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined), GameResolution(1)] public          void                                           Add                                                                                 (in Game.Collections.RefKeyValuePair<TSort, T>                                              element)                                                         => this.Add(in element.Key, in element.Value);
       [GameMethod(Inlined), GameResolution(0)] public          void                                           Add                                                                                 (in System.Collections.Generic.KeyValuePair <TSort, T>                                              element)                                                         => this.Add(element.Key,    element.Value);
       [GameMethod(Inlined), GameResolution(0)] public          void                                           Add                                                                                 (in TSort                                                                                           rank, in T                                      element)         { this.ranks.Add(in rank); this.ranks.Sort(this.Comparer); this.items.Insert((uint) this.ranks.LastIndexOf(in rank), in element); }
@@ -2955,7 +3012,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameMethod(Inlined), GameResolution(0)] object                                                         System.ICloneable.Clone                                                             ()                                                                                                                                                                   => this    .Clone      ();
       [GameMethod(Inlined), GameResolution(0)] bool                                                           System.IEquatable<RefSortedCollection<TSort, T>>.Equals                             (RefSortedCollection<TSort, T> collection)                                                                                                                           => this    .Equals     (collection);
 
-      /* … */
+      /* ... */
       public ref T                             this                                    [uint         index] => ref this.items[index];
       public     RefSortedCollection<TSort, T> this                                    [System.Range range] { get { (int index, int length) = range.GetOffsetAndLength((int) this.Count); return this.GetRange((uint) index, (uint) length); } }
       T                                        System.Collections.Generic.IList<T>.this[int          index] { get => this[(uint) index]; set => this[(uint) index] = value; }
@@ -2966,11 +3023,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
     internal class Sequence : System.Collections.Generic.IEnumerable<int> /* ->> Based on collection expressions i.e. `[1, 2, …, 3]` */ {
       private readonly int[] values;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public Sequence(System.ReadOnlySpan<int> values) => this.values = Util.Array<int>.From(values);
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public static Sequence                                    Create                                      (System.ReadOnlySpan<int> values) => new(values);
       [GameMethod(Inlined)] public        System.Collections.Generic.IEnumerator<int> GetEnumerator                               ()                                => ((System.Collections.Generic.IEnumerable<int>) this.values).GetEnumerator();
       [GameMethod(Inlined)] System.Collections.IEnumerator                            System.Collections.IEnumerable.GetEnumerator()                                => this.values.GetEnumerator();
@@ -2984,11 +3041,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public   readonly ref T Value                          => ref Shared<T>.Singleton;
       readonly object?        Game.Collections.IShared.Value => this.Value;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public Shared()           : base() {}
       [GameMethod(Inlined)] public Shared(in T value) : base() => Shared<T>.Singleton = value;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (in T                             value)      => this.Value is null ? value is null : this.Value!.Equals(value);
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (Game.Collections.IShared shared)     => shared.Value is T || (this.Value is null ? shared.Value is null : this.Value!.Equals(shared!.Value));
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (in Shared<T>                     shared)     => true;
@@ -3031,14 +3088,14 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       readonly object?                    Game.Collections.IMono.Value    =>     this                      .Value;
       readonly object?                    Game.Collections.IShared.Value  =>     this                      .Value;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public SharedLazyMono(System.Func<T> initializer) {
         SharedLazyMono<T>.Initializer = !SharedLazyMono<T>.Initializers.IsEmpty() ? (System.Func<T>) System.Delegate.Combine(SharedLazyMono<T>.Initializer, initializer) : initializer;
         SharedLazyMono<T>.Initializers.Add(initializer);
       }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (in T                                      value)          => SharedLazyMono<T>.LazyMono.Equals(in value);
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (in Game.Collections.IMono         mono)           => SharedLazyMono<T>.LazyMono.Equals(mono  .Value);
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (in Game.Collections.IShared       shared)         => SharedLazyMono<T>.LazyMono.Equals(shared.Value);
@@ -3115,7 +3172,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       bool        System.Collections.IList.IsFixedSize                 => false;
       bool        System.Collections.IList.IsReadOnly                  => false;
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] public SharedList(uint                                      capacity = 0u)                                        { SharedList<T>.List.EnsureCapacity(System.Math.Max(capacity, SharedList<T>.List.Capacity)); }
       [GameConstructor, GameMethod(Inlined)] public SharedList(SharedList                            <T> list)                                                 {}
       [GameConstructor, GameMethod(Inlined)] public SharedList(System.Collections.Generic.ICollection<T> collection) : this((uint) collection.Count)           { if (collection is SharedList<T>) return; SharedList<T>.List.Clear(); SharedList<T>.List.AddRange(collection); }
@@ -3126,7 +3183,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameConstructor, GameMethod(Inlined)] public SharedList(in System.Span                        <T> span)       : this((uint) span.Length)                {                                          SharedList<T>.List.Clear(); SharedList<T>.List.AddRange(in span); }
       [GameConstructor, GameMethod(Inlined)] public SharedList(in Util.Array<T>.Copyable                 copyable)   : this(copyable.Count)                    {                                          SharedList<T>.List.Clear(); SharedList<T>.List.AddRange(in copyable); }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined), GameResolution(0)] public   void                                           Add                                                                                    (in T                                      element)                                                                               =>     SharedList<T>.List.Add          (in element);
       [GameMethod(Inlined), GameResolution(0)] public   void                                           AddRange                                                                               (System.Collections.Generic.ICollection<T> collection)                                                                            =>     SharedList<T>.List.AddRange     (collection);
       [GameMethod(Inlined), GameResolution(0)] public   void                                           AddRange                                                                               (System.Collections.Generic.IEnumerable<T> enumerable)                                                                            =>     SharedList<T>.List.AddRange     (enumerable);
@@ -3281,12 +3338,12 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         bool   System.Collections.IList.IsFixedSize                 => false;
         bool   System.Collections.IList.IsReadOnly                  => false;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)] internal GameObjectSharedList(uint                                   capacity = 0u) : base(capacity) {}
         [GameConstructor, GameMethod(Inlined)] internal GameObjectSharedList(GameObjectSharedList               <T> list)          : base(list)     {}
         [GameConstructor, GameMethod(Inlined)] private  GameObjectSharedList(Game.Collections.SharedList<T> list)          : base(list)     {}
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined), GameResolution(0)] internal new void           Add     (in T                                      element)    =>     base.Add     (element);
         [GameMethod(Inlined), GameResolution(0)] internal new void           AddRange(System.Collections.Generic.ICollection<T> collection) =>     base.AddRange(collection);
         [GameMethod(Inlined), GameResolution(0)] internal new void           AddRange(System.Collections.Generic.IEnumerable<T> enumerable) =>     base.AddRange(enumerable);
@@ -3301,7 +3358,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         public GameObjectSharedList<UnityEngine.Component> ByComponent(System.Type type) {
           GameObjectSharedList<UnityEngine.Component> list = new(this.Count);
 
-          // … ->> Avoid overriding underlying `GameObjectSharedList<UnityEngine.Component>.List` prematurely
+          // ... ->> Avoid overriding underlying `GameObjectSharedList<UnityEngine.Component>.List` prematurely
           if (typeof(T) != typeof(UnityEngine.Component)) {
             list.Clear();
 
@@ -3408,7 +3465,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       readonly object?                  Game.Collections.IMono.Value    =>     this              .Value;
       readonly object?                  Game.Collections.IShared.Value  =>     this              .Value;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (in T                                  value)      => SharedMono<T>.Mono.Equals(in value);
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (in Game.Collections.IMono     mono)       => SharedMono<T>.Mono.Equals(mono  .Value);
       [GameMethod(Inlined)] public          readonly bool    Equals                                                                                 (in Game.Collections.IShared   shared)     => SharedMono<T>.Mono.Equals(shared.Value);
@@ -3492,11 +3549,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         bool                               System.Collections.ICollection.IsSynchronized              => false;
         object                             System.Collections.ICollection.SyncRoot                    => this;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         internal ValueCollection(Timeframe sequence) => this.sequence = sequence;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] private void                                    CopyTo                                                       (System.Array array, uint index) { foreach (object? value in this) array.SetValue(value, index++); }
         [GameMethod(Inlined)] public Timeframe.ValueEnumerator        GetEnumerator                                                ()                               => new(sequence);
         [GameMethod(Uninlined)]         void                                            System.Collections.Generic.ICollection<object?>.Add          (object? keyframe)               => throw new System.NotSupportedException("UI sequence values are dynamically generated and non-persistent");
@@ -3527,7 +3584,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         [GameMethod(Inlined)] readonly void        System.IDisposable.Dispose             () => this           .Dispose ();
       }
 
-      /* … */
+      /* ... */
       public   static readonly System.Collections.Generic.Dictionary<string, object?>                                                                                                                                                                                               Idle           = new(0);
       internal static          System.Collections.Generic.Dictionary<System.ValueTuple<System.Type, System.Type>, System.ValueTuple<(System.Reflection.MethodInfo, System.Reflection.MethodInfo, System.Reflection.MethodInfo), (sbyte, sbyte, sbyte), (System.Type, System.Type)>> Interpolations = new(3);
 
@@ -3556,7 +3613,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       System.Collections.ICollection                                                                                  System.Collections.IDictionary.Keys                                                                            => base.Keys;
       System.Collections.ICollection                                                                                  System.Collections.IDictionary.Values                                                                          => new Timeframe.ValueCollection(this);
 
-      /* … ->> `𝑓 Timeframe([optional] name, duration, [optional] delay, [optional] easing, [optional] interpolator, begin, end) { … }` */
+      /* ... ->> `𝑓 Timeframe([optional] name, duration, [optional] delay, [optional] easing, [optional] interpolator, begin, end) { … }` */
       [GameConstructor, GameMethod(Inlined)] public Timeframe()                                                                                                                                                                                                                                                            : base(null!, new System.Collections.Generic.Dictionary<string, object?>(), new System.Collections.Generic.Dictionary<string, object?>())                                                              {}
       [GameConstructor, GameMethod(Inlined)] public Timeframe             (double duration,                                                                                    System.Collections.Generic.Dictionary         <string, object?> begin, System.Collections.Generic.Dictionary         <string, object?> end) : this(null!, duration, 0.0,   null!,  null!,        begin as System.Collections.Generic.IReadOnlyDictionary<string, object?>, end as System.Collections.Generic.IReadOnlyDictionary<string, object?>) {}
       [GameConstructor, GameMethod(Inlined)] public Timeframe             (double duration,                                                                                    System.Collections.Generic.IReadOnlyDictionary<string, object?> begin, System.Collections.Generic.IReadOnlyDictionary<string, object?> end) : this(null!, duration, 0.0,   null!,  null!,        begin,                                                                    end)                                                                    {}
@@ -3591,7 +3648,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       [GameConstructor, GameMethod(Inlined)] public Timeframe(string name, double duration, double delay, Game.Tweener easing, Game.Interpolator interpolator, System.Collections.Generic.Dictionary         <string, object?> begin, System.Collections.Generic.Dictionary         <string, object?> end) : this(name,  duration, delay, easing, interpolator, begin as System.Collections.Generic.IReadOnlyDictionary<string, object?>, end as System.Collections.Generic.IReadOnlyDictionary<string, object?>) {}
       [GameConstructor, GameMethod(Inlined)] public Timeframe(string name, double duration, double delay, Game.Tweener easing, Game.Interpolator interpolator, System.Collections.Generic.IReadOnlyDictionary<string, object?> begin, System.Collections.Generic.IReadOnlyDictionary<string, object?> end) : base(name,  begin, end)                                                                                                                                                                              { this.delay = delay; this.duration = duration; this.easing = easing ?? this.easing; this.interpolator = interpolator ?? this.interpolator; this.timestamp = 0.0; }
 
-      /* … ->> `𝑓 Add([optional] keyframe, progress, properties) { … }` */
+      /* ... ->> `𝑓 Add([optional] keyframe, progress, properties) { … }` */
       [GameMethod(Inlined)] public          void                                                                             Add                                                                                                                        (double progress, System.Collections.Generic.Dictionary         <string, object?> properties) => this.Add($"#{this.keyframes.Count + 1}", progress, properties);
       [GameMethod(Inlined)] public          void                                                                             Add                                                                                                                        (double progress, System.Collections.Generic.IReadOnlyDictionary<string, object?> properties) => this.Add($"#{this.keyframes.Count + 1}", progress, properties);
       [GameMethod(Inlined)] public          void                                                                             Add                                                                                                           (string name, double progress, System.Collections.Generic.Dictionary         <string, object?> properties) => this.Add(name,                           progress, properties as System.Collections.Generic.IReadOnlyDictionary<string, object?>);
@@ -3616,7 +3673,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         System.Collections.Specialized.ListDictionary begin = base.begin!;
         System.Collections.Specialized.ListDictionary end   = base.end!;
 
-        // … ->> Simultaneous (un-)boxing is minimally slow 🐢
+        // ... ->> Simultaneous (un-)boxing is minimally slow 🐢
         if (begin.Contains(property) && end.Contains(property)) {
           double                                                                       elapsed            = UnityEngine.Time.realtimeSinceStartupAsDouble - this.timestamp;
           System.Collections.Generic.IList<Game.Collections.Keyframe> keyframes          = this.keyframes.Values;
@@ -3624,7 +3681,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
           double                                                                       progress           = (elapsed - this.delay) / this.duration;
           (double begin, double end)                                                   subprogress        = (Util.Perc(0.0), Util.Perc(100.0));
 
-          // …
+          // ...
           for (int index = this.keyframes.Count; 0     != index--; )                     { if (keyframes[index].Contains(property) && keyframeProgresses[index] <= progress) { begin = keyframes[index]; subprogress.begin = keyframeProgresses[index]; break; } }
           for (int index = 0;                    index != this.keyframes.Count; ++index) { if (keyframes[index].Contains(property) && keyframeProgresses[index] >  progress) { end   = keyframes[index]; subprogress.end   = keyframeProgresses[index]; break; } }
 
@@ -3650,11 +3707,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public bool x = false;
       public bool y = false;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public Vector2Bool()               {}
       [GameMethod(Inlined)] public Vector2Bool(bool x, bool y) { this.x = x; this.y = y; }
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool        Equals                                                            (in Vector2Bool vector)                          => this.x == vector.x && this.y == vector.y;
       [GameMethod(Inlined)] public override readonly bool        Equals                                                            (object?        value)                           => value is Vector2Bool vector && this.Equals(vector);
       [GameMethod(Inlined)] public override readonly int         GetHashCode                                                       ()                                               => System.HashCode.Combine(this.x, this.y);
@@ -3706,13 +3763,13 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public bool y = false;
       public bool z = false;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public Vector3Bool()                       {}
       [GameMethod(Inlined)] public Vector3Bool(bool x, bool y)         { this.x = x; this.y = y; }
       [GameMethod(Inlined)] public Vector3Bool(bool x, bool y, bool z) { this.x = x; this.y = y; this.z = z; }
 
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool        Equals                                                            (in Vector3Bool vector)                           => this.x == vector.x && this.y == vector.y && this.z == vector.z;
       [GameMethod(Inlined)] public override readonly bool        Equals                                                            (object?        value)                            => value is Vector3Bool vector && this.Equals(vector);
       [GameMethod(Inlined)] public override readonly int         GetHashCode                                                       ()                                                => System.HashCode.Combine(this.x, this.y, this.z);
@@ -3763,14 +3820,14 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       public bool z = false;
       public bool w = false;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public Vector4Bool()                               {}
       [GameMethod(Inlined)] public Vector4Bool(bool x, bool y)                 { this.x = x; this.y = y; }
       [GameMethod(Inlined)] public Vector4Bool(bool x, bool y, bool z)         { this.x = x; this.y = y; this.z = z; }
       [GameMethod(Inlined)] public Vector4Bool(bool x, bool y, bool z, bool w) { this.x = x; this.y = y; this.z = z; this.w = w; }
 
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool        Equals                                                            (in Vector4Bool vector)                                   => this.x == vector.x && this.y == vector.y && this.z == vector.z && this.w == vector.w;
       [GameMethod(Inlined)] public override readonly bool        Equals                                                            (object?        value)                                    => value is Vector4Bool vector && this.Equals(vector);
       [GameMethod(Inlined)] public override readonly int         GetHashCode                                                       ()                                                        => System.HashCode.Combine(this.x, this.y, this.z, this.w);
@@ -3813,11 +3870,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       internal readonly       UnityEngine.Coroutine?                                               coroutine = null;
       internal /* readonly */ Game.Collections.EventHandler<Game.Events.WaitEvent> events    = new(); // ->> Information actually stored within its `::WaitEvent`s
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)] public   WaitInfo()                                {}
       [GameConstructor, GameMethod(Inlined)] internal WaitInfo(UnityEngine.Coroutine coroutine) => this.coroutine = coroutine;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public          readonly bool Equals                                                         (in  WaitInfo wait)  => wait.events == this.events;
       [GameMethod(Inlined)] public override readonly bool Equals                                                         (object?      value) => value is WaitInfo wait && this.Equals(wait);
       [GameMethod(Inlined)] public override readonly int  GetHashCode                                                    ()                   => this.events.GetHashCode();
@@ -3836,7 +3893,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
         public override void OnGUI(UnityEngine.Rect position, UnityEditor.SerializedProperty property, UnityEngine.GUIContent label) {
           // bool isJobReadOnly = property.serializedObject.targetObject.GetType().GetField(property.name)?.IsDefined(typeof(Unity.Collections.ReadOnlyAttribute), true) ?? false;
 
-          // …
+          // ...
           UnityEngine.GUI.enabled = false;
 
           using (new UnityEditor.EditorGUI.DisabledScope(true)) // ->> Should have been sufficient on its own
@@ -3853,7 +3910,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
 
         private bool foldout = true;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)]
         private System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TKey, TValue>> Ensure(ref UnityEditor.SerializedProperty property) {
           System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TKey, TValue>> enumerable = this.fieldInfo.GetValue(property.serializedObject.targetObject) switch {
@@ -3882,7 +3939,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
             foldout: new(position.x,                                                position.y, position.width - Util.PercOf(size, 200.0f), position.height)
           );
 
-          // …
+          // ...
           if ((!RefDictionaryDrawer<TKey, TValue>.IsDrawable)) {
             base.OnGUI(position, property, label);
             return;
@@ -3930,7 +3987,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
                 clear: new(position.x + Util.PercOf(position.width - size, 100.0f),                             position.y,                    size,                                      position.height)
               );
 
-              // …
+              // ...
               if (immutable || typeof(TKey) == typeof(string)) UnityEngine.GUI.Label(subpositions.key, formattedKey);
               else {
                 UnityEditor.EditorGUI.BeginChangeCheck();
@@ -4018,7 +4075,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
 
         private bool foldout = true;
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)]
         private System.Collections.Generic.IEnumerable<T> Ensure(ref UnityEditor.SerializedProperty property) {
           System.Collections.Generic.IEnumerable<T> enumerable = this.fieldInfo.GetValue(property.serializedObject.targetObject) switch {
@@ -4047,7 +4104,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
             foldout: new(position.x,                                                position.y, position.width - Util.PercOf(size, 200.0f), position.height)
           );
 
-          // …
+          // ...
           if (!RefListDrawer<T>.IsDrawable) {
             base.OnGUI(position, property, label);
             return;
@@ -4093,7 +4150,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
                 clear  : new(position.x + Util.PercOf(position.width - size, 100.0f),                             position.y,                    size,                                      position.height)
               );
 
-              // …
+              // ...
               UnityEditor.EditorGUI.BeginChangeCheck();
                 element = (T) RefListDrawer<T>.GUIField!(subpositions.element, element!);
               if (UnityEditor.EditorGUI.EndChangeCheck()) {
@@ -4187,11 +4244,11 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       double                                                                                                       Game.Events.epoch    { get => this.epoch;    set => this.epoch    = value; }
       object?                                                                                                      Game.Events.metadata { get => this.metadata; set => this.metadata = value; }
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public LoadEvent() {}
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public readonly          void    Deconstruct(out System.Uri path,     out object? payload)                                                                                           { path = this.path; payload = this.payload; }
       [GameMethod(Inlined)] public readonly          void    Deconstruct(out System.Uri path,     out object? payload,         out bool   cached)                                                                { this.Deconstruct(out path, out payload); cached   = this.cached; }
       [GameMethod(Inlined)] public readonly          void    Deconstruct(out System.Uri path,     out object? payload,         out double duration)                                                              { this.Deconstruct(out path, out payload); duration = this.duration; }
@@ -4214,27 +4271,27 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
       double                                                  Game.Events.epoch    { get => this.epoch;    set => this.epoch    = value; }
       object?                                                 Game.Events.metadata { get => this.metadata; set => this.metadata = value; }
 
-      /* … */
+      /* ... */
       [GameConstructor, GameMethod(Inlined)]
       public WaitEvent() {}
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public readonly          void    Deconstruct(out double delay, out double timestamp)                     { delay = this.delay; timestamp = this.timestamp; }
       [GameMethod(Inlined)] public readonly          void    Deconstruct(out double delay, out double timestamp, out bool repeating) { this.Deconstruct(out delay, out timestamp); repeating = this.repeating; }
       [GameMethod(Inlined)] public readonly override string? ToString   ()                                                           => $"(delay: {this.delay}secs, repeating: {this.repeating}, waiting: {UnityEngine.Time.realtimeSinceStartupAsDouble < this.timestamp})";
     }
 
-    /* … */
+    /* ... */
     public System.Delegate callback { get; internal set; }
     public object?         data     { get; internal set; }
     public double          epoch    { get; internal set; }
     public object?         metadata { get;          set; }
 
-    /* … */
+    /* ... */
     internal static Game.Handler<T> ToMetadataHandler<T>(System.Action<object?> callback) where T : struct, Game.Events => callback is not null ? ([GameMethod(Inlined)] (object? _, in T data) => callback(data.metadata)) : null!;
   }
 
-  /* … */
+  /* ... */
   internal const System.Runtime.CompilerServices.MethodImplOptions External     = System.Runtime.CompilerServices.MethodImplOptions.ForwardRef;             // ->> Primarily for shortening the name
   internal const System.Runtime.CompilerServices.MethodImplOptions Inlined      = System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining;     //
   internal const System.Runtime.CompilerServices.MethodImplOptions Internal     = System.Runtime.CompilerServices.MethodImplOptions.InternalCall;           //
@@ -4256,30 +4313,32 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
     ReferenceTypes = (byte) (0x1u << 3)  // --> `(class A:B, class A:C).AsArray() == abstract class A[]` ->> Ensures covariant cast to `object[]`, despite constraining `object[]` to only `A` elements
   }
 
-  public        delegate void           ArrayCopier <T>                    (T[]                        sourceArray, uint       sourceIndex, T[] destinationArray, uint destinationIndex, uint count); // ->> See `𝑓 Util.Array    <T>.Copy        (…)`
-  public        delegate ref T          ArrayIndexer<T>                    (T[]                        array,       uint       index);                                                                // ->> See `𝑓 Util.Reference<T>.ArrayAtValue(…)`
-  public        delegate object         GUIField                           (in UnityEngine.Rect        position,    object     value);                                                                // ->> Determines how `RefDictionary<…>` (and `RefReadOnlyDictionary<…>`) elements are drawn by the Inspector
-  public        delegate void           Handler<T>                         (object?                    target,      in T       data) where T : Game.Events;                                           // ->> Handles completed `Load`, `Wait`, … operations i.e. `System.EventHandler`
-  public        delegate object?        Interpolator                       (double                     progress,    in object? a, in object? b);                                                      // ->> Interpolates `::begin` and `::end` properties in `Game.Collections.Keyframe["…"]`
-  public        delegate T              Interpolator                 <T>   (double                     progress,    in T       a, in T       b);                                                      //    ^^
-  public        delegate ref readonly T ReadOnlySpanIndexer          <T>   (in  System.ReadOnlySpan<T> span, int index);                                                                              // ->> See `𝑓 Util.Reference<T>.ReadOnlySpanAtValue(…)`
-  public        delegate void           RefAction                    <T>   (ref T                      value);                                                                                        // ->> Based on `System.Action<T>`
-  public unsafe delegate void*          RefAddresser                 <T>   (ref T                      value);                                                                                        // ->> Address of i.e. `&value`
-  public        delegate int            RefComparison                <T>   (ref T                      a, ref T b);                                                                                   // ->> Based on `System.Comparison<T>`; See `𝑓 RefComparer<T>.CompareValue(…)`
-  public        delegate U              RefConverter                 <T, U>(ref T                      value);                                                                                        // ->> Based on `System.Converter<T, U>`
-  public        delegate bool           RefEqualityComparison        <T>   (ref T                      a, ref T b);                                                                                   // ->> See `𝑓 RefEqualityComparer<T>.EqualsValue(…)`
-  public        delegate ref T          Referrer                     <T>   ();                                                                                                                        //
-  public        delegate int            RefHasher                    <T>   (ref T                      value);                                                                                        //
-  public        delegate bool           RefPredicate                 <T>   (ref T                      value);                                                                                        // ->> Based on `System.Predicate<T>`
-  public        delegate void           RefReadOnlyAction            <T>   (in  T                      value);                                                                                        // ->> Based on `System.Action<T>`
-  public unsafe delegate void*          RefReadOnlyAddresser         <T>   (in  T                      value);                                                                                        // ->> Address of i.e. `&value`
-  public        delegate int            RefReadOnlyComparison        <T>   (in  T                      a, in  T b);                                                                                   // ->> Based on `System.Comparison<T>`; See `𝑓 RefReadOnlyComparer<T>.CompareValue(…)`
-  public        delegate U              RefReadOnlyConverter         <T, U>(in  T                      value);                                                                                        // ->> Based on `System.Converter<T, U>`
-  public        delegate bool           RefReadOnlyEqualityComparison<T>   (in  T                      a, in T b);                                                                                    // ->> See `𝑓 RefReadOnlyEqualityComparer<T>.EqualsValue(…)`
-  public        delegate int            RefReadOnlyHasher            <T>   (in  T                      value);                                                                                        //
-  public        delegate bool           RefReadOnlyPredicate         <T>   (in  T                      value);                                                                                        // ->> Based on `System.Predicate<T>`
-  public        delegate ref T          SpanIndexer                  <T>   (in  System.Span<T>         span, int index);                                                                              // ->> See `𝑓 Util.Reference<T>.SpanAtValue(…)`
-  public        delegate double         Tweener                            (double                     time);                                                                                         // ->> Adjusts interpolation be-tween `Interpolator(…)`’s `progress` from `a` to `b`
+  public        delegate void           ArrayCopier <T>                       (T[]                        sourceArray, uint       sourceIndex, T[] destinationArray, uint destinationIndex, uint count); // ->> See `𝑓 Util.Array    <>.Copy        (…)`
+  public        delegate ref T          ArrayIndexer<T>                       (T[]                        array,       uint       index);                                                                // ->> See `𝑓 Util.Reference<>.ArrayAtValue(…)`
+  public        delegate object         GUIField                              (in UnityEngine.Rect        position,    object     value);                                                                // ->> Determines how `RefDictionary<…>` (and `RefReadOnlyDictionary<…>`) elements are drawn by the Inspector
+  public        delegate void           Handler<T>                            (object?                    target,      in T       data) where T : Game.Events;                                           // ->> Handles completed `Load`, `Wait`, … operations i.e. `System.EventHandler`
+  public        delegate object?        Interpolator                          (double                     progress,    in object? a, in object? b);                                                      // ->> Interpolates `::begin` and `::end` properties in `Game.Collections.Keyframe["…"]`
+  public        delegate T              Interpolator                 <T>      (double                     progress,    in T       a, in T       b);                                                      //    ^^
+  public        delegate ref readonly T ReadOnlySpanIndexer          <T>      (in  System.ReadOnlySpan<T> span, int index);                                                                              // ->> See `𝑓 Util.Reference<>.ReadOnlySpanAtValue(…)`
+  public        delegate void           RefAction                    <T>      (ref T                      value);                                                                                        // ->> Based on `System.Action<T>`
+  public        delegate V              BinaryOperation              <T, U, V>(in  T valueA,              in U valueB);                                                                                  // ->> See `𝑓 Traits.GetBinary<,,>`
+  public        delegate void           BinaryAssignOperation        <T, U>   (ref T value,               in U operand);                                                                                 // ->> See `𝑓 Traits.GetBinary<,>`
+  public unsafe delegate void*          RefAddresser                 <T>      (ref T                      value);                                                                                        // ->> Address of i.e. `&value`
+  public        delegate int            RefComparison                <T>      (ref T                      a, ref T b);                                                                                   // ->> Based on `System.Comparison<T>`; See `𝑓 RefComparer<T>.CompareValue(…)`
+  public        delegate U              RefConverter                 <T, U>   (ref T                      value);                                                                                        // ->> Based on `System.Converter<T, U>`
+  public        delegate bool           RefEqualityComparison        <T>      (ref T                      a, ref T b);                                                                                   // ->> See `𝑓 RefEqualityComparer<T>.EqualsValue(…)`
+  public        delegate ref T          Referrer                     <T>      ();                                                                                                                        //
+  public        delegate int            RefHasher                    <T>      (ref T                      value);                                                                                        //
+  public        delegate bool           RefPredicate                 <T>      (ref T                      value);                                                                                        // ->> Based on `System.Predicate<T>`
+  public        delegate void           RefReadOnlyAction            <T>      (in  T                      value);                                                                                        // ->> Based on `System.Action<T>`
+  public unsafe delegate void*          RefReadOnlyAddresser         <T>      (in  T                      value);                                                                                        // ->> Address of i.e. `&value`
+  public        delegate int            RefReadOnlyComparison        <T>      (in  T                      a, in  T b);                                                                                   // ->> Based on `System.Comparison<T>`; See `𝑓 RefReadOnlyComparer<T>.CompareValue(…)`
+  public        delegate U              RefReadOnlyConverter         <T, U>   (in  T                      value);                                                                                        // ->> Based on `System.Converter<T, U>`
+  public        delegate bool           RefReadOnlyEqualityComparison<T>      (in  T                      a, in T b);                                                                                    // ->> See `𝑓 RefReadOnlyEqualityComparer<T>.EqualsValue(…)`
+  public        delegate int            RefReadOnlyHasher            <T>      (in  T                      value);                                                                                        //
+  public        delegate bool           RefReadOnlyPredicate         <T>      (in  T                      value);                                                                                        // ->> Based on `System.Predicate<T>`
+  public        delegate ref T          SpanIndexer                  <T>      (in  System.Span<T>         span, int index);                                                                              // ->> See `𝑓 Util.Reference<T>.SpanAtValue(…)`
+  public        delegate double         Tweener                               (double                     time);                                                                                         // ->> Adjusts interpolation be-tween `Interpolator(…)`’s `progress` from `a` to `b`
 
   [System.AttributeUsage(System.AttributeTargets.All, AllowMultiple = false, Inherited = false)] // ->> Display property in Unity Inspector as “read-only”
   public sealed class ReadOnlyInInspectorAttribute : UnityEngine.PropertyAttribute /* ->> `System.Attribute`, `Unity.Collections.ReadOnlyAttribute` */ {}
@@ -4287,7 +4346,7 @@ namespace Game /* ->> Class types, constants, delegates, and enumerations */ {
   [System.AttributeUsage(System.AttributeTargets.All, AllowMultiple = false, Inherited = false)] // ->> Display property in Unity Inspector as “read-write”
   public sealed class ReadWriteInInspectorAttribute : UnityEngine.PropertyAttribute /* ->> `System.Attribute` */ {}
 
-  public readonly ref struct Void { /* ->> “error CS0590: UsEr-DeFiNeD oPeRaToRs CaNnOt ReTuRn VoId” */ }
+  public readonly struct Void { /* ->> “error CS0590: UsEr-DeFiNeD oPeRaToRs CaNnOt ReTuRn VoId” */ }
 }
 
 namespace Game /* ->> …everything else */ {
@@ -4337,7 +4396,7 @@ namespace Game /* ->> …everything else */ {
   public static class Extensions /* ->> Method extensions e.g. `System.Array.Add(this …)` */ {
     private static readonly UnityEngine.Vector3[] GetRectSizeWorldCorners = new UnityEngine.Vector3[4];
 
-    /* … */
+    /* ... */
     [GameMethod(Inlined)] public static void Add              (this System.Collections.Queue                             queue,      object?                                               element) { if (queue      is not null) queue     .Enqueue(element); }                    // ->> Intended for initializer lists only i.e. `new() {…}`
     [GameMethod(Inlined)] public static void Add<T>           (this System.Collections.Queue                             queue,      T                                                     element) { if (queue      is not null) queue     .Enqueue(element); }                    //    ^^
     [GameMethod(Inlined)] public static void Add<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> dictionary, System.Collections.Generic.KeyValuePair<TKey, TValue> element) { if (dictionary is not null) dictionary.Add    (element.Key, element.Value); } //
@@ -4385,7 +4444,7 @@ namespace Game /* ->> …everything else */ {
     [GameMethod(Inlined)] public static System.Collections.Specialized.StringCollection                           AsCopy              (this    System.Collections.Specialized.StringCollection                           collection)                       { if (collection       is not null) { System.Collections.Specialized.StringCollection  copy = new(); string[] subcopy = new string[collection.Count]; collection.CopyTo(subcopy, 0); copy.AddRange(subcopy);                         return copy; }               return Util.Reference<System.Collections.Specialized.StringCollection>                .Null; }
     [GameMethod(Inlined)] public static System.Collections.Specialized.StringDictionary                           AsCopy              (this    System.Collections.Specialized.StringDictionary                           dictionary)                       { if (dictionary       is not null) { System.Collections.Specialized.StringDictionary  copy = new(); foreach (System.Collections.DictionaryEntry element in dictionary) { copy.Add((string) element.Key, element.Value as string); } return copy; }               return Util.Reference<System.Collections.Specialized.StringDictionary>                .Null; }
     [GameMethod(Inlined)] public static System.Collections.Stack                                                  AsCopy              (this    System.Collections.Stack                                                  stack)                            =>    stack            is not null ? new(stack)                                                                                                                                                                                                                        : Util.Reference<System.Collections.Stack>                                       .Null;
-    [GameMethod(Inlined)] public static System.IO.MemoryStream                                                    AsCopy              (this    System.IO.MemoryStream                                                    stream)                           { if (stream           is not null) { try { return new(stream.GetBuffer(), 0, (int) stream.Length, stream.CanWrite, true); } catch (System.UnauthorizedAccessException) {} return new(Util.Array.From(stream), 0, (int) stream.Length, stream.CanWrite, false); } return Util.Reference<System.IO.MemoryStream>                                         .Null; }
+    [GameMethod(Inlined)] public static System.IO.MemoryStream                                                    AsCopy              (this    System.IO.MemoryStream                                                    stream)                           { if (stream           is not null) { try { return new(stream.GetBuffer(), 0, (int) stream.Length, stream.CanWrite, true); } catch (System.UnauthorizedAccessException) {} return new(Util.Enumerable.ToArray(stream), 0, (int) stream.Length, stream.CanWrite, false); } return Util.Reference<System.IO.MemoryStream>                                         .Null; }
     [GameMethod(Inlined)] public static System.Memory        <T>                                                  AsCopy<T>           (this in System.Memory        <T>                                                  memory)                           => memory.Slice(0);
     [GameMethod(Inlined)] public static System.Memory        <T>?                                                 AsCopy<T>           (this    System.Memory        <T>?                                                 memory)                           => memory is not null ? memory?.Slice(0) : Util.Reference<System.Memory<T>>.Null;
     [GameMethod(Inlined)] public static System.ReadOnlyMemory<T>                                                  AsCopy<T>           (this in System.ReadOnlyMemory<T>                                                  memory)                           => memory.Slice(0);
@@ -4403,44 +4462,44 @@ namespace Game /* ->> …everything else */ {
     [GameMethod(Inlined)] public static System.Collections.Generic.IReadOnlyList         <T>            AsReadOnly<T>           (this System.Collections.Generic.IList      <T>            list)       { if (list       is not null) { (list       as System.Collections.Generic.List      <T>)           ?.TrimExcess(); return list       is Game.Collections.RefList      <T>            sublist       ? sublist      .AsReadOnly() : new System.Collections.ObjectModel.ReadOnlyCollection<T>           (list); }       return Util.Reference<System.Collections.Generic.IReadOnlyList<T>>                    .Null; } // ->> `System.Collections.Generic.CollectionExtensions.AsReadOnly<T>           (list);`
     [GameMethod(Inlined)] public static System.Collections.ObjectModel.ReadOnlyCollection<T>            AsReadOnly<T>           (this System.Collections.Generic.List       <T>            list)       =>    list       is not null ? new System.Collections.ObjectModel.ReadOnlyCollection<T>(list)                                                                                                                                                                                                                                     : Util.Reference<System.Collections.ObjectModel.ReadOnlyCollection<T>>           .Null;
 
-    [GameMethod(Inlined)] public static T[]?                                                                       AtLeast<T>           (this    T[]                                                                       array,            uint length) => array           ?.Length ?? 0 >= length ? array            : null;
-    [GameMethod(Inlined)] public static System.Array?                                                              AtLeast              (this    System.Array                                                              array,            uint length) => array           ?.Length ?? 0 >= length ? array            : null;
-    [GameMethod(Inlined)] public static System.ArraySegment<T>?                                                    AtLeast<T>           (this in System.ArraySegment<T>                                                    arraySegment,     uint length) => arraySegment     .Count       >= length ? arraySegment     : null;
-    [GameMethod(Inlined)] public static System.ArraySegment<T>?                                                    AtLeast<T>           (this    System.ArraySegment<T>?                                                   arraySegment,     uint length) => arraySegment    ?.Count  ?? 0 >= length ? arraySegment     : null;
-    [GameMethod(Inlined)] public static System.Collections.ArrayList?                                              AtLeast              (this    System.Collections.ArrayList                                              arrayList,        uint length) => arrayList       ?.Count  ?? 0 >= length ? arrayList        : null;
-    [GameMethod(Inlined)] public static System.Collections.BitArray?                                               AtLeast              (this    System.Collections.BitArray                                               bits,             uint length) => bits            ?.Count  ?? 0 >= length ? bits             : null;
-    [GameMethod(Inlined)] public static System.Collections.Queue?                                                  AtLeast              (this    System.Collections.Queue                                                  queue,            uint length) => queue           ?.Count  ?? 0 >= length ? queue            : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.Dictionary      <TKey, TValue>?                 AtLeast<TKey, TValue>(this    System.Collections.Generic.Dictionary      <TKey, TValue>                 dictionary,       uint length) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.HashSet         <T>?                            AtLeast<T>           (this    System.Collections.Generic.HashSet         <T>                            hashset,          uint length) => hashset         ?.Count  ?? 0 >= length ? hashset          : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.LinkedList      <T>?                            AtLeast<T>           (this    System.Collections.Generic.LinkedList      <T>                            list,             uint length) => list            ?.Count  ?? 0 >= length ? list             : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.List            <T>?                            AtLeast<T>           (this    System.Collections.Generic.List            <T>                            list,             uint length) => list            ?.Count  ?? 0 >= length ? list             : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.Queue           <T>?                            AtLeast<T>           (this    System.Collections.Generic.Queue           <T>                            queue,            uint length) => queue           ?.Count  ?? 0 >= length ? queue            : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.SortedDictionary<TKey, TValue>?                 AtLeast<TKey, TValue>(this    System.Collections.Generic.SortedDictionary<TKey, TValue>                 sortedDictionary, uint length) => sortedDictionary?.Count  ?? 0 >= length ? sortedDictionary : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.SortedList      <TKey, TValue>?                 AtLeast<TKey, TValue>(this    System.Collections.Generic.SortedList      <TKey, TValue>                 sortedList,       uint length) => sortedList      ?.Count  ?? 0 >= length ? sortedList       : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.SortedSet       <T>?                            AtLeast<T>           (this    System.Collections.Generic.SortedSet       <T>                            sortedSet,        uint length) => sortedSet       ?.Count  ?? 0 >= length ? sortedSet        : null;
-    [GameMethod(Inlined)] public static System.Collections.Generic.Stack           <T>?                            AtLeast<T>           (this    System.Collections.Generic.Stack           <T>                            stack,            uint length) => stack           ?.Count  ?? 0 >= length ? stack            : null;
-    [GameMethod(Inlined)] public static System.Collections.Hashtable?                                              AtLeast              (this    System.Collections.Hashtable                                              hashtable,        uint length) => hashtable       ?.Count  ?? 0 >= length ? hashtable        : null;
-    [GameMethod(Inlined)] public static System.Collections.ObjectModel.Collection                  <T>?            AtLeast<T>           (this    System.Collections.ObjectModel.Collection                  <T>            collection,       uint length) => collection      ?.Count  ?? 0 >= length ? collection       : null;
-    [GameMethod(Inlined)] public static System.Collections.ObjectModel.ObservableCollection        <T>?            AtLeast<T>           (this    System.Collections.ObjectModel.ObservableCollection        <T>            collection,       uint length) => collection      ?.Count  ?? 0 >= length ? collection       : null;
-    [GameMethod(Inlined)] public static System.Collections.ObjectModel.ReadOnlyCollection          <T>?            AtLeast<T>           (this    System.Collections.ObjectModel.ReadOnlyCollection          <T>            collection,       uint length) => collection      ?.Count  ?? 0 >= length ? collection       : null;
-    [GameMethod(Inlined)] public static System.Collections.ObjectModel.ReadOnlyDictionary          <TKey, TValue>? AtLeast<TKey, TValue>(this    System.Collections.ObjectModel.ReadOnlyDictionary          <TKey, TValue> dictionary,       uint length) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
-    [GameMethod(Inlined)] public static System.Collections.ObjectModel.ReadOnlyObservableCollection<T>?            AtLeast<T>           (this    System.Collections.ObjectModel.ReadOnlyObservableCollection<T>            collection,       uint length) => collection      ?.Count  ?? 0 >= length ? collection       : null;
-    [GameMethod(Inlined)] public static System.Collections.SortedList?                                             AtLeast              (this    System.Collections.SortedList                                             sortedList,       uint length) => sortedList      ?.Count  ?? 0 >= length ? sortedList       : null;
-    [GameMethod(Inlined)] public static System.Collections.Specialized.HybridDictionary?                           AtLeast              (this    System.Collections.Specialized.HybridDictionary                           dictionary,       uint length) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
-    [GameMethod(Inlined)] public static System.Collections.Specialized.ListDictionary?                             AtLeast              (this    System.Collections.Specialized.ListDictionary                             dictionary,       uint length) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
-    [GameMethod(Inlined)] public static System.Collections.Specialized.NameValueCollection?                        AtLeast              (this    System.Collections.Specialized.NameValueCollection                        collection,       uint length) => collection      ?.Count  ?? 0 >= length ? collection       : null;
-    [GameMethod(Inlined)] public static System.Collections.Specialized.OrderedDictionary?                          AtLeast              (this    System.Collections.Specialized.OrderedDictionary                          dictionary,       uint length) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
-    [GameMethod(Inlined)] public static System.Collections.Specialized.StringCollection?                           AtLeast              (this    System.Collections.Specialized.StringCollection                           collection,       uint length) => collection      ?.Count  ?? 0 >= length ? collection       : null;
-    [GameMethod(Inlined)] public static System.Collections.Specialized.StringDictionary?                           AtLeast              (this    System.Collections.Specialized.StringDictionary                           dictionary,       uint length) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
-    [GameMethod(Inlined)] public static System.Collections.Stack?                                                  AtLeast              (this    System.Collections.Stack                                                  stack,            uint length) => stack           ?.Count  ?? 0 >= length ? stack            : null;
-    [GameMethod(Inlined)] public static System.IO.MemoryStream?                                                    AtLeast              (this    System.IO.MemoryStream                                                    stream,           uint length) => stream          ?.Count  ?? 0 >= length ? stream           : null;
-    [GameMethod(Inlined)] public static System.Memory        <T>?                                                  AtLeast<T>           (this in System.Memory        <T>                                                  memory,           uint length) => memory           .Length      >= length ? memory           : null;
-    [GameMethod(Inlined)] public static System.Memory        <T>?                                                  AtLeast<T>           (this    System.Memory        <T>?                                                 memory,           uint length) => memory          ?.Length ?? 0 >= length ? memory           : null;
-    [GameMethod(Inlined)] public static System.ReadOnlyMemory<T>?                                                  AtLeast<T>           (this in System.ReadOnlyMemory<T>                                                  memory,           uint length) => memory           .Length      >= length ? memory           : null;
-    [GameMethod(Inlined)] public static System.ReadOnlyMemory<T>?                                                  AtLeast<T>           (this    System.ReadOnlyMemory<T>?                                                 memory,           uint length) => memory          ?.Length ?? 0 >= length ? memory           : null;
+    [GameMethod(Inlined)] public static T[]?                                                                       AtLeast<T>           (this    T[]                                                                       array,            uint length = 1u) => array           ?.Length ?? 0 >= length ? array            : null;
+    [GameMethod(Inlined)] public static System.Array?                                                              AtLeast              (this    System.Array                                                              array,            uint length = 1u) => array           ?.Length ?? 0 >= length ? array            : null;
+    [GameMethod(Inlined)] public static System.ArraySegment<T>?                                                    AtLeast<T>           (this in System.ArraySegment<T>                                                    arraySegment,     uint length = 1u) => arraySegment     .Count       >= length ? arraySegment     : null;
+    [GameMethod(Inlined)] public static System.ArraySegment<T>?                                                    AtLeast<T>           (this    System.ArraySegment<T>?                                                   arraySegment,     uint length = 1u) => arraySegment    ?.Count  ?? 0 >= length ? arraySegment     : null;
+    [GameMethod(Inlined)] public static System.Collections.ArrayList?                                              AtLeast              (this    System.Collections.ArrayList                                              arrayList,        uint length = 1u) => arrayList       ?.Count  ?? 0 >= length ? arrayList        : null;
+    [GameMethod(Inlined)] public static System.Collections.BitArray?                                               AtLeast              (this    System.Collections.BitArray                                               bits,             uint length = 1u) => bits            ?.Count  ?? 0 >= length ? bits             : null;
+    [GameMethod(Inlined)] public static System.Collections.Queue?                                                  AtLeast              (this    System.Collections.Queue                                                  queue,            uint length = 1u) => queue           ?.Count  ?? 0 >= length ? queue            : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.Dictionary      <TKey, TValue>?                 AtLeast<TKey, TValue>(this    System.Collections.Generic.Dictionary      <TKey, TValue>                 dictionary,       uint length = 1u) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.HashSet         <T>?                            AtLeast<T>           (this    System.Collections.Generic.HashSet         <T>                            hashset,          uint length = 1u) => hashset         ?.Count  ?? 0 >= length ? hashset          : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.LinkedList      <T>?                            AtLeast<T>           (this    System.Collections.Generic.LinkedList      <T>                            list,             uint length = 1u) => list            ?.Count  ?? 0 >= length ? list             : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.List            <T>?                            AtLeast<T>           (this    System.Collections.Generic.List            <T>                            list,             uint length = 1u) => list            ?.Count  ?? 0 >= length ? list             : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.Queue           <T>?                            AtLeast<T>           (this    System.Collections.Generic.Queue           <T>                            queue,            uint length = 1u) => queue           ?.Count  ?? 0 >= length ? queue            : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.SortedDictionary<TKey, TValue>?                 AtLeast<TKey, TValue>(this    System.Collections.Generic.SortedDictionary<TKey, TValue>                 sortedDictionary, uint length = 1u) => sortedDictionary?.Count  ?? 0 >= length ? sortedDictionary : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.SortedList      <TKey, TValue>?                 AtLeast<TKey, TValue>(this    System.Collections.Generic.SortedList      <TKey, TValue>                 sortedList,       uint length = 1u) => sortedList      ?.Count  ?? 0 >= length ? sortedList       : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.SortedSet       <T>?                            AtLeast<T>           (this    System.Collections.Generic.SortedSet       <T>                            sortedSet,        uint length = 1u) => sortedSet       ?.Count  ?? 0 >= length ? sortedSet        : null;
+    [GameMethod(Inlined)] public static System.Collections.Generic.Stack           <T>?                            AtLeast<T>           (this    System.Collections.Generic.Stack           <T>                            stack,            uint length = 1u) => stack           ?.Count  ?? 0 >= length ? stack            : null;
+    [GameMethod(Inlined)] public static System.Collections.Hashtable?                                              AtLeast              (this    System.Collections.Hashtable                                              hashtable,        uint length = 1u) => hashtable       ?.Count  ?? 0 >= length ? hashtable        : null;
+    [GameMethod(Inlined)] public static System.Collections.ObjectModel.Collection                  <T>?            AtLeast<T>           (this    System.Collections.ObjectModel.Collection                  <T>            collection,       uint length = 1u) => collection      ?.Count  ?? 0 >= length ? collection       : null;
+    [GameMethod(Inlined)] public static System.Collections.ObjectModel.ObservableCollection        <T>?            AtLeast<T>           (this    System.Collections.ObjectModel.ObservableCollection        <T>            collection,       uint length = 1u) => collection      ?.Count  ?? 0 >= length ? collection       : null;
+    [GameMethod(Inlined)] public static System.Collections.ObjectModel.ReadOnlyCollection          <T>?            AtLeast<T>           (this    System.Collections.ObjectModel.ReadOnlyCollection          <T>            collection,       uint length = 1u) => collection      ?.Count  ?? 0 >= length ? collection       : null;
+    [GameMethod(Inlined)] public static System.Collections.ObjectModel.ReadOnlyDictionary          <TKey, TValue>? AtLeast<TKey, TValue>(this    System.Collections.ObjectModel.ReadOnlyDictionary          <TKey, TValue> dictionary,       uint length = 1u) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
+    [GameMethod(Inlined)] public static System.Collections.ObjectModel.ReadOnlyObservableCollection<T>?            AtLeast<T>           (this    System.Collections.ObjectModel.ReadOnlyObservableCollection<T>            collection,       uint length = 1u) => collection      ?.Count  ?? 0 >= length ? collection       : null;
+    [GameMethod(Inlined)] public static System.Collections.SortedList?                                             AtLeast              (this    System.Collections.SortedList                                             sortedList,       uint length = 1u) => sortedList      ?.Count  ?? 0 >= length ? sortedList       : null;
+    [GameMethod(Inlined)] public static System.Collections.Specialized.HybridDictionary?                           AtLeast              (this    System.Collections.Specialized.HybridDictionary                           dictionary,       uint length = 1u) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
+    [GameMethod(Inlined)] public static System.Collections.Specialized.ListDictionary?                             AtLeast              (this    System.Collections.Specialized.ListDictionary                             dictionary,       uint length = 1u) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
+    [GameMethod(Inlined)] public static System.Collections.Specialized.NameValueCollection?                        AtLeast              (this    System.Collections.Specialized.NameValueCollection                        collection,       uint length = 1u) => collection      ?.Count  ?? 0 >= length ? collection       : null;
+    [GameMethod(Inlined)] public static System.Collections.Specialized.OrderedDictionary?                          AtLeast              (this    System.Collections.Specialized.OrderedDictionary                          dictionary,       uint length = 1u) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
+    [GameMethod(Inlined)] public static System.Collections.Specialized.StringCollection?                           AtLeast              (this    System.Collections.Specialized.StringCollection                           collection,       uint length = 1u) => collection      ?.Count  ?? 0 >= length ? collection       : null;
+    [GameMethod(Inlined)] public static System.Collections.Specialized.StringDictionary?                           AtLeast              (this    System.Collections.Specialized.StringDictionary                           dictionary,       uint length = 1u) => dictionary      ?.Count  ?? 0 >= length ? dictionary       : null;
+    [GameMethod(Inlined)] public static System.Collections.Stack?                                                  AtLeast              (this    System.Collections.Stack                                                  stack,            uint length = 1u) => stack           ?.Count  ?? 0 >= length ? stack            : null;
+    [GameMethod(Inlined)] public static System.IO.MemoryStream?                                                    AtLeast              (this    System.IO.MemoryStream                                                    stream,           uint length = 1u) => stream          ?.Count  ?? 0 >= length ? stream           : null;
+    [GameMethod(Inlined)] public static System.Memory        <T>?                                                  AtLeast<T>           (this in System.Memory        <T>                                                  memory,           uint length = 1u) => memory           .Length      >= length ? memory           : null;
+    [GameMethod(Inlined)] public static System.Memory        <T>?                                                  AtLeast<T>           (this    System.Memory        <T>?                                                 memory,           uint length = 1u) => memory          ?.Length ?? 0 >= length ? memory           : null;
+    [GameMethod(Inlined)] public static System.ReadOnlyMemory<T>?                                                  AtLeast<T>           (this in System.ReadOnlyMemory<T>                                                  memory,           uint length = 1u) => memory           .Length      >= length ? memory           : null;
+    [GameMethod(Inlined)] public static System.ReadOnlyMemory<T>?                                                  AtLeast<T>           (this    System.ReadOnlyMemory<T>?                                                 memory,           uint length = 1u) => memory          ?.Length ?? 0 >= length ? memory           : null;
     #if NET9_0 || NET9_0_OR_GREATER
       [GameMethod(Inlined)]
-      public static System.Collections.ObjectModel.ReadOnlyCollection<T>? AtLeast<T>(this System.Collections.ObjectModel.ReadOnlySet<T> set, uint length) => set?.Count ?? 0 >= length ? set : null;
+      public static System.Collections.ObjectModel.ReadOnlyCollection<T>? AtLeast<T>(this System.Collections.ObjectModel.ReadOnlySet<T> set, uint length = 1u) => set?.Count ?? 0 >= length ? set : null;
     #endif
 
     [GameMethod(Inlined)] public static T[]?                                                                       AtMost<T>           (this    T[]                                                                       array,            uint length) => array           ?.Length ?? 0 < length ? array            : null;
@@ -4990,7 +5049,7 @@ namespace Game /* ->> …everything else */ {
     [GameMethod(Inlined)] public static T              Random<T>           (this    System.Collections.ObjectModel.ReadOnlyCollection          <T> collection)       =>     (collection       is not null && !collection  .IsEmpty() ? collection[(int) Util.RandomUInt((uint) collection.Count)]                   : Util.Reference<T>      .Null);
     [GameMethod(Inlined)] public static T              Random<T>           (this    System.Collections.ObjectModel.ReadOnlyObservableCollection<T> collection)       =>     (collection       is not null && !collection  .IsEmpty() ? ((System.Collections.ObjectModel.ReadOnlyCollection<T>) collection).Random() : Util.Reference<T>      .Null);
     [GameMethod(Inlined)] public static object?        Random              (this    System.Collections.SortedList                                  sortedList)       =>     (sortedList       is not null && !sortedList  .IsEmpty() ? sortedList.GetByIndex((int) Util.RandomUInt((uint) sortedList.Count))        : Util.Reference<object?>.Null);
-    [GameMethod(Inlined)] public static byte           Random              (this    System.IO.MemoryStream                                         stream)           =>     (stream           is not null && !stream      .IsEmpty() ? Util.Array.From(stream).Random()                                             : Util.Reference<byte>   .Null);
+    [GameMethod(Inlined)] public static byte           Random              (this    System.IO.MemoryStream                                         stream)           =>     (stream           is not null && !stream      .IsEmpty() ? Util.Enumerable.ToArray(stream).Random()                                             : Util.Reference<byte>   .Null);
     [GameMethod(Inlined)] public static T              Random<T>           (this in System.Memory        <T>                                       memory)           =>     (memory.Span.Random());
     [GameMethod(Inlined)] public static T              Random<T>           (this    System.Memory        <T>?                                      memory)           =>     (memory is not null ? ((System.Memory<T>) memory).Random() : Util.Reference<T>.Null);
     [GameMethod(Inlined)] public static T              Random<T>           (this in System.ReadOnlyMemory<T>                                       memory)           =>     (memory.Span.Random());
@@ -5165,10 +5224,10 @@ namespace Game /* ->> …everything else */ {
     }
 
     private static System.Runtime.CompilerServices.ITuple ToTuple(this System.Array array, System.Type type) {
-      uint length = (uint) (array?.Length ?? 0);
+      uint length = (uint) array.Length;
 
       // ...
-      if (0u != length && array!.GetType().GetElementType() is System.Type type) {
+      if (0u != length) {
         object      tuple       = array.GetValue(length - 1u)!;
         uint        tupleCount  = (length / 7u) * 7u;
         System.Type tupleType   = type;
@@ -5219,11 +5278,12 @@ namespace Game /* ->> …everything else */ {
       return System.ValueTuple.Create();
     }
 
-    // optimize Array.From(IEnumerable) to prod other types like Array/List first
-    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple   (this    System.Array                              array)      => array?.GetType().GetElementType() is System.Type type ?                                                                                                                                  array                      .ToTuple(type) : System.ValueTuple.Create();
-    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple<T>(this    System.Collections.Generic.IEnumerable<T> enumerable) =>                                                                                                                                                                                          Util.Array.From(enumerable).ToTuple(typeof(T));
-    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple   (this    System.Collections.IEnumerable            enumerable) { if (enumerable is not null) { using (System.Collections.IEnumerator enumerator = enumerable.GetEnumerator()) { while (enumerator.MoveNext()) { if (enumerator.Current is not null) return Util.Array.From(enumerable).ToTuple(enumerator.Current.GetType()); } } } return System.ValueTuple.Create(); }
-    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple<T>(this in System.ReadOnlySpan<T>                    span)       =>                                                                                                                                                                                          Util.Array.From(span)      .ToTuple(typeof(T));
+    // optimize Enumerable.ToArray(IEnumerable) to prod other types like Array/List first
+    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple<T>(this    T[]                                       array)      => array                             is not null         ?                                                                                                                                  array                      .ToTuple(typeof(T)) : System.ValueTuple.Create();
+    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple   (this    System.Array                              array)      => array?.GetType().GetElementType() is System.Type type ?                                                                                                                                  array                      .ToTuple(type)      : System.ValueTuple.Create();
+    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple<T>(this    System.Collections.Generic.IEnumerable<T> enumerable) =>                                                                                                                                                                                          Util.Enumerable.ToArray(enumerable).ToTuple(typeof(T));
+    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple   (this    System.Collections.IEnumerable            enumerable) { if (enumerable is not null) { using (System.Collections.IEnumerator enumerator = enumerable.GetEnumerator()) { while (enumerator.MoveNext()) { if (enumerator.Current is not null) return Util.Enumerable.ToArray(enumerable).ToTuple(enumerator.Current.GetType()); } } } return System.ValueTuple.Create(); }
+    [GameMethod(Inlined)] public static System.Runtime.CompilerServices.ITuple ToTuple<T>(this in System.ReadOnlySpan<T>                    span)       =>                                                                                                                                                                                          Util.Enumerable.ToArray(span)      .ToTuple(typeof(T));
 
     [GameMethod(Inlined)] public static void TrimExcess<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> dictionary)               { if (dictionary is not null) dictionary.TrimExcess(dictionary.Count); }
     [GameMethod(Inlined)] public static void TrimExcess<T>           (this System.Collections.Generic.IList      <T>            list)                     { if (list       is not null) list      .TrimExcess(list      .Count); }
@@ -5250,32 +5310,92 @@ namespace Game /* ->> …everything else */ {
   }
 
   public static class Traits /* ->> Metaprogramming generics */ {
+    private abstract class ConstructibleConstraint       <T> where T : new()     {}
+    private abstract class NonNullableConstraint         <T> where T : notnull   {}
+    private abstract class NonNullableReferenceConstraint<T> where T : class     {}
+    private abstract class ReferenceConstraint           <T> where T : class?    {}
+    private abstract class UnmanagedConstraint           <T> where T : unmanaged {}
+    private abstract class ValueConstraint               <T> where T : struct    {}
+
     private static class TypeInfo<T> {
       public static readonly bool IsConstructibleType = Traits.IsConstructibleType(typeof(T));
+      public static readonly bool IsNullableType      = Traits.IsNullableType     (typeof(T));
       public static readonly bool IsPrimitiveType     = Traits.IsPrimitiveType    (typeof(T));
       public static readonly bool IsReferenceType     = Traits.IsReferenceType    (typeof(T));
       public static readonly bool IsUnmanagedType     = Traits.IsUnmanagedType    (typeof(T));
       public static readonly bool IsValueType         = Traits.IsValueType        (typeof(T));
     }
 
-    internal abstract class ConstructibleConstraint       <T> where T : new()     {}
-    internal abstract class NonNullableConstraint         <T> where T : notnull   {}
-    internal abstract class NonNullableReferenceConstraint<T> where T : class     {}
-    internal abstract class ReferenceConstraint           <T> where T : class?    {}
-    internal abstract class UnmanagedConstraint           <T> where T : unmanaged {}
-    internal abstract class ValueConstraint               <T> where T : struct    {}
+    /* ... */
+    private static readonly System.Collections.Generic.Dictionary<(System.Type, System.Type, System.Type, string, bool), System.Reflection.Emit.DynamicMethod> BinaryDelegates = new();
 
-    /* … */
-    [GameMethod(Inlined), GameResolution(1)] public static bool IsConstructibleType<T>()                 => Traits.TypeInfo<T>.IsConstructibleType;
-    [GameMethod(Inlined), GameResolution(1)] public static bool IsConstructibleType   (System.Type type) { try { typeof(Traits.ConstructibleConstraint<>).MakeGenericType(type); return true; } catch {} return false; }
-    [GameMethod(Inlined), GameResolution(1)] public static bool IsPrimitiveType<T>    ()                 => Traits.TypeInfo<T>.IsPrimitiveType;
-    [GameMethod(Inlined), GameResolution(1)] public static bool IsPrimitiveType       (System.Type type) => type.IsPrimitive; // ->> `type == typeof(bool) || type == typeof(byte) || type == typeof(char) || type == typeof(double) || type == typeof(float) || type == typeof(int) || type == typeof(long) || type == typeof(sbyte) || type == typeof(short) || type == typeof(uint) || type == typeof(ulong) || type == typeof(ushort) || type == typeof(System.IntPtr) || type == typeof(System.UIntPtr)`
-    [GameMethod(Inlined), GameResolution(1)] public static bool IsReferenceType<T>    ()                 => Traits.TypeInfo<T>.IsReferenceType;
-    [GameMethod(Inlined), GameResolution(1)] public static bool IsReferenceType       (System.Type type) { try { typeof(Traits.ReferenceConstraint<>).MakeGenericType(type); return true; } catch {} return false; }
-    [GameMethod(Inlined), GameResolution(0)] public static bool IsUnmanagedType<T>    ()                 => Traits.TypeInfo<T>.IsUnmanagedType;
-    [GameMethod(Inlined), GameResolution(0)] public static bool IsUnmanagedType       (System.Type type) { try { typeof(Traits.UnmanagedConstraint<>).MakeGenericType(type); return true; } catch {} return false; }
-    [GameMethod(Inlined), GameResolution(1)] public static bool IsValueType<T>        ()                 => Traits.TypeInfo<T>.IsValueType;
-    [GameMethod(Inlined), GameResolution(1)] public static bool IsValueType           (System.Type type) { if (type.IsByRef || type == typeof(void) || System.Nullable.GetUnderlyingType(type) is not null) return false; if (type.IsEnum || type.IsPointer || type.IsValueType || typeof(System.Enum).IsAssignableFrom(type) || typeof(System.ValueType).IsAssignableFrom(type)) return true; try { typeof(Traits.ValueConstraint<>).MakeGenericType(type); return true; } catch {} return false; }
+    /* ... */
+    public unsafe static BinaryOperation      <T, U, V> GetAdditionDelegate          <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "Addition",           System.Reflection.Emit.OpCodes.Add);
+    public unsafe static BinaryAssignOperation<T, U>    GetAdditionAssignDelegate    <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "AdditionAssign",     System.Reflection.Emit.OpCodes.Add);
+    public unsafe static BinaryOperation      <T, U, V> GetBinaryDelegate            <T, U, V>             (params System.ReadOnlySpan<System.Reflection.Emit.OpCode> operations) =>                                    Traits.GetBinaryDelegate      <T, U, V>   ((null as string)!,            operations);
+    public unsafe static BinaryOperation      <T, U, V> GetBinaryDelegate            <T, U, V>(string name, params System.ReadOnlySpan<System.Reflection.Emit.OpCode> operations) => (Game.BinaryOperation<T, U, V>)    Traits.GetBinaryDelegate      <T, U, V>   (name,                      in operations, assign: false).CreateDelegate(typeof(Game.BinaryOperation<T, U, V>));
+    public unsafe static BinaryAssignOperation<T, U>    GetBinaryAssignDelegate      <T, U>                (params System.ReadOnlySpan<System.Reflection.Emit.OpCode> operations) =>                                    Traits.GetBinaryAssignDelegate<T, U>      ((null as string)!,            operations);
+    public unsafe static BinaryAssignOperation<T, U>    GetBinaryAssignDelegate      <T, U>   (string name, params System.ReadOnlySpan<System.Reflection.Emit.OpCode> operations) => (Game.BinaryAssignOperation<T, U>) Traits.GetBinaryDelegate      <T, U, Void>(name,                      in operations, assign: true).CreateDelegate(typeof(Game.BinaryAssignOperation<T, U>));
+    public unsafe static BinaryOperation      <T, U, V> GetBitwiseAndDelegate        <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "BitwiseAnd",         System.Reflection.Emit.OpCodes.And);
+    public unsafe static BinaryAssignOperation<T, U>    GetBitwiseAndAssignDelegate  <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "BitwiseAndAssign",   System.Reflection.Emit.OpCodes.And);
+    public unsafe static BinaryOperation      <T, U, V> GetBitwiseOrDelegate         <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "BitwiseOr",          System.Reflection.Emit.OpCodes.Or);
+    public unsafe static BinaryAssignOperation<T, U>    GetBitwiseOrAssignDelegate   <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "BitwiseOrAssign",    System.Reflection.Emit.OpCodes.Or);
+    public unsafe static BinaryOperation      <T, U, V> GetDivisionDelegate          <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "Division",           System.Reflection.Emit.OpCodes.Div);
+    public unsafe static BinaryAssignOperation<T, U>    GetDivisionAssignDelegate    <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "DivisionAssign",     System.Reflection.Emit.OpCodes.Div);
+    public unsafe static BinaryOperation      <T, U, V> GetExclusiveOrDelegate       <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "ExclusiveOr",        System.Reflection.Emit.OpCodes.Xor);
+    public unsafe static BinaryAssignOperation<T, U>    GetExclusiveOrAssignDelegate <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "ExclusiveOrAssign",  System.Reflection.Emit.OpCodes.Xor);
+    public unsafe static BinaryOperation      <T, U, V> GetGreaterThanDelegate       <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "GreaterThan",        System.Reflection.Emit.OpCodes.Cgt);
+    public unsafe static BinaryOperation      <T, U, V> GetGreaterThanOrEqualDelegate<T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "GreaterThanOrEqual", System.Reflection.Emit.OpCodes.Clt, System.Reflection.Emit.OpCodes.Ldc_I4_0, System.Reflection.Emit.OpCodes.Ceq);
+    public unsafe static BinaryOperation      <T, U, V> GetInequalityDelegate        <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "Inequality",         System.Reflection.Emit.OpCodes.Ceq, System.Reflection.Emit.OpCodes.Ldc_I4_0, System.Reflection.Emit.OpCodes.Ceq);
+    public unsafe static BinaryOperation      <T, U, V> GetLeftShiftDelegate         <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "LeftShift",          System.Reflection.Emit.OpCodes.Shl);
+    public unsafe static BinaryAssignOperation<T, U>    GetLeftShiftAssignDelegate   <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "LeftShiftAssign",    System.Reflection.Emit.OpCodes.Shl);
+    public unsafe static BinaryOperation      <T, U, V> GetLessThanDelegate          <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "LessThan",           System.Reflection.Emit.OpCodes.Clt);
+    public unsafe static BinaryOperation      <T, U, V> GetLessThanOrEqualDelegate   <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "LessThanOrEqual",    System.Reflection.Emit.OpCodes.Cgt, System.Reflection.Emit.OpCodes.Ldc_I4_0, System.Reflection.Emit.OpCodes.Ceq);
+    public unsafe static BinaryOperation      <T, U, V> GetModulusDelegate           <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "Modulus",            System.Reflection.Emit.OpCodes.Rem);
+    public unsafe static BinaryAssignOperation<T, U>    GetModulusAssignDelegate     <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "ModulusAssign",      System.Reflection.Emit.OpCodes.Rem);
+    public unsafe static BinaryOperation      <T, U, V> GetMultiplyDelegate          <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "Multiply",           System.Reflection.Emit.OpCodes.Mul);
+    public unsafe static BinaryAssignOperation<T, U>    GetMultiplyAssignDelegate    <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "MultiplyAssign",     System.Reflection.Emit.OpCodes.Mul);
+    public unsafe static BinaryOperation      <T, U, V> GetRightShiftDelegate        <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "RightShift",         System.Reflection.Emit.OpCodes.Shr);
+    public unsafe static BinaryAssignOperation<T, U>    GetRightShiftAssignDelegate  <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "RightShiftAssign",   System.Reflection.Emit.OpCodes.Shr);
+    public unsafe static BinaryOperation      <T, U, V> GetSubtractionDelegate       <T, U, V>(string name = null!)                                                               =>                                    Traits.GetBinaryDelegate      <T, U, V>   (name ?? "Subtraction",        System.Reflection.Emit.OpCodes.Sub);
+    public unsafe static BinaryAssignOperation<T, U>    GetSubtractionAssignDelegate <T, U>   (string name = null!)                                                               =>                                    Traits.GetBinaryAssignDelegate<T, U>      (name ?? "SubtractionAssign",  System.Reflection.Emit.OpCodes.Sub);
+
+    private unsafe static System.Reflection.Emit.DynamicMethod GetBinaryDelegate<T, U, V>(string name, in System.ReadOnlySpan<System.Reflection.Emit.OpCode> operations, bool assign = false) {
+      if (!Traits.BinaryDelegates.TryGetValue((typeof(T), typeof(U), typeof(V), name, assign), out System.Reflection.Emit.DynamicMethod? method))
+      fixed (System.Reflection.Emit.OpCode* address = operations) {
+        System.Reflection.Emit.ILGenerator generator;
+
+        // ...
+        method    = new($"_{name ?? (operations.Length == 1 ? address -> ToString() : "Binary")}{typeof(T).Name}{typeof(U).Name}", assign ? typeof(void) : typeof(V), new[] {typeof(T).MakeByRefType(), typeof(U).MakeByRefType()}, typeof(Program).Module, true);
+        generator = method.GetILGenerator();
+
+        generator.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+        if (assign) { generator.Emit(System.Reflection.Emit.OpCodes.Ldarg_0); }
+        generator.Emit(System.Reflection.Emit.OpCodes.Ldobj, typeof(T)); // --> `in T`
+        generator.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
+        generator.Emit(System.Reflection.Emit.OpCodes.Ldobj, typeof(U)); // --> `in U`
+        for (System.Reflection.Emit.OpCode* iterator = address, end = address + operations.Length; end != iterator; ++iterator) { generator.Emit(*iterator); }
+        if (assign)                                                                                                             { generator.Emit(System.Reflection.Emit.OpCodes.Stobj, typeof(T)); }
+        generator.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+        Traits.BinaryDelegates.Add((typeof(T), typeof(U), typeof(V), name!, assign), method);
+      }
+
+      return method!;
+    }
+
+    [GameMethod(Inlined)] public static bool IsConstructibleType<T>()                 => Traits.TypeInfo<T>.IsConstructibleType;
+    [GameMethod(Inlined)] public static bool IsNullableType     <T>()                 => Traits.TypeInfo<T>.IsNullableType;
+    [GameMethod(Inlined)] public static bool IsPrimitiveType    <T>()                 => Traits.TypeInfo<T>.IsPrimitiveType;
+    [GameMethod(Inlined)] public static bool IsReferenceType    <T>()                 => Traits.TypeInfo<T>.IsReferenceType;
+    [GameMethod(Inlined)] public static bool IsUnmanagedType    <T>()                 => Traits.TypeInfo<T>.IsUnmanagedType;
+    [GameMethod(Inlined)] public static bool IsValueType        <T>()                 => Traits.TypeInfo<T>.IsValueType;
+    [GameMethod(Inlined)] public static bool IsConstructibleType   (System.Type type) { try { typeof(Traits.ConstructibleConstraint<>).MakeGenericType(type); return true; } catch (System.Exception exception) when (exception is System.ArgumentException or System.NotSupportedException) {} return false; }
+    [GameMethod(Inlined)] public static bool IsNullableType        (System.Type type) => type.IsValueType && System.Nullable.GetUnderlyingType(type) is null;
+    [GameMethod(Inlined)] public static bool IsPrimitiveType       (System.Type type) => type.IsPrimitive; // ->> `type == typeof(bool) || type == typeof(byte) || type == typeof(char) || type == typeof(double) || type == typeof(float) || type == typeof(int) || type == typeof(long) || type == typeof(sbyte) || type == typeof(short) || type == typeof(uint) || type == typeof(ulong) || type == typeof(ushort) || type == typeof(System.IntPtr) || type == typeof(System.UIntPtr)`
+    [GameMethod(Inlined)] public static bool IsReferenceType       (System.Type type)                                                                                                                                                                                                                                                                                     { try { typeof(Traits.ReferenceConstraint<>).MakeGenericType(type); return true; } catch (System.Exception exception) when (exception is System.ArgumentException or System.NotSupportedException) {} return false; }
+    [GameMethod(Inlined)] public static bool IsUnmanagedType       (System.Type type)                                                                                                                                                                                                                                                                                     { try { typeof(Traits.UnmanagedConstraint<>).MakeGenericType(type); return true; } catch (System.Exception exception) when (exception is System.ArgumentException or System.NotSupportedException) {} return false; }
+    [GameMethod(Inlined)] public static bool IsValueType           (System.Type type) { if (type.IsByRef || type == typeof(void) || System.Nullable.GetUnderlyingType(type) is not null) return false; if (type.IsEnum || type.IsPointer || type.IsValueType || typeof(System.Enum).IsAssignableFrom(type) || typeof(System.ValueType).IsAssignableFrom(type)) return true; try { typeof(Traits.ValueConstraint    <>).MakeGenericType(type); return true; } catch (System.Exception exception) when (exception is System.ArgumentException or System.NotSupportedException) {} return false; }
   }
 
   public static partial class Util /* ->> Utilities */ {
@@ -5287,14 +5407,14 @@ namespace Game /* ->> …everything else */ {
         readonly bool                                    System.Collections.ICollection.IsSynchronized => false;
         readonly object                                  System.Collections.ICollection.SyncRoot       => this;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public Copyable(uint length, System.Action<System.Array, int> copier) {
           this.CopyTo = copier;
           this.Count  = length;
         }
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly bool                    IsEmpty                                     ()                              => 0u == this.Count;
         [GameMethod(Inlined)] readonly void                           System.Collections.ICollection.CopyTo       (System.Array array, int index) => this.CopyTo(array, index);
         [GameMethod(Inlined)] readonly System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()                              => null!;
@@ -5307,17 +5427,17 @@ namespace Game /* ->> …everything else */ {
         [GameMethod(Inlined)] public static implicit operator Copyable(System.Collections.Specialized.NameValueCollection collection) => new((uint) collection.Count,  collection                                   .CopyTo);
         [GameMethod(Inlined)] public static implicit operator Copyable(System.Collections.Specialized.StringCollection    collection) => new((uint) collection.Count,  ((System.Collections.ICollection) collection).CopyTo);
         [GameMethod(Inlined)] public static implicit operator Copyable(System.Collections.Stack                           stack)      => new((uint) stack     .Count,  stack                                        .CopyTo);
-        [GameMethod(Inlined)] public static implicit operator Copyable(System.IO.MemoryStream                             stream)     => (Copyable) Array.From(stream);
+        [GameMethod(Inlined)] public static implicit operator Copyable(System.IO.MemoryStream                             stream)     => (Copyable) Enumerable.ToArray(stream);
       }
 
       public readonly struct Enumerable : System.Collections.IEnumerable {
         private readonly System.Collections.IEnumerable value;
 
-        /* … */
-        [GameConstructor, GameMethod(Inlined)] public Enumerable(System.Collections.IEnumerable? enumerable) => this.value = enumerable ?? Array.From();
-        [GameConstructor, GameMethod(Inlined)] public Enumerable(System.IO.MemoryStream?         stream)     => this.value = Array.From(stream);
+        /* ... */
+        [GameConstructor, GameMethod(Inlined)] public Enumerable(System.Collections.IEnumerable? enumerable) => this.value = enumerable ?? Enumerable.ToArray();
+        [GameConstructor, GameMethod(Inlined)] public Enumerable(System.IO.MemoryStream?         stream)     => this.value = Enumerable.ToArray(stream);
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly System.Collections.IEnumerator GetEnumerator                               () => this.value.GetEnumerator();
         [GameMethod(Inlined)] readonly System.Collections.IEnumerator        System.Collections.IEnumerable.GetEnumerator() => this      .GetEnumerator();
 
@@ -5329,14 +5449,14 @@ namespace Game /* ->> …everything else */ {
         [GameMethod(Inlined)] public static implicit operator Enumerable(System.Collections.Specialized.NameValueCollection? collection) => new(collection);
         [GameMethod(Inlined)] public static implicit operator Enumerable(System.Collections.Specialized.StringCollection?    collection) => new(collection);
         [GameMethod(Inlined)] public static implicit operator Enumerable(System.Collections.Stack?                           stack)      => new(stack);
-        [GameMethod(Inlined)] public static implicit operator Enumerable(System.IO.MemoryStream?                             stream)     => new(Array.From(stream).ConvertAll([GameMethod(Inlined)] static (element) => (object?) element));
+        [GameMethod(Inlined)] public static implicit operator Enumerable(System.IO.MemoryStream?                             stream)     => new(Enumerable.ToArray(stream).ConvertAll([GameMethod(Inlined)] static (element) => (object?) element));
       }
 
-      /* … */
+      /* ... */
       public static void Copy(System.Array sourceArray, uint sourceIndex, System.Array destinationArray, uint destinationIndex, uint count) {
         (System.Type destinationType, System.Type sourceType) = (destinationArray.GetType().GetElementType(), sourceArray.GetType().GetElementType());
 
-        // …
+        // ...
         if (Traits.IsPrimitiveType(destinationType) && Traits.IsPrimitiveType(sourceType)) {
           (int destinationElementSize, int sourceElementSize) = (System.Runtime.InteropServices.Marshal.SizeOf(destinationType), System.Runtime.InteropServices.Marshal.SizeOf(sourceType));
 
@@ -5350,16 +5470,22 @@ namespace Game /* ->> …everything else */ {
       }
 
       [GameMethod(Inlined)] public static System.Array From()                                                            => System.Array.Empty<object>();
-      [GameMethod(Inlined)] public static System.Array From(System.Array?                                    array)      => array ?? Array.From();
+      [GameMethod(Inlined)] public static System.Array From(System.Array?                                    array)      => array ?? Enumerable.ToArray();
       [GameMethod(Inlined)] public static object?[]    From(System.Collections.ArrayList?                    arrayList)  => arrayList is not null ? arrayList.ToArray() : System.Array.Empty<object?>();
       [GameMethod(Inlined)] public static bool   []    From(System.Collections.BitArray?                     bits)       { if (!(bits?.IsEmpty() ?? true)) { bool[] array = new bool[bits!.Length]; uint length = 0u; foreach (bool bit in bits) { array[length++] = bit; } return array; } return System.Array.Empty<bool>(); }
-      [GameMethod(Inlined)] public static object?[]    From(System.Collections.IEnumerable?                  enumerable) { if (enumerable is not null) { System.Collections.Queue array = new(); for (System.Collections.IEnumerator enumerator = enumerable.GetEnumerator(); enumerator.MoveNext(); ) array.Enqueue(enumerator.Current); return Array.From(array); } return System.Array.Empty<object?>(); }
+      [GameMethod(Inlined)] public static object?[]    From(System.Collections.IEnumerable?                  enumerable) { if (enumerable is not null) { System.Collections.Queue array = new(); for (System.Collections.IEnumerator enumerator = enumerable.GetEnumerator(); enumerator.MoveNext(); ) array.Enqueue(enumerator.Current); return Enumerable.ToArray(array); } return System.Array.Empty<object?>(); }
       [GameMethod(Inlined)] public static object?[]    From(System.Collections.Queue?                        queue)      => queue      is not null ? queue.ToArray()               : System.Array.Empty<object?>();
-      [GameMethod(Inlined)] public static object?[]    From(System.Collections.SortedList?                   sortedList) => sortedList is not null ? Array.From(sortedList.Values) : System.Array.Empty<object?>();
+      [GameMethod(Inlined)] public static object?[]    From(System.Collections.SortedList?                   sortedList) => sortedList is not null ? Enumerable.ToArray(sortedList.Values) : System.Array.Empty<object?>();
       [GameMethod(Inlined)] public static string?[]    From(System.Collections.Specialized.StringCollection? collection) { if (!(collection?.IsEmpty() ?? true)) { string?[] array = new string?[collection!.Count]; uint length = 0u; foreach (string? element in collection) { array[length++] = element; } return array; } return System.Array.Empty<string?>(); }
       [GameMethod(Inlined)] public static object?[]    From(System.Collections.Stack?                        stack)      => stack  is not null ? stack .ToArray() : System.Array.Empty<object?>();
       [GameMethod(Inlined)] public static byte   []    From(System.IO.MemoryStream?                          stream)     => stream is not null ? stream.ToArray() : System.Array.Empty<byte>   ();
-      public static object?[] From(params Array.Enumerable[] enumerables) { System.Collections.Queue array = new(enumerables.Length); foreach (Array.Enumerable enumerable in enumerables) { foreach (object? element in enumerable) array.Enqueue(element); } return Array.From(array); }
+      public static object?[] From(params Array.Enumerable[] enumerables) { System.Collections.Queue array = new(enumerables.Length); foreach (Array.Enumerable enumerable in enumerables) { foreach (object? element in enumerable) array.Enqueue(element); } return Enumerable.ToArray(array); }
+
+      public static int IndexOfMax<T>(T[] array) where T : System.IComparable<T> { int maximum = -1; for (int index = array.Length; 0 != index--; ) { if ((maximum != -1 ? array[index].CompareTo(array[maximum]) : 0) >= 0) maximum = index; } return maximum; }
+      public static int IndexOfMin<T>(T[] array) where T : System.IComparable<T> { int minimum = -1; for (int index = array.Length; 0 != index--; ) { if ((minimum != -1 ? array[index].CompareTo(array[minimum]) : 0) <= 0) minimum = index; } return minimum; }
+
+      public static int LastIndexOfMax<T>(T[] array) where T : System.IComparable<T> { int maximum = -1; for (int index = array.Length; 0 != index--; ) { if ((maximum != -1 ? array[index].CompareTo(array[maximum]) : +1) > 0) maximum = index; } return maximum; }
+      public static int LastIndexOfMin<T>(T[] array) where T : System.IComparable<T> { int minimum = -1; for (int index = array.Length; 0 != index--; ) { if ((minimum != -1 ? array[index].CompareTo(array[minimum]) : -1) < 0) minimum = index; } return minimum; }
     }
 
     public static class Array<T> /* ->> Based on `Util.Reference<T>` for `𝑓 Util.Array<T>.Copy(…)` */ {
@@ -5369,14 +5495,14 @@ namespace Game /* ->> …everything else */ {
         readonly int                            System.Collections.Generic.ICollection<T>.Count      => ((int) this.Count);
         readonly bool                           System.Collections.Generic.ICollection<T>.IsReadOnly => true;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)]
         public Copyable(uint length, System.Action<T[], int> copier) {
           this.CopyTo = copier;
           this.Count  = length;
         }
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly bool                               IsEmpty                                                ()                     => 0u == this.Count;
         [GameMethod(Uninlined)]         readonly void                                      System.Collections.Generic.ICollection<T>.Add          (T element)            => throw new System.NotSupportedException("Copyable is read-only");
         [GameMethod(Uninlined)]         readonly void                                      System.Collections.Generic.ICollection<T>.Clear        ()                     => throw new System.NotSupportedException("Copyable is read-only");
@@ -5408,7 +5534,7 @@ namespace Game /* ->> …everything else */ {
         [GameMethod(Inlined)] public static implicit operator Copyable(System.Collections.Specialized.NameValueCollection             collection)   => new((uint) collection  .Count,  [GameMethod(Inlined)] (destinationArray, index) => collection                                   .CopyTo(destinationArray, index));
         [GameMethod(Inlined)] public static implicit operator Copyable(System.Collections.Specialized.StringCollection                collection)   => new((uint) collection  .Count,  [GameMethod(Inlined)] (destinationArray, index) => ((System.Collections.ICollection) collection).CopyTo(destinationArray, index));
         [GameMethod(Inlined)] public static implicit operator Copyable(System.Collections.Stack                                       stack)        => new((uint) stack       .Count,  [GameMethod(Inlined)] (destinationArray, index) => stack                                        .CopyTo(destinationArray, index));
-        [GameMethod(Inlined)] public static implicit operator Copyable(System.IO.MemoryStream                                         stream)       => typeof(T) == typeof(byte) && stream.Length <= int.MaxValue ? new Copyable((uint) stream.Length, [GameMethod(Inlined)] (destinationArray, index) => stream.Read(destinationArray as byte[], 0, (int) stream.Length)) : (Copyable) Util.Array.From(stream);
+        [GameMethod(Inlined)] public static implicit operator Copyable(System.IO.MemoryStream                                         stream)       => typeof(T) == typeof(byte) && stream.Length <= int.MaxValue ? new Copyable((uint) stream.Length, [GameMethod(Inlined)] (destinationArray, index) => stream.Read(destinationArray as byte[], 0, (int) stream.Length)) : (Copyable) Util.Enumerable.ToArray(stream);
         [GameMethod(Inlined)] public static implicit operator Copyable(in System.Memory        <T>                                    memory)       => (Copyable) memory.Span;
         [GameMethod(Inlined)] public static implicit operator Copyable(in System.ReadOnlyMemory<T>                                    memory)       => (Copyable) memory.Span;
         [GameMethod(Inlined)] public static implicit operator Copyable(in System.ReadOnlySpan  <T>                                    span)         => new((uint) span.Length, ((System.Collections.Generic.ICollection<T>) Array<T>.From(in span)).CopyTo); // ->> Could alternatively use function pointer if `static`
@@ -5422,11 +5548,11 @@ namespace Game /* ->> …everything else */ {
           readonly T                                      System.Collections.Generic.IEnumerator<T>.Current => this.Current;
           readonly object                                 System.Collections.IEnumerator.Current            => this.Current!;
 
-          /* … */
+          /* ... */
           [GameConstructor, GameMethod(Inlined)]
           public Enumerator(System.Collections.IEnumerator enumerator) => this.enumerator = enumerator;
 
-          /* … */
+          /* ... */
           public readonly void Dispose                                () { /* Do nothing… */ }
           public readonly bool MoveNext                               () => this.enumerator.MoveNext();
           public readonly void Reset                                  () => this.enumerator.Reset   ();
@@ -5435,18 +5561,18 @@ namespace Game /* ->> …everything else */ {
           readonly void        System.IDisposable.Dispose             () => this           .Dispose ();
         }
 
-        /* … */
+        /* ... */
         private readonly System.Collections.IEnumerable value;
 
-        /* … */
+        /* ... */
         [GameConstructor, GameMethod(Inlined)] public Enumerable(System.Collections.IEnumerable? enumerable)                              => this.value = enumerable ?? Array<T>.From();
-        [GameConstructor, GameMethod(Inlined)] public Enumerable(System.IO.MemoryStream?         stream)                                  => this.value = Util.Array.From(stream);
+        [GameConstructor, GameMethod(Inlined)] public Enumerable(System.IO.MemoryStream?         stream)                                  => this.value = Util.Enumerable.ToArray(stream);
         [GameConstructor, GameMethod(Inlined)] public Enumerable(in System.Memory        <T>     memory) : this(Array<T>.From(in memory)) {}
         [GameConstructor, GameMethod(Inlined)] public Enumerable(in System.ReadOnlyMemory<T>     memory) : this(Array<T>.From(in memory)) {}
         [GameConstructor, GameMethod(Inlined)] public Enumerable(in System.ReadOnlySpan  <T>     span)   : this(Array<T>.From(in span))   {}
         [GameConstructor, GameMethod(Inlined)] public Enumerable(in System.Span          <T>     span)   : this(Array<T>.From(in span))   {}
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)] public readonly Enumerable.Enumerator              GetEnumerator                                          () => new(this.value.GetEnumerator());
         [GameMethod(Inlined)] readonly System.Collections.Generic.IEnumerator<T> System.Collections.Generic.IEnumerable<T>.GetEnumerator() => this.GetEnumerator();
         [GameMethod(Inlined)] readonly System.Collections.IEnumerator            System.Collections.IEnumerable.GetEnumerator           () => this.GetEnumerator();
@@ -5474,7 +5600,7 @@ namespace Game /* ->> …everything else */ {
         [GameMethod(Inlined)] public static implicit operator Enumerable(System.Collections.Specialized.NameValueCollection?             collection)   => new(collection);
         [GameMethod(Inlined)] public static implicit operator Enumerable(System.Collections.Specialized.StringCollection?                collection)   => new(collection);
         [GameMethod(Inlined)] public static implicit operator Enumerable(System.Collections.Stack?                                       stack)        => new(stack);
-        [GameMethod(Inlined)] public static implicit operator Enumerable(System.IO.MemoryStream?                                         stream)       => new(Util.Array.From(stream));
+        [GameMethod(Inlined)] public static implicit operator Enumerable(System.IO.MemoryStream?                                         stream)       => new(Util.Enumerable.ToArray(stream));
         [GameMethod(Inlined)] public static implicit operator Enumerable(in System.Memory        <T>                                     memory)       => new(memory);
         [GameMethod(Inlined)] public static implicit operator Enumerable(in System.ReadOnlyMemory<T>                                     memory)       => new(memory);
         [GameMethod(Inlined)] public static implicit operator Enumerable(in System.ReadOnlySpan  <T>                                     span)         => new(span);
@@ -5487,10 +5613,10 @@ namespace Game /* ->> …everything else */ {
 
       private readonly struct Sentinel {}
 
-      /* … */
+      /* ... */
       public static readonly Game.ArrayCopier<T> Copy = (Game.ArrayCopier<T>) (Traits.IsPrimitiveType<T>() ? ((Game.ArrayCopier<Array<T>.Sentinel>) Array<Array<T>.Sentinel>.UnmanagedCopy).Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.ArrayCopier<T>)) : (Game.ArrayCopier<T>) Array<T>.ManagedCopy<T>);
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] // ->> Faster with `System.GC.AllocateUninitializedArray<T>(…, false)`
       public static T[] Create(uint length) => 0u != length ? new T[length] : System.Array.Empty<T>();
 
@@ -5503,18 +5629,18 @@ namespace Game /* ->> …everything else */ {
       [GameMethod(Inlined)] public static T[] From       (in System.ArraySegment<T>                               arraySegment)                 =>        arraySegment .ToArray();
       [GameMethod(Inlined)] public static T[] From       (System.ArraySegment   <T>?                              arraySegment)                 =>        arraySegment?.ToArray()          ?? Array<T>.From();
       [GameMethod(Inlined)] public static T[] From       (System.Collections.ArrayList?                           arrayList)                    => (T[]) (arrayList   ?.ToArray(typeof(T)) ?? Array<T>.From());
-      [GameMethod(Inlined)] public static T[] From       (System.Collections.BitArray?                            bits)                         => Util.Array.From(bits)      .ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<bool,    T>()(in element));
-      [GameMethod(Inlined)] public static T[] From       (System.Collections.IEnumerable?                         enumerable)                   => Util.Array.From(enumerable).ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<object?, T>()(in element));
+      [GameMethod(Inlined)] public static T[] From       (System.Collections.BitArray?                            bits)                         => Util.Enumerable.ToArray(bits)      .ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<bool,    T>()(in element));
+      [GameMethod(Inlined)] public static T[] From       (System.Collections.IEnumerable?                         enumerable)                   => Util.Enumerable.ToArray(enumerable).ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<object?, T>()(in element));
       [GameMethod(Inlined)] public static T[] From       (System.Collections.Generic.IEnumerable<T>?              enumerable)                   { if (enumerable is not null) { System.Collections.Generic.Queue<T> array = new(); using (System.Collections.Generic.IEnumerator<T> enumerator = enumerable.GetEnumerator()) { while (enumerator.MoveNext()) array.Enqueue(enumerator.Current); } return Util.Array<T>.From(array); } return Util.Array<T>.From(); }
       [GameMethod(Inlined)] public static T[] From       (System.Collections.Generic.List       <T>?              list)                         => list ?.ToArray() ?? Array<T>.From();
       [GameMethod(Inlined)] public static T[] From       (System.Collections.Generic.Queue      <T>?              queue)                        => queue?.ToArray() ?? Array<T>.From();
       [GameMethod(Inlined)] public static T[] From       (System.Collections.Generic.Stack      <T>?              stack)                        => stack?.ToArray() ?? Array<T>.From();
-      [GameMethod(Inlined)] public static T[] From       (System.Collections.Queue?                               queue)                        => Util.Array.From(queue)     .ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<object?, T>()(in element));
-      [GameMethod(Inlined)] public static T[] From       (System.Collections.Specialized.StringCollection?        collection)                   => Util.Array.From(collection).ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<string?, T>()(in element));
-      [GameMethod(Inlined)] public static T[] From       (System.Collections.Stack?                               stack)                        => Util.Array.From(stack)     .ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<object?, T>()(in element));
+      [GameMethod(Inlined)] public static T[] From       (System.Collections.Queue?                               queue)                        => Util.Enumerable.ToArray(queue)     .ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<object?, T>()(in element));
+      [GameMethod(Inlined)] public static T[] From       (System.Collections.Specialized.StringCollection?        collection)                   => Util.Enumerable.ToArray(collection).ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<string?, T>()(in element));
+      [GameMethod(Inlined)] public static T[] From       (System.Collections.Stack?                               stack)                        => Util.Enumerable.ToArray(stack)     .ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<object?, T>()(in element));
       [GameMethod(Inlined)] public static T[] From<TKey> (System.Collections.Generic.SortedList<TKey, T>          sortedList)                   => !(sortedList?.IsEmpty() ?? true) ? Array<T>.From(sortedList!.Values) : Array<T>.From();
-      [GameMethod(Inlined)] public static T[] From       (System.Collections.SortedList                           sortedList)                   => Util.Array.From(sortedList).ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<object?, T>()(in element));
-      [GameMethod(Inlined)] public static T[] From       (System.IO.MemoryStream?                                 stream)                       => Util.Array.From(stream)    .ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<byte,    T>()(in element));
+      [GameMethod(Inlined)] public static T[] From       (System.Collections.SortedList                           sortedList)                   => Util.Enumerable.ToArray(sortedList).ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<object?, T>()(in element));
+      [GameMethod(Inlined)] public static T[] From       (System.IO.MemoryStream?                                 stream)                       => Util.Enumerable.ToArray(stream)    .ConvertAll([GameMethod(Inlined)] static (element) => Util.GetConverter<byte,    T>()(in element));
       [GameMethod(Inlined)] public static T[] From       (in System.Memory                <T>                     memory)                       =>                                   memory                                             .ToArray       ();
       [GameMethod(Inlined)] public static T[] From       (System.Memory                   <T>?                    memory)                       =>                                   memory                                            ?.ToArray       () ?? Array<T>.From();
       [GameMethod(Inlined)] public static T[] From       (in System.ReadOnlyMemory        <T>                     memory)                       =>                                   memory                                             .ToArray       ();
@@ -5529,7 +5655,7 @@ namespace Game /* ->> …everything else */ {
       public static T[] From(params Array<T>.Enumerable[] enumerables) {
         System.Collections.Generic.Queue<T> array = new(enumerables.Length);
 
-        // …
+        // ...
         foreach (Array<T>.Enumerable enumerable in enumerables) {
           foreach (T element in enumerable)
           array.Enqueue(element);
@@ -5547,7 +5673,7 @@ namespace Game /* ->> …everything else */ {
       public static uint Count(System.Collections.IEnumerable enumerable) {
         uint count = 0u;
 
-        // …
+        // ...
         for (System.Collections.IEnumerator enumerator = enumerable.GetEnumerator(); enumerator.MoveNext(); )
         ++count;
 
@@ -5558,7 +5684,7 @@ namespace Game /* ->> …everything else */ {
       public static uint Count<T>(System.Collections.Generic.IEnumerable<T> enumerable) {
         uint count = 0u;
 
-        // …
+        // ...
         using (System.Collections.Generic.IEnumerator<T> enumerator = enumerable.GetEnumerator()) {
           while (enumerator.MoveNext())
           ++count;
@@ -5583,7 +5709,7 @@ namespace Game /* ->> …everything else */ {
         uint count = 0u;
         uint index = 0u;
 
-        // …
+        // ...
         if  (preserve) { while (enumerator.MoveNext()) ++index; }
         for (enumerator.Reset(); enumerator.MoveNext(); ) ++count;
         if  (preserve) { for (enumerator.Reset(); count != index; ++index) enumerator.MoveNext(); } // ->> Reset `enumerator` to initially passed state
@@ -5595,7 +5721,7 @@ namespace Game /* ->> …everything else */ {
       public static uint Count<T>(System.Collections.Generic.IEnumerator<T> enumerator, bool preserve = true) {
         uint count = Enumerator.Count((System.Collections.IEnumerator) enumerator, preserve);
 
-        // …
+        // ...
         if (!preserve)
         enumerator.Dispose();
 
@@ -5607,7 +5733,7 @@ namespace Game /* ->> …everything else */ {
         uint count = 0u;
         uint index = 0u;
 
-        // …
+        // ...
         if (preserve) {
           while (enumerator.MoveNext())                       ++index;
           for   (enumerator.Reset(); enumerator.MoveNext(); ) ++count;
@@ -5634,7 +5760,7 @@ namespace Game /* ->> …everything else */ {
         uint count = 0u;
         uint index = 0u;
 
-        // …
+        // ...
         if (preserve) {
           while (enumerator.MoveNext())
           ++index;
@@ -5663,10 +5789,10 @@ namespace Game /* ->> …everything else */ {
       public   static event System.Action<double>   OnStart                                             = [GameMethod(Inlined)] static (timestamp) => {};
       public   static event System.Action<double>   OnUpdate                                            = [GameMethod(Inlined)] static (timestamp) => {};
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public static bool AskToSave() => Game.AskToSave(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
       [GameMethod(Inlined)] public static bool AskToSave(in UnityEngine.SceneManagement.Scene scene) {
-        // … ->> Undo’s not bothered with for the time begin
+        // ... ->> Undo’s not bothered with for the time begin
         #if UNITY_EDITOR
           if (!UnityEditor.EditorApplication.isPlaying)
           return UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
@@ -5702,7 +5828,7 @@ namespace Game /* ->> …everything else */ {
       public delegate void Keyer   (in Game.Collections.KeyInfo key);
       public delegate void Prompter();
 
-      /* … */
+      /* ... */
       public static class Functions {
         public static Game.Collections.DeviceState F1  { get; internal set; } = Game.Collections.DeviceState.INVALID;
         public static Game.Collections.DeviceState F2  { get; internal set; } = Game.Collections.DeviceState.INVALID;
@@ -5771,7 +5897,7 @@ namespace Game /* ->> …everything else */ {
         public static Game.Collections.DeviceState W          { get; internal set; } = Game.Collections.DeviceState.INVALID;
       }
 
-      /* … */
+      /* ... */
       internal static readonly Game.Collections.RefList        <Game.Collections.KeyInfo>                                                             BeginState                        =  new(16u);
       public   static readonly Game.Collections.RefReadOnlyList<Game.Collections.KeyInfo>                                                             Begin                             =  (Game.Collections.RefReadOnlyList<Game.Collections.KeyInfo>) Keys.BeginState;
       public   static          uint                                                                                                                                   Count                             => System.Math.Max(Keys.CurrentState.Count, System.Math.Max(Keys.BeginState.Count, Keys.EndState.Count));
@@ -5799,7 +5925,7 @@ namespace Game /* ->> …everything else */ {
       public   static readonly Game.Collections.InputStateCollection    <Game.Collections.KeyInfo>                                                    Any                               =  new(Keys.States);
       internal static readonly (Game.Collections.RefReadOnlyList<UnityEngine.KeyCode>, Game.Collections.RefReadOnlyList<UnityEngine.InputSystem.Key>) All                               =  (new(stackalloc[] {UnityEngine.KeyCode.A, UnityEngine.KeyCode.Alpha0, UnityEngine.KeyCode.Alpha1, UnityEngine.KeyCode.Alpha2, UnityEngine.KeyCode.Alpha3, UnityEngine.KeyCode.Alpha4, UnityEngine.KeyCode.Alpha5, UnityEngine.KeyCode.Alpha6, UnityEngine.KeyCode.Alpha7, UnityEngine.KeyCode.Alpha8, UnityEngine.KeyCode.Alpha9, UnityEngine.KeyCode.AltGr, UnityEngine.KeyCode.Ampersand, UnityEngine.KeyCode.Asterisk, UnityEngine.KeyCode.At, UnityEngine.KeyCode.B, UnityEngine.KeyCode.BackQuote, UnityEngine.KeyCode.Backslash, UnityEngine.KeyCode.Backspace, UnityEngine.KeyCode.Break, UnityEngine.KeyCode.C, UnityEngine.KeyCode.CapsLock, UnityEngine.KeyCode.Caret, UnityEngine.KeyCode.Clear, UnityEngine.KeyCode.Colon, UnityEngine.KeyCode.Comma, UnityEngine.KeyCode.D, UnityEngine.KeyCode.Delete, UnityEngine.KeyCode.Dollar, UnityEngine.KeyCode.DoubleQuote, UnityEngine.KeyCode.DownArrow, UnityEngine.KeyCode.E, UnityEngine.KeyCode.End, UnityEngine.KeyCode.Equals, UnityEngine.KeyCode.Escape, UnityEngine.KeyCode.Exclaim, UnityEngine.KeyCode.F, UnityEngine.KeyCode.F1, UnityEngine.KeyCode.F10, UnityEngine.KeyCode.F11, UnityEngine.KeyCode.F12, UnityEngine.KeyCode.F13, UnityEngine.KeyCode.F14, UnityEngine.KeyCode.F15, UnityEngine.KeyCode.F2, UnityEngine.KeyCode.F3, UnityEngine.KeyCode.F4, UnityEngine.KeyCode.F5, UnityEngine.KeyCode.F6, UnityEngine.KeyCode.F7, UnityEngine.KeyCode.F8, UnityEngine.KeyCode.F9, UnityEngine.KeyCode.G, UnityEngine.KeyCode.Greater, UnityEngine.KeyCode.H, UnityEngine.KeyCode.Hash, UnityEngine.KeyCode.Help, UnityEngine.KeyCode.Home, UnityEngine.KeyCode.I, UnityEngine.KeyCode.Insert, UnityEngine.KeyCode.J, UnityEngine.KeyCode.K, UnityEngine.KeyCode.Keypad0, UnityEngine.KeyCode.Keypad1, UnityEngine.KeyCode.Keypad2, UnityEngine.KeyCode.Keypad3, UnityEngine.KeyCode.Keypad4, UnityEngine.KeyCode.Keypad5, UnityEngine.KeyCode.Keypad6, UnityEngine.KeyCode.Keypad7, UnityEngine.KeyCode.Keypad8, UnityEngine.KeyCode.Keypad9, UnityEngine.KeyCode.KeypadDivide, UnityEngine.KeyCode.KeypadEnter, UnityEngine.KeyCode.KeypadEquals, UnityEngine.KeyCode.KeypadMinus, UnityEngine.KeyCode.KeypadMultiply, UnityEngine.KeyCode.KeypadPeriod, UnityEngine.KeyCode.KeypadPlus, UnityEngine.KeyCode.L, UnityEngine.KeyCode.LeftAlt, UnityEngine.KeyCode.LeftApple, UnityEngine.KeyCode.LeftArrow, UnityEngine.KeyCode.LeftBracket, UnityEngine.KeyCode.LeftCommand, UnityEngine.KeyCode.LeftControl, UnityEngine.KeyCode.LeftCurlyBracket, UnityEngine.KeyCode.LeftMeta, UnityEngine.KeyCode.LeftParen, UnityEngine.KeyCode.LeftShift, UnityEngine.KeyCode.LeftWindows, UnityEngine.KeyCode.Less, UnityEngine.KeyCode.M, UnityEngine.KeyCode.Menu, UnityEngine.KeyCode.Minus, UnityEngine.KeyCode.N, UnityEngine.KeyCode.Numlock, UnityEngine.KeyCode.O, UnityEngine.KeyCode.P, UnityEngine.KeyCode.PageDown, UnityEngine.KeyCode.PageUp, UnityEngine.KeyCode.Pause, UnityEngine.KeyCode.Percent, UnityEngine.KeyCode.Period, UnityEngine.KeyCode.Pipe, UnityEngine.KeyCode.Plus, UnityEngine.KeyCode.Print, UnityEngine.KeyCode.Q, UnityEngine.KeyCode.Question, UnityEngine.KeyCode.Quote, UnityEngine.KeyCode.R, UnityEngine.KeyCode.Return, UnityEngine.KeyCode.RightAlt, UnityEngine.KeyCode.RightApple, UnityEngine.KeyCode.RightArrow, UnityEngine.KeyCode.RightBracket, UnityEngine.KeyCode.RightCommand, UnityEngine.KeyCode.RightControl, UnityEngine.KeyCode.RightCurlyBracket, UnityEngine.KeyCode.RightMeta, UnityEngine.KeyCode.RightParen, UnityEngine.KeyCode.RightShift, UnityEngine.KeyCode.RightWindows, UnityEngine.KeyCode.S, UnityEngine.KeyCode.ScrollLock, UnityEngine.KeyCode.Semicolon, UnityEngine.KeyCode.Slash, UnityEngine.KeyCode.Space, UnityEngine.KeyCode.SysReq, UnityEngine.KeyCode.T, UnityEngine.KeyCode.Tab, UnityEngine.KeyCode.Tilde, UnityEngine.KeyCode.U, UnityEngine.KeyCode.Underscore, UnityEngine.KeyCode.UpArrow, UnityEngine.KeyCode.V, UnityEngine.KeyCode.W, UnityEngine.KeyCode.X, UnityEngine.KeyCode.Y, UnityEngine.KeyCode.Z}), new(stackalloc[] {UnityEngine.InputSystem.Key.A, UnityEngine.InputSystem.Key.AltGr, UnityEngine.InputSystem.Key.B, UnityEngine.InputSystem.Key.Backquote, UnityEngine.InputSystem.Key.Backslash, UnityEngine.InputSystem.Key.Backspace, UnityEngine.InputSystem.Key.C, UnityEngine.InputSystem.Key.CapsLock, UnityEngine.InputSystem.Key.Comma, UnityEngine.InputSystem.Key.ContextMenu, UnityEngine.InputSystem.Key.D, UnityEngine.InputSystem.Key.Delete, UnityEngine.InputSystem.Key.Digit0, UnityEngine.InputSystem.Key.Digit1, UnityEngine.InputSystem.Key.Digit2, UnityEngine.InputSystem.Key.Digit3, UnityEngine.InputSystem.Key.Digit4, UnityEngine.InputSystem.Key.Digit5, UnityEngine.InputSystem.Key.Digit6, UnityEngine.InputSystem.Key.Digit7, UnityEngine.InputSystem.Key.Digit8, UnityEngine.InputSystem.Key.Digit9, UnityEngine.InputSystem.Key.DownArrow, UnityEngine.InputSystem.Key.E, UnityEngine.InputSystem.Key.End, UnityEngine.InputSystem.Key.Enter, UnityEngine.InputSystem.Key.Equals, UnityEngine.InputSystem.Key.Escape, UnityEngine.InputSystem.Key.F, UnityEngine.InputSystem.Key.F1, UnityEngine.InputSystem.Key.F10, UnityEngine.InputSystem.Key.F11, UnityEngine.InputSystem.Key.F12, UnityEngine.InputSystem.Key.F2, UnityEngine.InputSystem.Key.F3, UnityEngine.InputSystem.Key.F4, UnityEngine.InputSystem.Key.F5, UnityEngine.InputSystem.Key.F6, UnityEngine.InputSystem.Key.F7, UnityEngine.InputSystem.Key.F8, UnityEngine.InputSystem.Key.F9, UnityEngine.InputSystem.Key.G, UnityEngine.InputSystem.Key.H, UnityEngine.InputSystem.Key.Home, UnityEngine.InputSystem.Key.I, UnityEngine.InputSystem.Key.Insert, UnityEngine.InputSystem.Key.J, UnityEngine.InputSystem.Key.K, UnityEngine.InputSystem.Key.L, UnityEngine.InputSystem.Key.LeftAlt, UnityEngine.InputSystem.Key.LeftApple, UnityEngine.InputSystem.Key.LeftArrow, UnityEngine.InputSystem.Key.LeftBracket, UnityEngine.InputSystem.Key.LeftCommand, UnityEngine.InputSystem.Key.LeftCtrl, UnityEngine.InputSystem.Key.LeftMeta, UnityEngine.InputSystem.Key.LeftShift, UnityEngine.InputSystem.Key.LeftWindows, UnityEngine.InputSystem.Key.M, UnityEngine.InputSystem.Key.Minus, UnityEngine.InputSystem.Key.N, UnityEngine.InputSystem.Key.NumLock, UnityEngine.InputSystem.Key.Numpad0, UnityEngine.InputSystem.Key.Numpad1, UnityEngine.InputSystem.Key.Numpad2, UnityEngine.InputSystem.Key.Numpad3, UnityEngine.InputSystem.Key.Numpad4, UnityEngine.InputSystem.Key.Numpad5, UnityEngine.InputSystem.Key.Numpad6, UnityEngine.InputSystem.Key.Numpad7, UnityEngine.InputSystem.Key.Numpad8, UnityEngine.InputSystem.Key.Numpad9, UnityEngine.InputSystem.Key.NumpadDivide, UnityEngine.InputSystem.Key.NumpadEnter, UnityEngine.InputSystem.Key.NumpadEquals, UnityEngine.InputSystem.Key.NumpadMinus, UnityEngine.InputSystem.Key.NumpadMultiply, UnityEngine.InputSystem.Key.NumpadPeriod, UnityEngine.InputSystem.Key.NumpadPlus, UnityEngine.InputSystem.Key.O, UnityEngine.InputSystem.Key.OEM1, UnityEngine.InputSystem.Key.OEM2, UnityEngine.InputSystem.Key.OEM3, UnityEngine.InputSystem.Key.OEM4, UnityEngine.InputSystem.Key.OEM5, UnityEngine.InputSystem.Key.P, UnityEngine.InputSystem.Key.PageDown, UnityEngine.InputSystem.Key.PageUp, UnityEngine.InputSystem.Key.Pause, UnityEngine.InputSystem.Key.Period, UnityEngine.InputSystem.Key.PrintScreen, UnityEngine.InputSystem.Key.Q, UnityEngine.InputSystem.Key.Quote, UnityEngine.InputSystem.Key.R, UnityEngine.InputSystem.Key.RightAlt, UnityEngine.InputSystem.Key.RightApple, UnityEngine.InputSystem.Key.RightArrow, UnityEngine.InputSystem.Key.RightBracket, UnityEngine.InputSystem.Key.RightCommand, UnityEngine.InputSystem.Key.RightCtrl, UnityEngine.InputSystem.Key.RightMeta, UnityEngine.InputSystem.Key.RightShift, UnityEngine.InputSystem.Key.RightWindows, UnityEngine.InputSystem.Key.S, UnityEngine.InputSystem.Key.ScrollLock, UnityEngine.InputSystem.Key.Semicolon, UnityEngine.InputSystem.Key.Slash, UnityEngine.InputSystem.Key.Space, UnityEngine.InputSystem.Key.T, UnityEngine.InputSystem.Key.Tab, UnityEngine.InputSystem.Key.U, UnityEngine.InputSystem.Key.UpArrow, UnityEngine.InputSystem.Key.V, UnityEngine.InputSystem.Key.W, UnityEngine.InputSystem.Key.X, UnityEngine.InputSystem.Key.Y, UnityEngine.InputSystem.Key.Z})); // ->> `new(System.Enum.GetValues<…>())`
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)]
       internal static void Add(in Game.Collections.KeyInfo key) => Keys.OnKeyAdded(in key);
 
@@ -5857,7 +5983,7 @@ namespace Game /* ->> …everything else */ {
       internal abstract class CachedIndex {}
       internal abstract class FailedIndex {}
 
-      /* … */
+      /* ... */
       public   const           double                                                                                               Asynchronously    = 0.0;
       internal static          Unity.Collections.NativeArray<float>                                                                 AudioClipData     = new(0, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.UninitializedMemory);
       public   const           uint                                                                                                 Once              = 0u;
@@ -5868,7 +5994,7 @@ namespace Game /* ->> …everything else */ {
       public   const           byte                                                                                                 WithoutCache      = (byte) 0u; // ->> `false`
       public   const           byte                                                                                                 WithReadOnlyCache = (byte) 2u; // ->> `true`
 
-      /* … */
+      /* ... */
       [GameMethod(Uninlined)]
       private static void Idle(object? target, in Game.Events.LoadEvent data) {}
 
@@ -5883,7 +6009,7 @@ namespace Game /* ->> …everything else */ {
         bool                                                 requested        = restarted;
         System.Diagnostics.Stopwatch                         stopwatch        = new(); // ->> Track `timeout`
 
-        /* … */
+        /* ... */
         [GameMethod(Inlined)]
         static ref readonly T GetCache(ref Game.Collections.LoadInfo load, ref Game.Collections.Mono<T> payload, System.Func<T, T> recacher) {
           payload = !payload ? recacher((T) load.cached!) : payload;
@@ -5894,12 +6020,12 @@ namespace Game /* ->> …everything else */ {
         static void LoadCached(ref Game.Collections.LoadInfo load, ref Game.Collections.Mono<T> payload, System.Func<T, T> recacher) {
           Game.Collections.SharedList<Game.Collections.IndexFor<Load.CachedIndex>> resolved = new();
 
-          // …
+          // ...
           for (uint index = resolved.IsEmpty() ? load.events.CountInvocationList() : resolved[resolved.Count - 1u].value; 0u != index--; ) {
             ref Game.Collections.HandlerInfo<Game.Events.LoadEvent> loadHandler = ref load.events[index];
             ref Game.Events.LoadEvent                                       loadEvent   = ref loadHandler.metadata;
 
-            // …
+            // ...
             if (loadEvent.data.cached) {
               loadEvent.callback      = loadHandler.value;
               loadEvent.data.duration = UnityEngine.Time.realtimeSinceStartupAsDouble - loadEvent.data.duration;
@@ -5920,7 +6046,7 @@ namespace Game /* ->> …everything else */ {
         static void LoadFailed(ref Game.Collections.LoadInfo load) {
           Game.Collections.SharedList<Game.Collections.IndexFor<Load.FailedIndex>> resolved = new();
 
-          // …
+          // ...
           load.payload = null;
 
           for (uint index = resolved.IsEmpty() ? load.events.CountInvocationList() : resolved[resolved.Count - 1u].value; 0u != index--; ) {
@@ -5928,7 +6054,7 @@ namespace Game /* ->> …everything else */ {
             ref Game.Events.LoadEvent                                       loadEvent   = ref loadHandler.metadata;
             Game.Handler<Game.Events.LoadEvent>                     fallback    = loadEvent.callback;
 
-            // …
+            // ...
             if (loadEvent.data.attempts == loadEvent.data.attemptsAllowed) {
               loadEvent.callback      = loadHandler.value;
               loadEvent.data.duration = UnityEngine.Time.realtimeSinceStartupAsDouble - loadEvent.data.duration;
@@ -5949,7 +6075,7 @@ namespace Game /* ->> …everything else */ {
         /*static*/ T? LoadSucceeded(ref Game.Collections.LoadInfo load, UnityEngine.Networking.UnityWebRequest handler, System.Func<UnityEngine.Networking.UnityWebRequest, T?> loader) {
           T? payload = loader(handler);
 
-          // …
+          // ...
           load.payload = payload;
 
           if (payload is not null) {
@@ -5962,7 +6088,7 @@ namespace Game /* ->> …everything else */ {
           foreach (ref Game.Collections.HandlerInfo<Game.Events.LoadEvent> loadHandler in load.events) {
             ref Game.Events.LoadEvent loadEvent = ref loadHandler.metadata;
 
-            // …
+            // ...
             loadEvent.callback      = loadHandler.value;
             loadEvent.data.duration = UnityEngine.Time.realtimeSinceStartupAsDouble - loadEvent.data.duration;
             loadEvent.data.payload  = payload;
@@ -5981,7 +6107,7 @@ namespace Game /* ->> …everything else */ {
           ref Game.Collections.LoadInfo                load             = ref Load.Pending[(typeof(T), path)];
           int                                                  loadHandlerIndex = load.events.FindIndex([GameMethod(Inlined)] (loadHandler) => loadHandler.target == operation);
 
-          // …
+          // ...
           using (UnityEngine.Networking.UnityWebRequest request = operation.webRequest) // ->> `request.uri` could be modified through redirection unless `::redirectLimit = 0`
           if (loadHandlerIndex != -1) {
             ref Game.Collections.HandlerInfo<Game.Events.LoadEvent> loadHandler = ref load.events[(uint) loadHandlerIndex];
@@ -6013,7 +6139,7 @@ namespace Game /* ->> …everything else */ {
           Load.Uri<T>(loadHandler.metadata.data.path, loadHandler.value, null, Load.Asynchronously, loadHandler.metadata.data.cached, loadHandler.metadata.data.attemptsAllowed - 1u, requester, loader, recacher, loadHandler.metadata.callback, true);
         }
 
-        // … ->> Get cache
+        // ... ->> Get cache
         if (load.cached is not null) {
           LoadCached(ref load, ref cachedPayload, recacher);
 
@@ -6025,13 +6151,13 @@ namespace Game /* ->> …everything else */ {
           }
         }
 
-        // … ->> Get payload
+        // ... ->> Get payload
         do {
           stopwatch.Restart();
 
-          // … ->> Wait in load queue until prior handler is complete
+          // ... ->> Wait in load queue until prior handler is complete
           if (!requested && !load.events.IsEmpty()) {
-            // … ->> `Load.Asynchronously` — Handler awaits completion of predecessor
+            // ... ->> `Load.Asynchronously` — Handler awaits completion of predecessor
             if (double.IsNaN(timeout) || 0.0 >= timeout) {
               stopwatch.Stop();
               load.events += new Game.Collections.HandlerInfo<Game.Events.LoadEvent>(callback, null, new() {callback = fallback, data = (attempts - 1u, attemptsAllowed, cached, UnityEngine.Time.realtimeSinceStartupAsDouble, path, null), metadata = metadata});
@@ -6039,7 +6165,7 @@ namespace Game /* ->> …everything else */ {
               return null;
             }
 
-            // … ->> `Load.Synchronously` — Handler blocks until completion of predecessor
+            // ... ->> `Load.Synchronously` — Handler blocks until completion of predecessor
             else {
               while (!load.events.IsEmpty() && stopwatch.Elapsed.TotalSeconds < timeout)                                 continue; // ->> `while …`
               if    (attempts != attemptsAllowed && (load.payload is null || stopwatch.Elapsed.TotalSeconds >= timeout)) continue; // ->> `do … while`
@@ -6051,7 +6177,7 @@ namespace Game /* ->> …everything else */ {
             }
           }
 
-          // … ->> Future handlers will wait on this handler to complete
+          // ... ->> Future handlers will wait on this handler to complete
           failed                                               = false;
           operation                                            = requester(path).SendWebRequest(); // ->> Was unaware of `int UnityEngine.Networking.UnityWebRequest::timeout` beforehand
           operation.webRequest.disposeDownloadHandlerOnDispose = typeof(T) != typeof(UnityEngine.Networking.DownloadHandler);
@@ -6066,13 +6192,13 @@ namespace Game /* ->> …everything else */ {
 
           for (UnityEngine.Networking.UnityWebRequest request = operation.webRequest; !failed && UnityEngine.Networking.UnityWebRequest.Result.Success != request.result; failed = failed || UnityEngine.Networking.UnityWebRequest.Result.ConnectionError == request.result || UnityEngine.Networking.UnityWebRequest.Result.DataProcessingError == request.result || UnityEngine.Networking.UnityWebRequest.Result.ProtocolError == request.result)
           if (UnityEngine.Networking.UnityWebRequest.Result.InProgress == request.result) {
-            // … ->> `Load.Asynchronously`
+            // ... ->> `Load.Asynchronously`
             if (double.IsNaN(timeout) || 0.0 >= timeout) {
               operation.completed += LoadUri;
               return null;
             }
 
-            // … ->> `Load.Synchronously`
+            // ... ->> `Load.Synchronously`
             failed = stopwatch.Elapsed.TotalSeconds >= timeout;
           }
 
@@ -6089,7 +6215,7 @@ namespace Game /* ->> …everything else */ {
           }
         } while (attempts++ != attemptsAllowed);
 
-        // … ->> Allow pending handlers to get payload (or available cache)
+        // ... ->> Allow pending handlers to get payload (or available cache)
         if (failed) {
           LoadFailed(ref load);
           if (!load.events.IsEmpty()) ReloadUri(ref load, requester, loader, recacher);
@@ -6127,7 +6253,7 @@ namespace Game /* ->> …everything else */ {
         [GameMethod(Inlined)] static (request) => {
           UnityEngine.AudioClip? audioClip = UnityEngine.Networking.DownloadHandlerAudioClip.GetContent(request); // ->> `((UnityEngine.Networking.DownloadHandlerAudioClip) request.downloadHandler).audioClip`
 
-          // …
+          // ...
           if (null != audioClip)
           audioClip.name = $"🎵 {System.IO.Path.GetFileName(request.url)}";
 
@@ -6138,7 +6264,7 @@ namespace Game /* ->> …everything else */ {
           int                   cachedAudioClipDataSize = cachedAudioClip.channels * cachedAudioClip.samples;
           UnityEngine.AudioClip audioClip               = cachedAudioClip;
 
-          // …
+          // ...
           if (int.MaxValue / cachedAudioClip.channels >= cachedAudioClip.samples) do {
             if (cachedAudioClipDataSize > Load.AudioClipData.Length) {
               Load.AudioClipData.Dispose();
@@ -6171,7 +6297,7 @@ namespace Game /* ->> …everything else */ {
         [GameMethod(Inlined)] static (path) => UnityEngine.Networking.UnityWebRequest.Get(path),
         encoding is System.Text.UTF8Encoding ? ([GameMethod(Inlined)] static (request) => request.downloadHandler.text) : ([GameMethod(Inlined)] (request) => {
           try { return encoding.GetString(request.downloadHandler.nativeData.AsReadOnlySpan()); }
-          catch (System.Exception exception) when (exception is System.ArgumentException || exception is System.ArgumentNullException || exception is System.Text.DecoderFallbackException) {}
+          catch (System.Exception exception) when (exception is System.ArgumentException or System.ArgumentNullException or System.Text.DecoderFallbackException) {}
 
           return null;
         }),
@@ -6197,7 +6323,7 @@ namespace Game /* ->> …everything else */ {
           UnityEngine.Texture2D cachedTexture = (UnityEngine.Texture2D) cached;
           UnityEngine.Texture2D texture       = cachedTexture;
 
-          // …
+          // ...
           texture      = new(cachedTexture.width, cachedTexture.height, cachedTexture.format, cachedTexture.mipmapCount, false);
           texture.name = cachedTexture.name;
           UnityEngine.Graphics.CopyTexture(cachedTexture, texture);
@@ -6240,7 +6366,7 @@ namespace Game /* ->> …everything else */ {
       public  static          UnityEngine.Color                       UriColor                         = UnityEngine.Color.cyan;
       public  static          UnityEngine.Color                       WarningColor                     = UnityEngine.Color.yellow;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)]
       public static void Clear() {
         Log.UnityEditorLogEntriesType ??= System.Type.GetType("UnityEditor.LogEntries");
@@ -6261,7 +6387,7 @@ namespace Game /* ->> …everything else */ {
 
         Log.UnityEditorLogEntriesClearMethod ??= Log.UnityEditorLogEntriesType?.GetMethod("Clear"); // ->> `System.Reflection.BindingFlags.Public`
 
-        // …
+        // ...
         UnityEngine.Debug.ClearDeveloperConsole(); // ->> `UnityEngine.Debug.developerConsoleVisible`
         Log.UnityEditorLogEntriesClearMethod?.Invoke(new object(), null);
       }
@@ -6270,7 +6396,7 @@ namespace Game /* ->> …everything else */ {
       public static void Print(object? value) {
         bool stringsDelimitedAlways = Log.StringsDelimitedAlways;
 
-        // … ->> Ignore null values
+        // ... ->> Ignore null values
         Log.StringsDelimitedAlways = Log.StringsDelimited;
 
         if (value is not null) {
@@ -6286,14 +6412,14 @@ namespace Game /* ->> …everything else */ {
       public static void Print(params object?[] values) /* ->> Modifies possible pre-existing `values` array */ {
         uint length = (uint) values.Length;
 
-        // …
+        // ...
         for (uint index = length; 0u != index--; ) {
           // ->> Ignore null values
           if (Util.Reference<object?>.At(values, index) is null)
           Util.Array<object?>.Copy(values, index + 1u, values, index, --length - index);
         }
 
-        // …
+        // ...
         if (length == 1u)
           Log.Print(Util.Reference<object?>.Only(values));
 
@@ -6328,7 +6454,7 @@ namespace Game /* ->> …everything else */ {
           object[]?                                                         valueAsEnumerable = null;
         #pragma warning restore CS0219
 
-        // …
+        // ...
         [GameMethod(Inlined)] static string ColorToFormattedString  (in UnityEngine.Color color)                                                                            => UnityEngine.ColorUtility.ToHtmlStringRGB(color);
         [GameMethod(Inlined)] static string DecimalToFormattedString(decimal              value)                                                                            => value.ToString("0.000###") + 'm';
         [GameMethod(Inlined)] static string DoubleToFormattedString (double               value)                                                                            => !double.IsInfinity(value) && !double.IsNaN(value) ? value.ToString("0.00####") : value.ToString();
@@ -6338,7 +6464,7 @@ namespace Game /* ->> …everything else */ {
         [GameMethod(Inlined)] static string ToFormattedString       (string               value, in UnityEngine.Color color, bool embolden, bool italicize, bool underline) => $"<color=#{ColorToFormattedString(color)}>{(underline ? "<u>" : string.Empty)}{(embolden ? "<b>" : string.Empty)}{(italicize ? "<i>" : string.Empty)}{value}{(italicize ? "</i>" : string.Empty)}{(embolden ? "</b>" : string.Empty)}{(underline ? "</u>" : string.Empty)}</color>";
         [GameMethod(Inlined)] static string ToUnformattedString     (string               value, in UnityEngine.Color color, bool embolden, bool italicize, bool underline) => value;
 
-        // … ->> Basic types
+        // ... ->> Basic types
         if (value is null)                            return string.Empty;
         if (value is bool    boolean)                 return format(boolean.ToString(),                                                                      Log.BooleanColor,     embolden = false, italicize = false, underline = false);
         if (value is byte    bits && recursive)       return format($"0x{bits.ToString("X2")}",                                                              Log.BytesColor,       embolden = false, italicize = true,  underline = false);
@@ -6365,14 +6491,14 @@ namespace Game /* ->> …everything else */ {
           bool   textIsUri = System.Uri.TryCreate(text, System.UriKind.Absolute, out System.Uri _);
           string textUri   = formatted && textIsUri ? System.Uri.EscapeDataString(text).Replace("<", "%3C", System.StringComparison.OrdinalIgnoreCase).Replace(">", "%3E", System.StringComparison.OrdinalIgnoreCase) : string.Empty;
 
-          // …
+          // ...
           text = Escape(text);
           text = formatted && textIsUri ? $"<u><link=\"{textUri}\"><color=#{ColorToFormattedString(Log.UriColor)}>{text}</color></link></u>" : text;
 
           return format(!Log.StringsDelimitedAlways && (recursive ? !Log.EnumerablesStringsDelimited : true) ? text : 0 == text.Length || text.Length != 1 ? $"“{text.Replace("“", "\\“", System.StringComparison.OrdinalIgnoreCase).Replace("”", "\\”", System.StringComparison.OrdinalIgnoreCase)}”" : $"‘{text.Replace("‘", "\\‘", System.StringComparison.OrdinalIgnoreCase).Replace("’", "\\’", System.StringComparison.OrdinalIgnoreCase)}’", Log.StringColor, embolden = false, italicize = false, underline = false);
         }
 
-        // … ->> Foundational types (RIP `UnityEngine.Animation…Info`, `UnityEngine.ContactPoint…`, `UnityEngine.DrivenRectTransformTracker`, `UnityEngine.HumanBone`, `UnityEngine.JointAngleLimits2D`, `UnityEngine.Matrix4x4`, `UnityEngine.RaycastHit…`, `UnityEngine.RenderTextureDescriptor`, `UnityEngine.SkeletonBone`, `UnityEngine.WaitFor…` …)
+        // ... ->> Foundational types (RIP `UnityEngine.Animation…Info`, `UnityEngine.ContactPoint…`, `UnityEngine.DrivenRectTransformTracker`, `UnityEngine.HumanBone`, `UnityEngine.JointAngleLimits2D`, `UnityEngine.Matrix4x4`, `UnityEngine.RaycastHit…`, `UnityEngine.RenderTextureDescriptor`, `UnityEngine.SkeletonBone`, `UnityEngine.WaitFor…` …)
         if (value is Game.Collections.DeviceState state)                    return formatted ? $"<color=#{ColorToFormattedString(Log.EnumerationColor)}>{state}</color>"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        : state.ToString()!;
         if (value is Game.Collections.Vector2Bool vectorA)                  return formatted ? $"<b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerBegin}</color></b><color=#{ColorToFormattedString(Log.BooleanColor)}>{vectorA.x}</color>, <color=#{ColorToFormattedString(Log.BooleanColor)}>{vectorA.y}</color><b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerEnd}</color></b>"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        : $"{containerBegin}{vectorA.x}, {vectorA.y}{containerEnd}";
         if (value is Game.Collections.Vector3Bool vectorB)                  return formatted ? $"<b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerBegin}</color></b><color=#{ColorToFormattedString(Log.BooleanColor)}>{vectorB.x}</color>, <color=#{ColorToFormattedString(Log.BooleanColor)}>{vectorB.y}</color>, <color=#{ColorToFormattedString(Log.BooleanColor)}>{vectorB.z}</color><b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerEnd}</color></b>"                                                                                                                                                                                                                                                                                                                                                                                                                                                                : $"{containerBegin}{vectorB.x}, {vectorB.y}, {vectorB.z}{containerEnd}";
@@ -6412,11 +6538,11 @@ namespace Game /* ->> …everything else */ {
           uint     index    = 0u;
           string[] subvalue = new string[keyframe.properties.Count];
 
-          // …
+          // ...
           [GameMethod(Inlined)]
           static string ValueToFormattedString(object? value, bool formatted, bool recursive) => value is not null ? formatted ? Log.ToString(value, true, recursive) : value.ToString() : string.Empty;
 
-          // …
+          // ...
           if (Recur(keyframe, recursive))
           return formatted ? $"<color=#{ColorToFormattedString(Log.RecursiveEntryColor)}>{Log.RecursiveEntry}</color>" : Log.RecursiveEntry;
 
@@ -6439,7 +6565,7 @@ namespace Game /* ->> …everything else */ {
           return formatted ? $"<color=#{ColorToFormattedString(Log.EnumerationColor)}>#{ColorToFormattedString(color)}</color> <b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerBegin}</color></b><color=#{ColorToFormattedString(Log.IntegerColor)}>{(byte) (color.r * 255u)}</color>, <color=#{ColorToFormattedString(Log.IntegerColor)}>{(byte) (color.g * 255u)}</color>, <color=#{ColorToFormattedString(Log.IntegerColor)}>{(byte) (color.b * 255u)}</color>, <color=#{ColorToFormattedString(Log.FloatColor)}>{FloatToFormattedString(color.a * 100.0f)}%</color><b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerEnd}</color></b>"  : $"#{ColorToFormattedString(color)} {containerBegin}{(byte) (color.r * 255u)}, {(byte) (color.g * 255u)}, {(byte) (color.b * 255u)}, {FloatToFormattedString(color.a * 100.0f)}%{containerEnd}";
         }
 
-        // … ->> Interfaces
+        // ... ->> Interfaces
         if (value is Game.Collections.IEventHandler events) goto fallback;
         if (value is Game.Collections.IMono         mono)    { if (Recur(mono,    recursive)) { return formatted ? $"<color=#{ColorToFormattedString(Log.RecursiveEntryColor)}>{Log.RecursiveEntry}</color>" : Log.RecursiveEntry; } return Log.ToString(mono.Value, formatted, true); }
         if (value is Game.Collections.IHandlerInfo  handler) { if (Recur(handler, recursive)) { return formatted ? $"<color=#{ColorToFormattedString(Log.RecursiveEntryColor)}>{Log.RecursiveEntry}</color>" : Log.RecursiveEntry; } return formatted ? $"<b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerBegin}</color></b><b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerBegin}</color></b>{Log.ToString(handler.target, true, true)}<b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerEnd}</color></b> {Log.ToString(handler.metadata, true, true)}<b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerEnd}</color></b>" : $"[[{Log.ToString(handler.target, false, true)}] {Log.ToString(handler.metadata, false, true)}]"; }
@@ -6459,7 +6585,7 @@ namespace Game /* ->> …everything else */ {
           uint                      count     = 0u;
           char*                     separator = stackalloc[] {',', ' ', '…'};
 
-          // …
+          // ...
           if (Recur(enumerable, recursive))
           return formatted ? $"<color=#{ColorToFormattedString(Log.RecursiveEntryColor)}>{Log.RecursiveEntry}</color>" : Log.RecursiveEntry;
 
@@ -6473,7 +6599,7 @@ namespace Game /* ->> …everything else */ {
           return formatted ? $"<b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{(valueAsEnumerable is null ? "(" + count + ") " : string.Empty)}{containerBegin}</color></b>{builder.ToString()}<b><color=#{ColorToFormattedString(Log.EnumerableColor)}>{containerEnd}</color></b>" : $"[{builder.ToString()}]";
         }
 
-        // …
+        // ...
         fallback:
         return Escape(value.ToString()); // ->> `Game.Collections.InputInfo`, `UnityEngine.GameObject`, …
       }
@@ -6500,7 +6626,7 @@ namespace Game /* ->> …everything else */ {
       public static          UnityEngine.EventSystems.EventSystem?                                  EventSystem      =  null;
       public static          UnityEngine.UI.GraphicRaycaster?                                       GraphicRaycaster =  null;
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public static bool IsPointed(UnityEngine.Component  component)                                                    => Pointed.IsPointed(component,            out Game.Collections.PointedInfo pointed);
       [GameMethod(Inlined)] public static bool IsPointed(UnityEngine.GameObject gameObject)                                                   => Pointed.IsPointed(gameObject,           out Game.Collections.PointedInfo pointed);
       [GameMethod(Inlined)] public static bool IsPointed(UnityEngine.Component  component,  out Game.Collections.PointedInfo pointed) => Pointed.IsPointed(component.gameObject, out pointed);
@@ -6511,7 +6637,7 @@ namespace Game /* ->> …everything else */ {
       public delegate void Pointerer(in Game.Collections.PointerInfo pointer);
       public delegate void Scroller (in UnityEngine.Vector2                  scroll, in UnityEngine.Vector2 scrollDelta);
 
-      /* … */
+      /* ... */
       internal static readonly Game.Collections.RefList        <Game.Collections.PointerInfo>                                                                                                                                                        BeginState                                     =  new(24u);
       public   static readonly Game.Collections.RefReadOnlyList<Game.Collections.PointerInfo>                                                                                                                                                        Begin                                          =  (Game.Collections.RefReadOnlyList<Game.Collections.PointerInfo>) Pointers.BeginState;
       public   static          uint                                                                                                                                                                                                                                  Count                                          => System.Math.Max(Pointers.CurrentState.Count, System.Math.Max(Pointers.BeginState.Count, Pointers.EndState.Count));
@@ -6569,7 +6695,7 @@ namespace Game /* ->> …everything else */ {
         Game.Collections.RefReadOnlyList<sbyte>.Empty
       )))();
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] internal static void Add  (in Game.Collections.PointerInfo pointer) => Pointers.OnPointerAdded(in pointer);
       [GameMethod(Inlined)] internal static void Click(in Game.Collections.PointerInfo pointer) => Pointers.OnClick       (in pointer);
 
@@ -6644,7 +6770,7 @@ namespace Game /* ->> …everything else */ {
       public static System.Collections.Generic.List<UnityEngine.UI.Graphic> Raycast(UnityEngine.UI.GraphicRaycaster raycaster, UnityEngine.EventSystems.EventSystem eventSystem, in Game.Collections.PointerInfo pointer) {
         System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult> raycasts = new();
 
-        // …
+        // ...
         raycaster.Raycast  (Pointers.MakePointerEventData(eventSystem, in pointer), raycasts);
         raycasts .RemoveAll([GameMethod(Inlined)] static (raycast) => !raycast.isValid);
 
@@ -6677,7 +6803,7 @@ namespace Game /* ->> …everything else */ {
     public static class Reference<T> /* ->> Solely for `𝑓 Util.Reference<T>.*At(…)` */ {
       private readonly struct Sentinel {}
 
-      /* … */
+      /* ... */
       private         static readonly Game.ArrayIndexer                 <T>                                                                   ArrayAtValue              =  (Game.ArrayIndexer                 <T>) (Traits.IsValueType<T>() ? ((Game.ArrayIndexer                 <Reference<T>.Sentinel>) Reference<Reference<T>.Sentinel>.UnmanagedArrayAt).Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.ArrayIndexer                 <T>)) : (Game.ArrayIndexer                 <T>) Reference<T>.ManagedArrayAt<T>); // ->> Damn it Unity, `ref System.Runtime.CompilerServices.Unsafe.Add(ref value, offset)` was perfectly fine
       public          static readonly Game.RefReadOnlyComparison        <T>                                                                   CompareValue              =  (Game.RefReadOnlyComparison        <T>) (Traits.IsValueType<T>() ? ((Game.RefReadOnlyComparison        <Reference<T>.Sentinel>) Reference<Reference<T>.Sentinel>.UnmanagedCompare).Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.RefReadOnlyComparison        <T>)) : (Game.RefReadOnlyComparison        <T>) Reference<T>.ManagedCompare);    //
       public          static readonly Game.RefReadOnlyEqualityComparison<T>                                                                   EqualsValue               =  (Game.RefReadOnlyEqualityComparison<T>) (Traits.IsValueType<T>() ? ((Game.RefReadOnlyEqualityComparison<Reference<T>.Sentinel>) Reference<Reference<T>.Sentinel>.UnmanagedEquals) .Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).CreateDelegate(typeof(Game.RefReadOnlyEqualityComparison<T>)) : (Game.RefReadOnlyEqualityComparison<T>) Reference<T>.ManagedEquals<T>);  // ->> Damn it Unity, `ref System.Runtime.CompilerServices.Unsafe.AreSame(ref valueA, ref valueB)` was perfectly fine
@@ -6693,7 +6819,7 @@ namespace Game /* ->> …everything else */ {
         System.Reflection.Emit.ILGenerator   generator         = method.GetILGenerator();
         System.Reflection.Emit.LocalBuilder  methodPinnedLocal = generator.DeclareLocal(typeof(void*), true);
 
-        // … ->> Pray the Intermediate Language code is valid for C#’s .NET runtime and furthermore Unity’s Mono (or IL2CPP) implementation 🙏
+        // ... ->> Pray the Intermediate Language code is valid for C#’s .NET runtime and furthermore Unity’s Mono (or IL2CPP) implementation 🙏
         method.DefineParameter(1, System.Reflection.ParameterAttributes.In, "value"); // ->> Unnecessary formality
 
         generator.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);                  //
@@ -6702,11 +6828,11 @@ namespace Game /* ->> …everything else */ {
         generator.Emit(System.Reflection.Emit.OpCodes.Conv_U);                   // ->> Is the `unsigned` conversion necessary?
         generator.Emit(System.Reflection.Emit.OpCodes.Ret);                      // ->> Also works for `T*` pointers, but Unity explicitly disallows
 
-        // …
+        // ...
         return (Game.RefReadOnlyAddresser<T>) method.CreateDelegate(typeof(Game.RefReadOnlyAddresser<T>));
       } }))();
 
-      /* … */
+      /* ... */
       public unsafe static void* AddressOf(System.Delegate function) {
         System.Type                          returnType      = function.Method.ReturnType;
         System.Type[]                        parameterTypes  = System.Array.ConvertAll(function.Method.GetParameters(), static parameter => parameter.ParameterType);
@@ -6714,7 +6840,7 @@ namespace Game /* ->> …everything else */ {
         System.Reflection.Emit.ILGenerator   methodGenerator = method.GetILGenerator();
         System.Type[]                        types           = new System.Type[parameterTypes.Length + 1];
 
-        // …
+        // ...
         System.Array.Copy(parameterTypes, 0, types, 0, parameterTypes.Length);
         types[parameterTypes.Length] = returnType;
 
@@ -6724,7 +6850,10 @@ namespace Game /* ->> …everything else */ {
         methodGenerator.EmitCall(function.Method.IsStatic ? System.Reflection.Emit.OpCodes.Call : System.Reflection.Emit.OpCodes.Callvirt, function.Method, null);
         methodGenerator.Emit    (System.Reflection.Emit.OpCodes.Ret);
 
-        return System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(method.CreateDelegate(System.Linq.Expressions.Expression.GetDelegateType(types))).ToPointer();
+        function = method.CreateDelegate(System.Linq.Expressions.Expression.GetDelegateType(types)); // hand-roll this with `System.RefFunc<…>`
+        System.GC.KeepAlive(function);
+
+        return System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(function).ToPointer();
       }
       [GameMethod(Inlined), GameResolution(0)] public unsafe static void*          AddressOf(in T                      value)                                      => Reference<T>.LoadAddressValue(in value);
       [GameMethod(Inlined), GameResolution(0)] public unsafe static void*          AddressOf(in T                      value,  System.Reflection.FieldInfo field)  { if (field is not null) { Game.RefReadOnlyAddresser<T> LoadFieldAddresser = Reference<T>.GetUnmanagedLoadFieldAddresser(field); if (value is not null) return LoadFieldAddresser(in value); else { Game.Collections.SharedMono<T> subvalue = new(); return new System.IntPtr((byte*) LoadFieldAddresser(in subvalue.Value) - (byte*) Reference<T>.AddressOf(in subvalue.Value)).ToPointer(); } } return System.IntPtr.Zero.ToPointer(); }
@@ -6741,7 +6870,7 @@ namespace Game /* ->> …everything else */ {
       public unsafe static Game.RefReadOnlyAddresser<T> GetUnmanagedLoadFieldAddresser(System.Reflection.FieldInfo field) {
         Game.RefReadOnlyAddresser<T>? LoadFieldAddresser = null;
 
-        // …
+        // ...
         foreach ((System.Reflection.FieldInfo subfield, Game.RefReadOnlyAddresser<T> LoadFieldAddress) in Reference<T>.LoadFieldAddressValues)
         if (field.Attributes == subfield.Attributes && field.DeclaringType == subfield.DeclaringType && field.FieldHandle == subfield.FieldHandle && field.FieldType == subfield.FieldType && field.IsAssembly == subfield.IsAssembly && field.IsFamily == subfield.IsFamily && field.IsFamilyAndAssembly == subfield.IsFamilyAndAssembly && field.IsFamilyOrAssembly == subfield.IsFamilyOrAssembly && field.IsInitOnly == subfield.IsInitOnly && field.IsLiteral == subfield.IsLiteral && field.IsPinvokeImpl == subfield.IsPinvokeImpl && field.IsPrivate == subfield.IsPrivate && field.IsPublic == subfield.IsPublic && field.IsSecurityCritical == subfield.IsSecurityCritical && field.IsSecuritySafeCritical == subfield.IsSecuritySafeCritical && field.IsSecurityTransparent == subfield.IsSecurityTransparent && field.IsSpecialName == subfield.IsSpecialName && field.IsStatic == subfield.IsStatic && field.MetadataToken == subfield.MetadataToken && field.Name == subfield.Name) {
           LoadFieldAddresser = LoadFieldAddress;
@@ -6752,7 +6881,7 @@ namespace Game /* ->> …everything else */ {
           System.Reflection.Emit.DynamicMethod method    = new("LoadFieldAddress", typeof(void*), new[] {typeof(T).MakeByRefType()}, typeof(Reference<T>).Module, true);
           System.Reflection.Emit.ILGenerator   generator = method.GetILGenerator();
 
-          // … ->> See `𝑓 Util.Reference<T>.UnmanagedLoadAddressValue(…)`
+          // ... ->> See `𝑓 Util.Reference<T>.UnmanagedLoadAddressValue(…)`
           method.DefineParameter(1, System.Reflection.ParameterAttributes.In, "value");
 
           generator.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
@@ -6814,7 +6943,7 @@ namespace Game /* ->> …everything else */ {
       public   static          int                                                                          TabPreviousIndex                    =  -1;
       internal static          Game.Collections.SharedLazyMono<UnityEngine.InputSystem.Touchscreen> Touchscreen                         =  new(() => UnityEngine.InputSystem.Touchscreen.current);
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)]
       internal static void Blur() {
         UI.Blurred = true;
@@ -6827,17 +6956,17 @@ namespace Game /* ->> …everything else */ {
       }
 
       private static void Blur<T>(in Game.Collections.RefList<T> state, in Game.Collections.RefList<T> endState) where T : Game.Collections.InputInfo {
-        // … ->> Progress all acknowledged inputs to their `.EndState` state
+        // ... ->> Progress all acknowledged inputs to their `.EndState` state
         for (uint index = state.Count; 0u != index--; ) {
           ref T input = ref state[index];
 
-          // …
+          // ...
           input.state = Game.Collections.DeviceState.END;
 
           foreach (ref readonly T endInput in endState) {
             bool remove = false;
 
-            // …
+            // ...
             if (endInput is Game.Collections.KeyInfo endKey && input is Game.Collections.KeyInfo key && endKey.codes == key.codes) {
               Util.Keys.IsRemoving = remove = true;
               Util.Keys.Remove(key);
@@ -6848,7 +6977,7 @@ namespace Game /* ->> …everything else */ {
               Util.Pointers.Remove(pointer);
             }
 
-            // …
+            // ...
             if (remove) {
               state.RemoveAt(index);
               break;
@@ -6913,7 +7042,7 @@ namespace Game /* ->> …everything else */ {
           int   duplicateIndex = -1;
           ref T input          = ref sourceState[index];
 
-          // …
+          // ...
           if (!input.polled) {
             input.state++; // ->> From `Game.Collections.DeviceState.BEGIN` to `Game.Collections.DeviceState.END` and beyond
 
@@ -6925,11 +7054,11 @@ namespace Game /* ->> …everything else */ {
                 break;
               }
 
-              // … ->> Repress duplicates
+              // ... ->> Repress duplicates
               if (duplicateIndex != -1) {
                 ref T preinput = ref destinationState[(uint) duplicateIndex];
 
-                // … ->> Update `pre`-existing `input`
+                // ... ->> Update `pre`-existing `input`
                 preinput.epoch  = input.epoch;
                 preinput.polled = true;
 
@@ -6942,7 +7071,7 @@ namespace Game /* ->> …everything else */ {
                   case Game.Collections.PointerInfo pointer: {
                     ref Game.Collections.PointerInfo prepointer = ref (destinationState as Game.Collections.RefList<Game.Collections.PointerInfo>)![(uint) duplicateIndex];
 
-                    // …
+                    // ...
                     prepointer.origin           = pointer.origin;
                     prepointer.positionPrevious = pointer.positionPrevious != prepointer.position ? pointer.positionPrevious : prepointer.positionPrevious;
                     prepointer.positionRecent   = pointer.positionRecent == prepointer.positionPrevious || pointer.positionRecent == prepointer.position ? pointer.positionRecent : prepointer.positionRecent;
@@ -6995,7 +7124,7 @@ namespace Game /* ->> …everything else */ {
             Game.Collections.RefList<Game.Collections.KeyInfo> state    = Util.Keys.States[(int) index];
             int                                                                subindex = (int) state.Count;
 
-            // …
+            // ...
             while (0 != subindex--)
             if (
               key is UnityEngine.KeyCode         key1 ? key1 == state[(uint) subindex].codes.Item1 :
@@ -7019,7 +7148,7 @@ namespace Game /* ->> …everything else */ {
           }
         }
 
-        /* … */
+        /* ... */
         (
           Game.Collections.DeviceState A,               Game.Collections.DeviceState D,         Game.Collections.DeviceState S,          Game.Collections.DeviceState W,
           Game.Collections.DeviceState DownArrow,       Game.Collections.DeviceState LeftArrow, Game.Collections.DeviceState RightArrow, Game.Collections.DeviceState UpArrow,
@@ -7031,20 +7160,20 @@ namespace Game /* ->> …everything else */ {
           Game.Collections.DeviceState Space
         ) polled = (Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID, Game.Collections.DeviceState.INVALID);
 
-        /* … */
+        /* ... */
         Util.Keys.IsAdding   = false;
         Util.Keys.IsChanging = false;
         Util.Keys.IsRemoving = false;
 
         if (!UI.Blurred) {
-          // … ->> Acknowledge `UnityEngine.Input.GetKey*(…)` key binds
+          // ... ->> Acknowledge `UnityEngine.Input.GetKey*(…)` key binds
           fixed (UnityEngine.KeyCode* address = Util.Keys.All.Item1.Items)
           for (UnityEngine.KeyCode* iterator = address + Util.Keys.All.Item1.Count; address != iterator; ) {
             ref readonly UnityEngine.KeyCode                  key    = ref *--iterator;
             System.ReadOnlySpan<bool>                         states = stackalloc[] {UnityEngine.Input.GetKeyDown(key), UnityEngine.Input.GetKey(key), UnityEngine.Input.GetKeyUp(key)};
             ref readonly Game.Collections.DeviceState state  = ref PollDeviceState(in states);
 
-            // …
+            // ...
             PollKeys(key, timestamp, false, in states, null);
 
             if (UnityEngine.KeyCode.A            == key) polled.A                = state;
@@ -7092,14 +7221,14 @@ namespace Game /* ->> …everything else */ {
             if (UnityEngine.KeyCode.W            == key) polled.W                = state;
           }
 
-          // … ->> Acknowledge `UnityEngine.InputSystem.*` key binds
+          // ... ->> Acknowledge `UnityEngine.InputSystem.*` key binds
           foreach (UnityEngine.InputSystem.Controls.KeyControl keyControl in UI.Keyboard.Value?.allKeys ?? new UnityEngine.InputSystem.Utilities.ReadOnlyArray<UnityEngine.InputSystem.Controls.KeyControl>(System.Array.Empty<UnityEngine.InputSystem.Controls.KeyControl>()))
           if (keyControl is not null) {
             UnityEngine.InputSystem.Key                       key    = keyControl.keyCode;
             System.ReadOnlySpan<bool>                         states = stackalloc[] {keyControl.wasPressedThisFrame, keyControl.isPressed, keyControl.wasReleasedThisFrame};
             ref readonly Game.Collections.DeviceState state  = ref PollDeviceState(in states);
 
-            // …
+            // ...
             PollKeys(key, timestamp, false, in states, (UnityEngine.InputSystem.Keyboard) UI.Keyboard);
 
             if (UnityEngine.InputSystem.Key.A            == key) polled.A                = state;
@@ -7144,7 +7273,7 @@ namespace Game /* ->> …everything else */ {
           }
         }
 
-        // … ->> Update prior keys
+        // ... ->> Update prior keys
         UI.Progress(in Util.Keys.EndState,     null);
         UI.Progress(in Util.Keys.CurrentState, Util.Keys.EndState);
         UI.Progress(in Util.Keys.BeginState,   Util.Keys.CurrentState);
@@ -7214,11 +7343,11 @@ namespace Game /* ->> …everything else */ {
           foreach (UnityEngine.UI.Graphic pointed in Util.Pointers.Raycast(Util.Pointed.GraphicRaycaster, Util.Pointed.EventSystem, in pointer)) {
             int index = (int) Util.Pointed.Any.Count;
 
-            // … ->> Track prior pointed objects
+            // ... ->> Track prior pointed objects
             while (0 != index--) {
               ref Game.Collections.PointedInfo subpointed = ref Util.Pointed.Any[(uint) index];
 
-              // … ->> Disregard assumption about pointed object no longer being pointed at
+              // ... ->> Disregard assumption about pointed object no longer being pointed at
               if (pointed == subpointed.graphic) {
                 subpointed.pointersList.Add(in pointer);
                 subpointed.state = Game.Collections.DeviceState.CURRENT;
@@ -7227,27 +7356,27 @@ namespace Game /* ->> …everything else */ {
               }
             }
 
-            // … ->> Acknowledge newly pointed object
+            // ... ->> Acknowledge newly pointed object
             if (index == -1)
             Util.Pointed.Any.Add(new() {epoch = epoch, graphic = pointed, pointersList = new(2u) {pointer}, state = Game.Collections.DeviceState.BEGIN});
           }
         }
 
-        // … ->> Assume pointed objects are no longer being pointed at and remove them
+        // ... ->> Assume pointed objects are no longer being pointed at and remove them
         for (uint index = Util.Pointed.Any.Count; 0u != index--; ) {
           ref Game.Collections.PointedInfo pointed = ref Util.Pointed.Any[index];
 
-          // …
+          // ...
           if (Game.Collections.DeviceState.END == pointed.state) Util.Pointed.Any.RemoveAt(index); // ->> Act on the assumption afterward
           else { pointed.pointersList.Clear(); pointed.state = Game.Collections.DeviceState.END; } // ->> Make the assumption
         }
 
-        // … ->> Track pointed `UnityEngine.UI.Graphic` objects
+        // ... ->> Track pointed `UnityEngine.UI.Graphic` objects
         PollPointed(in Util.Pointers.BeginState,   timestamp);
         PollPointed(in Util.Pointers.CurrentState, timestamp);
         PollPointed(in Util.Pointers.EndState,     timestamp);
 
-        // … ->> Acknowledge objects no longer being pointed at
+        // ... ->> Acknowledge objects no longer being pointed at
         foreach (ref Game.Collections.PointedInfo pointed in Util.Pointed.Any) {
           if (Game.Collections.DeviceState.END == pointed.state)
           pointed.epoch = timestamp;
@@ -7262,11 +7391,11 @@ namespace Game /* ->> …everything else */ {
             Game.Collections.RefList<Game.Collections.PointerInfo> state    = Util.Pointers.States[(int) index];
             int                                                                    subindex = (int) state.Count;
 
-            // …
+            // ...
             while (0 != subindex--) {
               ref Game.Collections.PointerInfo pointer = ref state[(uint) subindex];
 
-              // …
+              // ...
               if (device == pointer.device && id == pointer.id) {
                 if (!invalidate) {
                   if (pointer.position != position) {
@@ -7302,7 +7431,7 @@ namespace Game /* ->> …everything else */ {
         static void PollStates(in Game.Collections.RefList<Game.Collections.PointerInfo> state) {
           ref readonly Game.Collections.DeviceState substate = ref (Util.Pointers.BeginState == state ? ref Game.Collections.DeviceState.BEGIN : ref (Util.Pointers.CurrentState == state ? ref Game.Collections.DeviceState.CURRENT : ref (Util.Pointers.EndState == state ? ref Game.Collections.DeviceState.END : ref Game.Collections.DeviceState.UNKNOWN)));
 
-          // …
+          // ...
           foreach (ref readonly Game.Collections.PointerInfo pointer in state) {
             Util.Pointers.IsMoving = pointer.IsMoving();
 
@@ -7343,7 +7472,7 @@ namespace Game /* ->> …everything else */ {
           }
         }
 
-        // …
+        // ...
         Util.Pointers.IsAdding   = false;
         Util.Pointers.IsChanging = false;
         Util.Pointers.IsClicking = false;
@@ -7360,11 +7489,11 @@ namespace Game /* ->> …everything else */ {
             (UnityEngine.Vector2) UnityEngine.Input.mousePosition
           );
 
-          // …
+          // ...
           Util.Pointers.ScrollPreviousValue = Util.Pointers.ScrollValue;
           Util.Pointers.ScrollValue         = UnityEngine.Vector2.zero;
 
-          // … ->> Acknowledge `UnityEngine.Input.GetMouse*(…)` pointer (e.g. mouse, pen, touch, e.t.c.) binds
+          // ... ->> Acknowledge `UnityEngine.Input.GetMouse*(…)` pointer (e.g. mouse, pen, touch, e.t.c.) binds
           if (UnityEngine.Input.mousePresent) {
             if (UnityEngine.Vector2.zero != (Util.Pointers.ScrollValue = Util.Vector.ExcludeX(UnityEngine.Input.mouseScrollDelta)))
             Util.Pointers.Scrolls(Util.Pointers.ScrollValue, Util.Pointers.ScrollDelta);
@@ -7373,20 +7502,20 @@ namespace Game /* ->> …everything else */ {
             PollPointers(Util.Pointers.MakeMouseId((uint) button), timestamp, 1u, false, in pointerPosition, 1.0f, in pointerPosition, UnityEngine.Vector2.one, false, stackalloc[] {UnityEngine.Input.GetMouseButtonDown(button), UnityEngine.Input.GetMouseButton(button), UnityEngine.Input.GetMouseButtonUp(button)}, null);
           }
 
-          // … ->> Acknowledge `UnityEngine.Touch` touch binds
+          // ... ->> Acknowledge `UnityEngine.Touch` touch binds
           if (UnityEngine.Input.touchSupported)
           for (int index = UnityEngine.Input.touchCount; 0 != index--; ) {
             UnityEngine.Touch touch = UnityEngine.Input.GetTouch(index);
             PollPointers(Util.Pointers.MakeTouchId((uint) touch.fingerId), timestamp /* ->> Not `UnityEngine.Touch::deltaTime` */, (uint) touch.tapCount, false, touch.position, UnityEngine.Input.touchPressureSupported ? touch.pressure : 1.0f, touch.rawPosition, UnityEngine.Vector2.one * touch.radius, false, stackalloc[] {UnityEngine.TouchPhase.Began == touch.phase, UnityEngine.TouchPhase.Moved == touch.phase || UnityEngine.TouchPhase.Stationary == touch.phase, UnityEngine.TouchPhase.Canceled == touch.phase || UnityEngine.TouchPhase.Ended == touch.phase}, null);
           }
 
-          // … ->> Acknowledge `UnityEngine.InputSystem.*` mouse binds
+          // ... ->> Acknowledge `UnityEngine.InputSystem.*` mouse binds
           if (UI.Mouse) {
             uint                id       = (uint) UI.Mouse.Value.deviceId; // ->> Unsure about `::pointerId.ReadValue()`
             UnityEngine.Vector2 position = UI.Mouse.Value.position.ReadValue();
             UnityEngine.Vector2 scroll   = UI.Mouse.Value.scroll  .ReadValue();
 
-            // …
+            // ...
             if (UnityEngine.Vector2.zero != (Util.Pointers.ScrollValue = scroll))
             Util.Pointers.Scrolls(Util.Pointers.ScrollValue, Util.Pointers.ScrollDelta);
 
@@ -7397,12 +7526,12 @@ namespace Game /* ->> …everything else */ {
             if (UI.Mouse.Value.backButton    is not null) PollPointers(Util.Pointers.MakeMouseId(/* id + */ (uint) Util.Pointers.MouseButtonBack)    /* ->> `UI.Mouse.Value.backButton   .path` */, timestamp, 1u, false, in position, 1.0f, in position, UnityEngine.Vector2.one, false, stackalloc[] {UI.Mouse.Value.backButton   .wasPressedThisFrame, UI.Mouse.Value.backButton   .isPressed, UI.Mouse.Value.backButton   .wasReleasedThisFrame}, (UnityEngine.InputSystem.Mouse) UI.Mouse);
           }
 
-          // … ->> Acknowledge `UnityEngine.InputSystem.*` pen binds
+          // ... ->> Acknowledge `UnityEngine.InputSystem.*` pen binds
           if (UI.Pen) {
             uint                id       = (uint) UI.Pen.Value.deviceId; // ->> Unsure about `::pointerId.ReadValue()`
             UnityEngine.Vector2 position = UI.Pen.Value.position.ReadValue();
 
-            // …
+            // ...
             if (UI.Pen.Value.tip                                        is not null) PollPointers(Util.Pointers.MakePenId(id + (uint) Util.Pointers.PenButtonTip)        /* ->> `UI.Pen.Value.tip                                       .path` */, timestamp, 1u, UI.Pen.Value.tip                                       .invert, in position, UI.Pen.Value.pressure.ReadValue(), in position, UnityEngine.Vector2.one, false, stackalloc[] {UI.Pen.Value.tip                                       .wasPressedThisFrame, UI.Pen.Value.tip                                       .isPressed, UI.Pen.Value.tip                                       .wasReleasedThisFrame}, (UnityEngine.InputSystem.Pen) UI.Pen);
             if (UI.Pen.Value.eraser                                     is not null) PollPointers(Util.Pointers.MakePenId(id + (uint) Util.Pointers.PenButtonEraser)     /* ->> `UI.Pen.Value.eraser                                    .path` */, timestamp, 1u, UI.Pen.Value.eraser                                    .invert, in position, UI.Pen.Value.pressure.ReadValue(), in position, UnityEngine.Vector2.one, false, stackalloc[] {UI.Pen.Value.eraser                                    .wasPressedThisFrame, UI.Pen.Value.eraser                                    .isPressed, UI.Pen.Value.eraser                                    .wasReleasedThisFrame}, (UnityEngine.InputSystem.Pen) UI.Pen);
             if (UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel1] is not null) PollPointers(Util.Pointers.MakePenId(id + (uint) Util.Pointers.PenButtonBarrel + 0) /* ->> `UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel1].path` */, timestamp, 1u, UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel1].invert, in position, UI.Pen.Value.pressure.ReadValue(), in position, UnityEngine.Vector2.one, false, stackalloc[] {UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel1].wasPressedThisFrame, UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel1].isPressed, UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel1].wasReleasedThisFrame}, (UnityEngine.InputSystem.Pen) UI.Pen);
@@ -7411,17 +7540,17 @@ namespace Game /* ->> …everything else */ {
             if (UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel4] is not null) PollPointers(Util.Pointers.MakePenId(id + (uint) Util.Pointers.PenButtonBarrel + 3) /* ->> `UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel4].path` */, timestamp, 1u, UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel4].invert, in position, UI.Pen.Value.pressure.ReadValue(), in position, UnityEngine.Vector2.one, false, stackalloc[] {UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel4].wasPressedThisFrame, UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel4].isPressed, UI.Pen.Value[UnityEngine.InputSystem.PenButton.Barrel4].wasReleasedThisFrame}, (UnityEngine.InputSystem.Pen) UI.Pen);
           }
 
-          // … ->> Acknowledge `UnityEngine.InputSystem.*` touch binds
+          // ... ->> Acknowledge `UnityEngine.InputSystem.*` touch binds
           if (UI.Touchscreen) {
             UnityEngine.InputSystem.Utilities.ReadOnlyArray<UnityEngine.InputSystem.Controls.TouchControl> touches = UI.Touchscreen.Value.touches;
 
-            // …
+            // ...
             if (!touches.IsEmpty()) {
               UnityEngine.InputSystem.Controls.TouchControl      primaryTouch      = UI.Touchscreen.Value.primaryTouch;
               UnityEngine.InputSystem.TouchPhase                 primaryTouchPhase = primaryTouch?.phase.ReadValue() ?? UnityEngine.InputSystem.TouchPhase.None;
               UnityEngine.InputSystem.Controls.TouchPressControl primaryTouchPress = primaryTouch?.press!;
 
-              // …
+              // ...
               foreach (UnityEngine.InputSystem.Controls.TouchControl touch in touches)
               if (touch is not null) {
                 UnityEngine.InputSystem.TouchPhase                 phase = touch.phase.ReadValue();
@@ -7442,13 +7571,13 @@ namespace Game /* ->> …everything else */ {
             PollPointers(Util.Pointers.MakeEnhancedTouchId((uint) touch.touchId), touch.startTime, (uint) touch.tapCount, false, touch.screenPosition, touch.pressure, touch.startScreenPosition, touch.radius, !touch.valid || UnityEngine.InputSystem.TouchPhase.None == phase, stackalloc[] {UnityEngine.InputSystem.TouchPhase.Began == phase, UnityEngine.InputSystem.TouchPhase.Moved == phase || UnityEngine.InputSystem.TouchPhase.Stationary == phase, UnityEngine.InputSystem.TouchPhase.Canceled == phase || UnityEngine.InputSystem.TouchPhase.Ended == phase}, (UnityEngine.InputSystem.Touchscreen) UI.Touchscreen);
           }
 
-          // … ->> Acknowledge `UnityEngine.InputSystem.*` pointer binds
+          // ... ->> Acknowledge `UnityEngine.InputSystem.*` pointer binds
           if (UI.Pointer) {
             UnityEngine.Vector2 position = UI.Pointer.Value.position.ReadValue();
             PollPointers(Util.Pointers.MakePointerId((uint) UI.Pointer.Value.deviceId) /* ->> Unsure about `::pointerId.ReadValue()` */, timestamp, 1u, false, in position, 1.0f, in position, UnityEngine.Vector2.one, false, stackalloc[] {UI.Pointer.Value.press.wasPressedThisFrame, UI.Pointer.Value.press.isPressed, UI.Pointer.Value.press.wasReleasedThisFrame}, (UnityEngine.InputSystem.Pointer) UI.Pointer);
           }
 
-          // … ->> Acknowledge (mouse) cursor movement at least
+          // ... ->> Acknowledge (mouse) cursor movement at least
           if (UnityEngine.Input.mousePresent) {
             if (0u != UI.PointerAcknowledged)
               PollPointers(Util.Pointers.MakeId(), timestamp, 0u, false, in pointerPosition, 0.0f, in pointerPosition, UnityEngine.Vector2.one, false, stackalloc[] {UI.PointerAcknowledged == 1u, UI.PointerAcknowledged >= 2u, false}, null);
@@ -7457,7 +7586,7 @@ namespace Game /* ->> …everything else */ {
           }
         }
 
-        // … ->> Update prior pointers
+        // ... ->> Update prior pointers
         Util.Pointers.MouseButtonBackState    = Game.Collections.DeviceState.UNKNOWN;
         Util.Pointers.MouseButtonForwardState = Game.Collections.DeviceState.UNKNOWN;
         Util.Pointers.MouseButtonLeftState    = Game.Collections.DeviceState.UNKNOWN;
@@ -7493,7 +7622,7 @@ namespace Game /* ->> …everything else */ {
             int   count = UI.TabList.Count;
             sbyte shift = Util.Keys.Modifiers.Shift < Game.Collections.DeviceState.END ? (sbyte) -1 : (sbyte) +1;
 
-            // …
+            // ...
             if (0.0 == UI.TabDelayElapsed || Util.Keys.RepeatDelay <= UI.TabDelayElapsed) {
               if (UI.TabIndex == -1 && UI.TabIndexPreserved && UI.TabPreviousIndex < count && UI.TabPreviousIndex != -1)
                 UI.TabIndex = UI.TabPreviousIndex;
@@ -8014,11 +8143,11 @@ namespace Game /* ->> …everything else */ {
       internal sealed   class  MonoBehaviour : UnityEngine.MonoBehaviour {}
       internal readonly struct TimerIndex                                {}
 
-      /* … */
+      /* ... */
       internal static readonly Game.Collections.RefSortedCollection<double, Game.Collections.WaitInfo> Pending = new(16u) {{double.NaN, new()}};                                                                                                 // ->> Used `System.Collections.Generic.SortedDictionary<double, Game.Collections.WaitInfo>` prior
       internal static readonly Wait.MonoBehaviour                                                                      Waiter  = Util.Eval(static waiter => waiter.PreserveFromSceneLoad(), new UnityEngine.GameObject("⏱️").AddComponent<Wait.MonoBehaviour>()); // ->> Use coroutines for asynchronicity
 
-      /* … */
+      /* ... */
       [GameMethod(Inlined)] public static uint Check         () => Wait.CheckCoroutine();
       [GameMethod(Inlined)] public static uint CheckCoroutine() => 0u; // ->> Number of coroutines stopped
 
@@ -8028,12 +8157,12 @@ namespace Game /* ->> …everything else */ {
         double                                                                                  timestamp = UnityEngine.Time.realtimeSinceStartupAsDouble;
         ref readonly Game.Collections.WaitInfo                                          wait      = ref Wait.Pending[0]; // ->> `Wait.Pending.GetValueByRank(double.NaN)`
 
-        // … ->> Enumeration is messy because the final design could not succinctly account for a timer-based model
+        // ... ->> Enumeration is messy because the final design could not succinctly account for a timer-based model
         for (uint index = resolved.IsEmpty() ? wait.events.CountInvocationList() : resolved[resolved.Count - 1u].value; 0u != index--; ) {
           ref Game.Collections.HandlerInfo<Game.Events.WaitEvent> waitHandler = ref wait.events[index];
           ref Game.Events.WaitEvent                                       waitEvent   = ref waitHandler.metadata;
 
-          // …
+          // ...
           if (!(timestamp < waitEvent.data.timestamp)) {
             if (!waitEvent.data.repeating) resolved.Add(index);               // ->> Remove `Wait.ForTimerUntil(…)` handlers, or
             else waitEvent.data.timestamp = timestamp + waitEvent.data.delay; // ->> Update `Wait.ForTimerEvery(…)` handlers
@@ -8060,7 +8189,7 @@ namespace Game /* ->> …everything else */ {
             yield return new UnityEngine.WaitForSecondsRealtime((float) delay);
             Game.Collections.WaitInfo wait = Wait.Pending.GetValueByRank(delay); // ->> Could be a reference local
 
-            // …
+            // ...
             if (0u == wait.events.CountInvocationList())
             break;
 
@@ -8110,7 +8239,7 @@ namespace Game /* ->> …everything else */ {
       [GameMethod(Inlined)] public  static void Until             (double                                              delay, Game.Handler<Game.Events.WaitEvent> callback, object? metadata = null)                                                         => Wait.ForCoroutineUntil(delay, callback,                                                                                                        metadata);
     }
 
-    /* … */
+    /* ... */
     private  static readonly System.Collections.Generic.Dictionary            <(System.Type, System.Type), System.Delegate>                                 Casters              = new(1);
     internal static readonly Game.Collections.RefReadOnlyDictionary   <string, UnityEngine.Color>                                                   Colors               = ((System.Func<string[], UnityEngine.Color[], Game.Collections.RefReadOnlyDictionary<string, UnityEngine.Color>>) ([GameMethod(Inlined)] static (names, colors) => { Game.Collections.RefReadOnlyDictionary<string, UnityEngine.Color> dictionary = new(); dictionary.keys = new(names); dictionary.values = new(colors); return dictionary; }))(new[] {"antiqueWhite", "aquamarine", "azure", "beige", "bisque", "black", "blanchedAlmond", "blue", "blueViolet", "brown", "burlywood", "cadetBlue", "chartreuse", "chocolate", "clear", "coral", "cornflowerBlue", "cornsilk", "crimson", "cyan", "darkBlue", "darkCyan", "darkGoldenRod", "darkGray", "darkGreen", "darkKhaki", "darkMagenta", "darkOliveGreen", "darkOrange", "darkOrchid", "darkRed", "darkSalmon", "darkSeaGreen", "darkSlateBlue", "darkSlateGray", "darkTurquoise", "darkViolet", "deepPink", "deepSkyBlue", "dimGray", "dodgerBlue", "firebrick", "floralWhite", "forestGreen", "gainsboro", "ghostWhite", "gold", "goldenRod", "gray", "gray1", "gray2", "gray3", "gray4", "gray5", "gray6", "gray7", "gray8", "gray9", "green", "greenYellow", "grey", "honeydew", "hotPink", "indianRed", "indigo", "ivory", "khaki", "lavender", "lavenderBlush", "lawnGreen", "lemonChiffon", "lightBlue", "lightCoral", "lightCyan", "lightGoldenRod", "lightGoldenRodYellow", "lightGray", "lightGreen", "lightPink", "lightSalmon", "lightSeaGreen", "lightSkyBlue", "lightSlateBlue", "lightSlateGray", "lightSteelBlue", "lightYellow", "limeGreen", "linen", "magenta", "maroon", "mediumAquamarine", "mediumBlue", "mediumOrchid", "mediumPurple", "mediumSeaGreen", "mediumSlateBlue", "mediumSpringGreen", "mediumTurquoise", "mediumVioletRed", "midnightBlue", "mintCream", "mistyRose", "moccasin", "navajoWhite", "navyBlue", "oldLace", "olive", "oliveDrab", "orange", "orangeRed", "orchid", "paleGoldenRod", "paleGreen", "paleTurquoise", "paleVioletRed", "papayaWhip", "peachPuff", "peru", "pink", "plum", "powderBlue", "purple", "rebeccaPurple", "red", "rosyBrown", "royalBlue", "saddleBrown", "salmon", "sandyBrown", "seaGreen", "seashell", "sienna", "silver", "skyBlue", "slateBlue", "slateGray", "snow", "softBlue", "softGreen", "softRed", "softYellow", "springGreen", "steelBlue", "tan", "teal", "thistle", "tomato", "turquoise", "violet", "violetRed", "wheat", "white", "whiteSmoke", "yellow", "yellowGreen", "yellowNice"}, /* ->> `stackalloc` */ new[] {UnityEngine.Color.antiqueWhite, UnityEngine.Color.aquamarine, UnityEngine.Color.azure, UnityEngine.Color.beige, UnityEngine.Color.bisque, UnityEngine.Color.black, UnityEngine.Color.blanchedAlmond, UnityEngine.Color.blue, UnityEngine.Color.blueViolet, UnityEngine.Color.brown, UnityEngine.Color.burlywood, UnityEngine.Color.cadetBlue, UnityEngine.Color.chartreuse, UnityEngine.Color.chocolate, UnityEngine.Color.clear, UnityEngine.Color.coral, UnityEngine.Color.cornflowerBlue, UnityEngine.Color.cornsilk, UnityEngine.Color.crimson, UnityEngine.Color.cyan, UnityEngine.Color.darkBlue, UnityEngine.Color.darkCyan, UnityEngine.Color.darkGoldenRod, UnityEngine.Color.darkGray, UnityEngine.Color.darkGreen, UnityEngine.Color.darkKhaki, UnityEngine.Color.darkMagenta, UnityEngine.Color.darkOliveGreen, UnityEngine.Color.darkOrange, UnityEngine.Color.darkOrchid, UnityEngine.Color.darkRed, UnityEngine.Color.darkSalmon, UnityEngine.Color.darkSeaGreen, UnityEngine.Color.darkSlateBlue, UnityEngine.Color.darkSlateGray, UnityEngine.Color.darkTurquoise, UnityEngine.Color.darkViolet, UnityEngine.Color.deepPink, UnityEngine.Color.deepSkyBlue, UnityEngine.Color.dimGray, UnityEngine.Color.dodgerBlue, UnityEngine.Color.firebrick, UnityEngine.Color.floralWhite, UnityEngine.Color.forestGreen, UnityEngine.Color.gainsboro, UnityEngine.Color.ghostWhite, UnityEngine.Color.gold, UnityEngine.Color.goldenRod, UnityEngine.Color.gray, UnityEngine.Color.gray1, UnityEngine.Color.gray2, UnityEngine.Color.gray3, UnityEngine.Color.gray4, UnityEngine.Color.gray5, UnityEngine.Color.gray6, UnityEngine.Color.gray7, UnityEngine.Color.gray8, UnityEngine.Color.gray9, UnityEngine.Color.green, UnityEngine.Color.greenYellow, UnityEngine.Color.grey, UnityEngine.Color.honeydew, UnityEngine.Color.hotPink, UnityEngine.Color.indianRed, UnityEngine.Color.indigo, UnityEngine.Color.ivory, UnityEngine.Color.khaki, UnityEngine.Color.lavender, UnityEngine.Color.lavenderBlush, UnityEngine.Color.lawnGreen, UnityEngine.Color.lemonChiffon, UnityEngine.Color.lightBlue, UnityEngine.Color.lightCoral, UnityEngine.Color.lightCyan, UnityEngine.Color.lightGoldenRod, UnityEngine.Color.lightGoldenRodYellow, UnityEngine.Color.lightGray, UnityEngine.Color.lightGreen, UnityEngine.Color.lightPink, UnityEngine.Color.lightSalmon, UnityEngine.Color.lightSeaGreen, UnityEngine.Color.lightSkyBlue, UnityEngine.Color.lightSlateBlue, UnityEngine.Color.lightSlateGray, UnityEngine.Color.lightSteelBlue, UnityEngine.Color.lightYellow, UnityEngine.Color.limeGreen, UnityEngine.Color.linen, UnityEngine.Color.magenta, UnityEngine.Color.maroon, UnityEngine.Color.mediumAquamarine, UnityEngine.Color.mediumBlue, UnityEngine.Color.mediumOrchid, UnityEngine.Color.mediumPurple, UnityEngine.Color.mediumSeaGreen, UnityEngine.Color.mediumSlateBlue, UnityEngine.Color.mediumSpringGreen, UnityEngine.Color.mediumTurquoise, UnityEngine.Color.mediumVioletRed, UnityEngine.Color.midnightBlue, UnityEngine.Color.mintCream, UnityEngine.Color.mistyRose, UnityEngine.Color.moccasin, UnityEngine.Color.navajoWhite, UnityEngine.Color.navyBlue, UnityEngine.Color.oldLace, UnityEngine.Color.olive, UnityEngine.Color.oliveDrab, UnityEngine.Color.orange, UnityEngine.Color.orangeRed, UnityEngine.Color.orchid, UnityEngine.Color.paleGoldenRod, UnityEngine.Color.paleGreen, UnityEngine.Color.paleTurquoise, UnityEngine.Color.paleVioletRed, UnityEngine.Color.papayaWhip, UnityEngine.Color.peachPuff, UnityEngine.Color.peru, UnityEngine.Color.pink, UnityEngine.Color.plum, UnityEngine.Color.powderBlue, UnityEngine.Color.purple, UnityEngine.Color.rebeccaPurple, UnityEngine.Color.red, UnityEngine.Color.rosyBrown, UnityEngine.Color.royalBlue, UnityEngine.Color.saddleBrown, UnityEngine.Color.salmon, UnityEngine.Color.sandyBrown, UnityEngine.Color.seaGreen, UnityEngine.Color.seashell, UnityEngine.Color.sienna, UnityEngine.Color.silver, UnityEngine.Color.skyBlue, UnityEngine.Color.slateBlue, UnityEngine.Color.slateGray, UnityEngine.Color.snow, UnityEngine.Color.softBlue, UnityEngine.Color.softGreen, UnityEngine.Color.softRed, UnityEngine.Color.softYellow, UnityEngine.Color.springGreen, UnityEngine.Color.steelBlue, UnityEngine.Color.tan, UnityEngine.Color.teal, UnityEngine.Color.thistle, UnityEngine.Color.tomato, UnityEngine.Color.turquoise, UnityEngine.Color.violet, UnityEngine.Color.violetRed, UnityEngine.Color.wheat, UnityEngine.Color.white, UnityEngine.Color.whiteSmoke, UnityEngine.Color.yellow, UnityEngine.Color.yellowGreen, UnityEngine.Color.yellowNice}); // ->> `new(typeof(UnityEngine.Color).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static).FindAll(static field => field.FieldType == typeof(UnityEngine.Color)).ConvertAll(static field => (UnityEngine.Color) field.GetValue(null)))`
     private  static readonly System.Collections.Generic.Dictionary            <(System.Type, System.Type), System.Delegate>                                 Converters           = new(1);
@@ -8129,19 +8258,22 @@ namespace Game /* ->> …everything else */ {
     }.AsReadOnly();
     private static readonly System.Random Randomizer = new();
 
-    /* … */
+    /* ... */
     [GameMethod(Inlined)] public static T Cast   <T>   (object? value) => value is not null ? Util.GetCaster   <T>   (value.GetType())(value)    : default!;
     [GameMethod(Inlined)] public static U Convert<T, U>(in T    value) => value is not null ? Util.GetConverter<T, U>()               (in value) : default!;
+
+    // Convert(value, T, T)
+    // CanConvert(T, T)
 
     [GameMethod(Inlined)]
     public static UnityEngine.Vector3[] CornersFrom(in UnityEngine.Rect rectangle) => new UnityEngine.Vector3[4] {new(rectangle.xMin, rectangle.yMax, 0.0f), new(rectangle.xMin, rectangle.yMin, 0.0f), new(rectangle.xMax, rectangle.yMin, 0.0f), new(rectangle.xMax, rectangle.yMax, 0.0f)}; // ->> Origin begins from bottom-left rather than top-left
 
     [GameMethod(Inlined)] public static ref          T Eval<T>   (Game.RefAction           <T>    evaluator, ref T value) {  evaluator(ref value); return ref value; }
     [GameMethod(Inlined)] public static ref readonly T Eval<T>   (Game.RefReadOnlyAction   <T>    evaluator, in  T value) {  evaluator(in  value); return ref value; }
+    [GameMethod(Inlined)] public static T              Eval<T>   (System.Action            <T>    evaluator, in  T value) {  evaluator(value); return value; }
     [GameMethod(Inlined)] public static U              Eval<T, U>(Game.RefConverter        <T, U> evaluator, ref T value) => evaluator(ref value);
     [GameMethod(Inlined)] public static U              Eval<T, U>(Game.RefReadOnlyConverter<T, U> evaluator, in  T value) => evaluator(in  value);
-    [GameMethod(Inlined)] public static T              Eval<T>   (System.Action                    <T>    evaluator, in  T value) {  evaluator(value); return value; }
-    [GameMethod(Inlined)] public static U              Eval<T, U>(System.Func                      <T, U> evaluator, in  T value) => evaluator(value);
+    [GameMethod(Inlined)] public static U              Eval<T, U>(System.Func              <T, U> evaluator, in  T value) => evaluator(value);
 
     [GameMethod(Inlined)]
     public static UnityEngine.AudioType EvaluateAudioTypeFromExtension(string extension) => (
@@ -8173,7 +8305,7 @@ namespace Game /* ->> …everything else */ {
       return (System.Converter<object, T>) caster;
     }
 
-    public static Game.RefReadOnlyConverter<T, U> GetConverter<T, U>() /* ->> Respects type while reflecting constructors and overloads */ {
+    public static Game.RefReadOnlyConverter<T, U> GetConverter<T, U>() {
       if (!Util.Converters.TryGetValue((typeof(T), typeof(U)), out System.Delegate converter)) {
         [GameMethod(Inlined)]
         static Game.RefReadOnlyConverter<T, U> GetUnmanagedConverter() {
@@ -8181,11 +8313,11 @@ namespace Game /* ->> …everything else */ {
           return System.Linq.Expressions.Expression.Lambda<Game.RefReadOnlyConverter<T, U>>(System.Linq.Expressions.Expression.Convert(parameter, typeof(U)), parameter).Compile();
         }
 
-        // …
+        // ...
         if (!typeof(U).IsAssignableFrom(typeof(T))) {
           System.Linq.Expressions.ParameterExpression parameter = System.Linq.Expressions.Expression.Parameter(typeof(T).MakeByRefType());
 
-          // …
+          // ...
           converter = (
             typeof(U).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public).Find([GameMethod(Inlined)] static (constructor) => { System.Reflection.ParameterInfo[]            parameters = constructor.GetParameters();                                                      return (parameters.Length == 1 || (parameters.Length > 1 && Util.Reference<System.Reflection.ParameterInfo>.At(parameters, 1u).HasDefaultValue)) && (Util.Reference<System.Reflection.ParameterInfo>.Only(parameters).ParameterType.GetElementType() ?? Util.Reference<System.Reflection.ParameterInfo>.Only(parameters).ParameterType).IsAssignableFrom(typeof(T)); }) as System.Reflection.MethodBase ??
             typeof(U).GetMethods     (System.Reflection.BindingFlags.Public   | System.Reflection.BindingFlags.Static)                                           .Find([GameMethod(Inlined)] static (method)      => { ref readonly System.Reflection.ParameterInfo parameter  = ref Util.Reference<System.Reflection.ParameterInfo>.Only(method.GetParameters()); return (method.Name == "op_Explicit" || method.Name == "op_Implicit")                                                                            && (parameter.ParameterType                                                       .GetElementType() ?? parameter                                                       .ParameterType).IsAssignableFrom(typeof(T)); }) as System.Reflection.MethodBase
@@ -8194,7 +8326,7 @@ namespace Game /* ->> …everything else */ {
             System.Reflection.MethodInfo      method      => System.Linq.Expressions.Expression.Lambda<Game.RefReadOnlyConverter<T, U>>(System.Linq.Expressions.Expression.Call(method,      parameter),                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               parameter).Compile(),
             _                                             => [GameMethod(Inlined)] static (in T value) => {
               try { return (U) System.Convert.ChangeType(value, typeof(U), System.Globalization.CultureInfo.InvariantCulture); }
-              catch (System.Exception exception) when (exception is System.InvalidCastException || exception is System.OverflowException) {}
+              catch (System.Exception exception) when (exception is System.InvalidCastException or System.OverflowException) {}
 
               return ((Game.RefReadOnlyConverter<T, U>) (Util.Converters[(typeof(T), typeof(U))] = GetUnmanagedConverter()))(in value);
             } // ->> Implicitly casted by `switch` expression to `Game.RefReadOnlyConverter<T, U>` 😎
@@ -8205,6 +8337,40 @@ namespace Game /* ->> …everything else */ {
       }
 
       return (Game.RefReadOnlyConverter<T, U>) converter;
+    }
+
+    public static Game.RefReadOnlyConverter<T, U> GetConverter<T, U>(System.Type typeA, System.Type typeB) /* ->> Respects type while reflecting constructors and overloads */ {
+      if (!Util.Converters.TryGetValue((typeA, typeB), out System.Delegate converter)) {
+        [GameMethod(Inlined)]
+        static System.Delegate GetUnmanagedConverter() {
+          System.Linq.Expressions.ParameterExpression parameter = System.Linq.Expressions.Expression.Parameter(typeA.MakeByRefType());
+          return System.Linq.Expressions.Expression.Lambda<Game.RefReadOnlyConverter<T, U>>(System.Linq.Expressions.Expression.Convert(parameter, typeB), parameter).Compile();
+        }
+
+        // ...
+        if (!typeB.IsAssignableFrom(typeA)) {
+          System.Linq.Expressions.ParameterExpression parameter = System.Linq.Expressions.Expression.Parameter(typeA.MakeByRefType());
+
+          // ...
+          converter = (
+            typeB.GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public).Find([GameMethod(Inlined)] static (constructor) => { System.Reflection.ParameterInfo[]            parameters = constructor.GetParameters();                                                      return (parameters.Length == 1 || (parameters.Length > 1 && Util.Reference<System.Reflection.ParameterInfo>.At(parameters, 1u).HasDefaultValue)) && (Util.Reference<System.Reflection.ParameterInfo>.Only(parameters).ParameterType.GetElementType() ?? Util.Reference<System.Reflection.ParameterInfo>.Only(parameters).ParameterType).IsAssignableFrom(typeA); }) as System.Reflection.MethodBase ??
+            typeB.GetMethods     (System.Reflection.BindingFlags.Public   | System.Reflection.BindingFlags.Static)                                           .Find([GameMethod(Inlined)] static (method)      => { ref readonly System.Reflection.ParameterInfo parameter  = ref Util.Reference<System.Reflection.ParameterInfo>.Only(method.GetParameters()); return (method.Name == "op_Explicit" || method.Name == "op_Implicit")                                                                            && (parameter.ParameterType                                                       .GetElementType() ?? parameter                                                       .ParameterType).IsAssignableFrom(typeA); }) as System.Reflection.MethodBase
+          ) switch {
+            System.Reflection.ConstructorInfo constructor => System.Linq.Expressions.Expression.Lambda<Game.RefReadOnlyConverter<T, U>>(System.Linq.Expressions.Expression.New (constructor, ((System.Func<System.Linq.Expressions.ParameterExpression, System.Reflection.ParameterInfo[], System.Linq.Expressions.Expression[]>) ([GameMethod(Inlined)] static (parameter, parameters) => { System.Linq.Expressions.Expression[] expressions; Util.Reference<System.Reflection.ParameterInfo>.First(parameters) = Util.Reference<System.Reflection.ParameterInfo>.At(parameters, 1u); expressions = parameters.ConvertAll([GameMethod(Inlined)] static (parameter) => (System.Linq.Expressions.Expression) System.Linq.Expressions.Expression.Constant(parameter.DefaultValue, parameter.ParameterType)); Util.Reference<System.Linq.Expressions.Expression>.Only(expressions) = parameter; return expressions; }))(parameter, constructor.GetParameters())), parameter).Compile(),
+            System.Reflection.MethodInfo      method      => System.Linq.Expressions.Expression.Lambda<Game.RefReadOnlyConverter<T, U>>(System.Linq.Expressions.Expression.Call(method,      parameter),                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               parameter).Compile(),
+            _                                             => [GameMethod(Inlined)] static (in T value) => {
+              try { return (U) System.Convert.ChangeType(value, typeB, System.Globalization.CultureInfo.InvariantCulture); }
+              catch (System.Exception exception) when (exception is System.InvalidCastException or System.OverflowException) {}
+
+              return ((Game.RefReadOnlyConverter<T, U>) (Util.Converters[(typeA, typeB)] = GetUnmanagedConverter()))(in value);
+            } // ->> Implicitly casted by `switch` expression to `Game.RefReadOnlyConverter<T, U>` 😎
+          };
+        } else converter = GetUnmanagedConverter();
+
+        Util.Converters.Add((typeA, typeB), converter);
+      }
+
+      return converter;
     }
 
     [GameMethod(Inlined)] public static ref T Invalid<T>() => throw new System.InvalidOperationException("Invalid object encountered");
@@ -8230,12 +8396,12 @@ namespace Game /* ->> …everything else */ {
     public static T Lerp<T>(double progress, in T a, in T b) /* ->> `((b - a) * progress) + a` */ {
       if (a is null || b is null) return default!;
 
-      // … ->> Interpolate also between eligible class types
+      // ... ->> Interpolate also between eligible class types
       ((System.Reflection.MethodInfo addition, System.Reflection.MethodInfo multiplication, System.Reflection.MethodInfo subtraction) methods, (sbyte addition, sbyte multiplication, sbyte subtraction) orders, (System.Type, System.Type progress) types) interpolation = ((null!, null!, null!), (+1, +1, +1), (default!, typeof(double)));
       System.Reflection.MethodInfo[] methods = System.Array.Empty<System.Reflection.MethodInfo>();
       (System.Type a, System.Type b) types   = (a.GetType(), b.GetType());
 
-      // …
+      // ...
       [GameMethod(Inlined)]
       bool AdditionAssert(System.Type typeA, System.Type typeB, System.Type type) => (
         !typeA.IsArray && !typeA.IsPointer && (typeA.GetElementType() ?? typeA).IsAssignableFrom(type) &&
@@ -8265,7 +8431,7 @@ namespace Game /* ->> …everything else */ {
         !typeB.IsArray && !typeB.IsPointer && (typeB.GetElementType() ?? typeB).IsAssignableFrom(types.a)
       );
 
-      // …
+      // ...
       if (types.a != types.b)                                                     return default!;
       if (types.a == typeof(byte))                                                return (T) (object) Util.Lerp(progress, (byte)                   (object) a!, (byte)                   (object) b!);
       if (types.a == typeof(decimal))                                             return (T) (object) Util.Lerp(progress, (decimal)                (object) a!, (decimal)                (object) b!);
@@ -8289,7 +8455,7 @@ namespace Game /* ->> …everything else */ {
       foreach (System.Reflection.MethodInfo subtractionMethod in (methods = types.a.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))) /* ->> `types.b.GetMethods(…)` */ {
         System.Reflection.ParameterInfo[] subtractionParameters = subtractionMethod.GetParameters();
 
-        // …
+        // ...
         if (subtractionMethod.Name == "op_Subtraction" && subtractionParameters.Length == 2 && SubtractionAssert(subtractionParameters[0].ParameterType, subtractionParameters[1].ParameterType)) {
           interpolation.methods.subtraction    = subtractionMethod;
           interpolation.orders .multiplication = 0;
@@ -8298,7 +8464,7 @@ namespace Game /* ->> …everything else */ {
           if (0 == interpolation.orders.multiplication) foreach (System.Reflection.MethodInfo multiplicationMethod in methods) { System.Reflection.ParameterInfo[] multiplicationParameters = multiplicationMethod.GetParameters(); if (multiplicationMethod.Name == "op_Multiply" && multiplicationParameters.Length == 2 && MultiplicationAssert(multiplicationParameters[0].ParameterType, multiplicationParameters[1].ParameterType, interpolation.methods.subtraction.ReturnType)) { interpolation.methods.multiplication = multiplicationMethod; interpolation.orders.multiplication = +1; break; } }
           if (0 == interpolation.orders.multiplication) foreach (System.Reflection.MethodInfo multiplicationMethod in methods) { System.Reflection.ParameterInfo[] multiplicationParameters = multiplicationMethod.GetParameters(); if (multiplicationMethod.Name == "op_Multiply" && multiplicationParameters.Length == 2 && MultiplicationAssert(multiplicationParameters[1].ParameterType, multiplicationParameters[0].ParameterType, interpolation.methods.subtraction.ReturnType)) { interpolation.methods.multiplication = multiplicationMethod; interpolation.orders.multiplication = -1; break; } }
 
-          // …
+          // ...
           if (0 != interpolation.orders.multiplication) {
             interpolation.orders.addition = 0;
 
@@ -8316,18 +8482,21 @@ namespace Game /* ->> …everything else */ {
       return default!;
     }
 
-    [GameMethod(Inlined), GameResolution(0)] public   static decimal Perc  (decimal percentage)                => percentage / 100.0m;
-    [GameMethod(Inlined), GameResolution(2)] public   static double  Perc  (double  percentage)                => percentage / 100.0;
-    [GameMethod(Inlined), GameResolution(1)] public   static float   Perc  (float   percentage)                => percentage / 100.0f;
-    [GameMethod(Inlined), GameResolution(0)] public   static decimal PercOf(decimal value, decimal percentage) => System.Math      .Min(value, (decimal) percentage) * (System.Math      .Max(value, (decimal) percentage) / 100.0m);
-    [GameMethod(Inlined), GameResolution(2)] public   static decimal PercOf(decimal value, double  percentage) => System.Math      .Min(value, (decimal) percentage) * (System.Math      .Max(value, (decimal) percentage) / 100.0m);
-    [GameMethod(Inlined), GameResolution(1)] public   static decimal PercOf(decimal value, float   percentage) => System.Math      .Min(value, (decimal) percentage) * (System.Math      .Max(value, (decimal) percentage) / 100.0m);
-    [GameMethod(Inlined), GameResolution(0)] public   static double  PercOf(double  value, decimal percentage) => System.Math      .Min(value, (double)  percentage) * (System.Math      .Max(value, (double)  percentage) / 100.0);
-    [GameMethod(Inlined), GameResolution(2)] public   static double  PercOf(double  value, double  percentage) => System.Math      .Min(value, (double)  percentage) * (System.Math      .Max(value, (double)  percentage) / 100.0);
-    [GameMethod(Inlined), GameResolution(1)] public   static double  PercOf(double  value, float   percentage) => System.Math      .Min(value, (double)  percentage) * (System.Math      .Max(value, (double)  percentage) / 100.0);
-    [GameMethod(Inlined), GameResolution(0)] public   static float   PercOf(float   value, decimal percentage) => UnityEngine.Mathf.Min(value, (float)   percentage) * (UnityEngine.Mathf.Max(value, (float)   percentage) / 100.0f);
-    [GameMethod(Inlined), GameResolution(2)] public   static float   PercOf(float   value, double  percentage) => UnityEngine.Mathf.Min(value, (float)   percentage) * (UnityEngine.Mathf.Max(value, (float)   percentage) / 100.0f);
-    [GameMethod(Inlined), GameResolution(1)] public   static float   PercOf(float   value, float   percentage) => UnityEngine.Mathf.Min(value, (float)   percentage) * (UnityEngine.Mathf.Max(value, (float)   percentage) / 100.0f);
+    [GameMethod(Inlined)]
+    public static System.Type ParameterTypeOf(System.Reflection.ParameterInfo parameter) => parameter is not null ? parameter.ParameterType.IsByRef ? parameter.ParameterType.GetElementType() : parameter.ParameterType : null;
+
+    [GameMethod(Inlined), GameResolution(0)] public static decimal Perc  (decimal percentage)                => percentage / 100.0m;
+    [GameMethod(Inlined), GameResolution(2)] public static double  Perc  (double  percentage)                => percentage / 100.0;
+    [GameMethod(Inlined), GameResolution(1)] public static float   Perc  (float   percentage)                => percentage / 100.0f;
+    [GameMethod(Inlined), GameResolution(0)] public static decimal PercOf(decimal value, decimal percentage) => System.Math      .Min(value, (decimal) percentage) * (System.Math      .Max(value, (decimal) percentage) / 100.0m);
+    [GameMethod(Inlined), GameResolution(2)] public static decimal PercOf(decimal value, double  percentage) => System.Math      .Min(value, (decimal) percentage) * (System.Math      .Max(value, (decimal) percentage) / 100.0m);
+    [GameMethod(Inlined), GameResolution(1)] public static decimal PercOf(decimal value, float   percentage) => System.Math      .Min(value, (decimal) percentage) * (System.Math      .Max(value, (decimal) percentage) / 100.0m);
+    [GameMethod(Inlined), GameResolution(0)] public static double  PercOf(double  value, decimal percentage) => System.Math      .Min(value, (double)  percentage) * (System.Math      .Max(value, (double)  percentage) / 100.0);
+    [GameMethod(Inlined), GameResolution(2)] public static double  PercOf(double  value, double  percentage) => System.Math      .Min(value, (double)  percentage) * (System.Math      .Max(value, (double)  percentage) / 100.0);
+    [GameMethod(Inlined), GameResolution(1)] public static double  PercOf(double  value, float   percentage) => System.Math      .Min(value, (double)  percentage) * (System.Math      .Max(value, (double)  percentage) / 100.0);
+    [GameMethod(Inlined), GameResolution(0)] public static float   PercOf(float   value, decimal percentage) => UnityEngine.Mathf.Min(value, (float)   percentage) * (UnityEngine.Mathf.Max(value, (float)   percentage) / 100.0f);
+    [GameMethod(Inlined), GameResolution(2)] public static float   PercOf(float   value, double  percentage) => UnityEngine.Mathf.Min(value, (float)   percentage) * (UnityEngine.Mathf.Max(value, (float)   percentage) / 100.0f);
+    [GameMethod(Inlined), GameResolution(1)] public static float   PercOf(float   value, float   percentage) => UnityEngine.Mathf.Min(value, (float)   percentage) * (UnityEngine.Mathf.Max(value, (float)   percentage) / 100.0f);
 
     [GameMethod(Inlined)] public static UnityEngine.Component  Prefab(UnityEngine.Component  prefabrication, UnityEngine.Transform? parent, in UnityEngine.Vector3 position, in UnityEngine.Quaternion rotation, bool local) => null != prefabrication ? (UnityEngine.Component)  (null == parent ? UnityEngine.Object.Instantiate(prefabrication, position, rotation) : UnityEngine.Object.Instantiate(prefabrication, position, rotation, parent)) : null!;
     [GameMethod(Inlined)] public static UnityEngine.Object     Prefab(UnityEngine.Object     prefabrication, UnityEngine.Transform? parent, in UnityEngine.Vector3 position, in UnityEngine.Quaternion rotation, bool local) => null != prefabrication ? (UnityEngine.Object)     (null == parent ? UnityEngine.Object.Instantiate(prefabrication, position, rotation) : UnityEngine.Object.Instantiate(prefabrication, position, rotation, parent)) : null!;
@@ -8412,6 +8581,7 @@ namespace Game /* ->> …everything else */ {
       // │ uint                                                     │ uint                                  │ uint                                  │ decimal │ double                  │ float                                        │ long                                  │ long                                  │ long                                  │ uint, nuint                           │ long                                  │ long                                  │ uint                                  │ ulong                                 │ uint                                  │ System.Half                           │ System.Int128                         │ System.Numerics.BigInteger │ System.Numerics.Complex │ System.Runtime.InteropServices.NFloat                    │ System.UInt128                        │
       // │ ulong                                                    │ ulong                                 │ ulong                                 │ decimal │ double                  │ float                                        │ System.Int128                         │ System.Int128                         │ System.Int128                         │ ulong                                 │ System.Int128                         │ System.Int128                         │ ulong                                 │ ulong                                 │ ulong                                 │ System.Half                           │ System.Int128                         │ System.Numerics.BigInteger │ System.Numerics.Complex │ System.Runtime.InteropServices.NFloat                    │ System.UInt128                        │
       // │ ushort                                                   │ int                                   │ int                                   │ decimal │ double                  │ float                                        │ int                                   │ long                                  │ nint                                  │ nuint                                 │ int                                   │ int                                   │ uint                                  │ ulong                                 │ ushort                                │ System.Half                           │ System.Int128                         │ System.Numerics.BigInteger │ System.Numerics.Complex │ System.Runtime.InteropServices.NFloat                    │ System.UInt128                        │
+      // │ System.Enum                                              │ -                                     │ -                                     │ -       │ -                       │ -                                            │ -                                     │ -                                     │ -                                     │ -                                     │ -                                     │ -                                     │ -                                     │ -                                     │ -                                     │ -                                     │ -                                     │ -                          │ -                       │ -                                                        │ -                                     │
       // │ System.Half                                              │ System.Half                           │ System.Half                           │ -       │ double                  │ float                                        │ System.Half                           │ System.Half                           │ System.Half                           │ System.Half                           │ System.Half                           │ System.Half                           │ System.Half                           │ System.Half                           │ System.Half                           │ System.Half                           │ System.Half                           │ -                          │ System.Numerics.Complex │ System.Runtime.InteropServices.NFloat                    │ System.Half                           │
       // │ System.Int128                                            │ System.Int128                         │ System.Int128                         │ -       │ double                  │ float                                        │ System.Int128                         │ System.Int128                         │ System.Int128                         │ System.Int128                         │ System.Int128                         │ System.Int128                         │ System.Int128                         │ System.Int128                         │ System.Int128                         │ System.Half                           │ System.Runtime.InteropServices.NFloat │ System.Numerics.BigInteger │ -                       │ System.Runtime.InteropServices.NFloat                    │ -                                     │
       // │ System.Numerics.BigInteger                               │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ -       │ -                       │ -                                            │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ System.Numerics.BigInteger            │ -                                     │ System.Numerics.BigInteger            │ System.Numerics.BigInteger │ -                       │ -                                                        │ System.Numerics.BigInteger            │
@@ -8419,26 +8589,31 @@ namespace Game /* ->> …everything else */ {
       // │ System.Runtime.InteropServices.NFloat (32 bits, 64 bits) │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ -       │ double                  │ float, System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ System.Runtime.InteropServices.NFloat │ -                          │ System.Numerics.Complex │ System.Runtime.InteropServices.NFloat                    │ System.Runtime.InteropServices.NFloat │
       // │ System.UInt128                                           │ System.UInt128                        │ System.UInt128                        │ -       │ double                  │ float                                        │ -                                     │ -                                     │ -                                     │ System.UInt128                        │ -                                     │ -                                     │ System.UInt128                        │ System.UInt128                        │ System.UInt128                        │ System.Half                           │ -                                     │ System.Numerics.BigInteger │ -                       │ System.Runtime.InteropServices.NFloat                    │ System.UInt128                        │
       // └-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------┘
-      if (typeA == typeof(byte))                                           return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(byte),                                  System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(uint),                                                 System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? typeof(nuint)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
-      if (typeA == typeof(char))                                           return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(char),                                  System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(uint),                                                 System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? typeof(nuint)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
-      if (typeA == typeof(decimal))                                        return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(decimal),                               System.TypeCode.Char => typeof(decimal),                               System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => null,                            System.TypeCode.Int16 => typeof(decimal),                                                      System.TypeCode.Int32 => typeof(decimal),                                                      System.TypeCode.Int64 => typeof(decimal),                                                      System.TypeCode.SByte => typeof(decimal),                                                      System.TypeCode.Single => null,                                                                                                                           System.TypeCode.UInt16 => typeof(decimal),                               System.TypeCode.UInt32 => typeof(decimal),                                              System.TypeCode.UInt64 => typeof(decimal),                               _ => typeB == typeof(nint) ? typeof(decimal)                                                      : typeB == typeof(nuint) ? typeof(decimal)                                                      : typeB == typeof(System.Half) ? null                                          : typeB == typeof(System.Int128) ? null                                          : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? null                            : typeB == typeof(System.Runtime.InteropServices.NFloat) ? null                                                                                                                           : typeB == typeof(System.UInt128) ? null                                          : null };
-      if (typeA == typeof(double))                                         return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(double),                                System.TypeCode.Char => typeof(double),                                System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(double),                                                       System.TypeCode.Int32 => typeof(double),                                                       System.TypeCode.Int64 => typeof(double),                                                       System.TypeCode.SByte => typeof(double),                                                       System.TypeCode.Single => typeof(double),                                                                                                                 System.TypeCode.UInt16 => typeof(double),                                System.TypeCode.UInt32 => typeof(double),                                               System.TypeCode.UInt64 => typeof(double),                                _ => typeB == typeof(nint) ? typeof(double)                                                       : typeB == typeof(nuint) ? typeof(double)                                                       : typeB == typeof(System.Half) ? typeof(double)                                : typeB == typeof(System.Int128) ? typeof(double)                                : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(double)                                                                                                                 : typeB == typeof(System.UInt128) ? typeof(double)                                : null };
-      if (typeA == typeof(float))                                 unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(float),                                 System.TypeCode.Char => typeof(float),                                 System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(float),                                                        System.TypeCode.Int32 => typeof(float),                                                        System.TypeCode.Int64 => typeof(float),                                                        System.TypeCode.SByte => typeof(float),                                                        System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(float),                                 System.TypeCode.UInt32 => typeof(float),                                                System.TypeCode.UInt64 => typeof(float),                                 _ => typeB == typeof(nint) ? typeof(float)                                                        : typeB == typeof(nuint) ? typeof(float)                                                        : typeB == typeof(System.Half) ? typeof(float)                                 : typeB == typeof(System.Int128) ? typeof(float)                                 : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? sizeof(float) <= sizeof(System.Runtime.InteropServices.NFloat) ? typeof(float) : typeof(System.Runtime.InteropServices.NFloat) : typeB == typeof(System.UInt128) ? typeof(float)                                 : null }; }
-      if (typeA == typeof(int))                                   unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? sizeof(int) <= sizeof(nint) ? typeof(int) : typeof(nint)             : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
-      if (typeA == typeof(long))                                  unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(long),                                  System.TypeCode.Char => typeof(long),                                  System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(long),                                                         System.TypeCode.Int32 => typeof(long),                                                         System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(long),                                                         System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(long),                                  System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(long)                                                         : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
-      if (typeA == typeof(nint))                                  unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(nint),                                  System.TypeCode.Char => typeof(nint),                                  System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(nint),                                                         System.TypeCode.Int32 => sizeof(nint)  <= sizeof(int)  ? typeof(int)  : typeof(nint),          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(nint),                                                         System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(nint),                                  System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? sizeof(nint)  <= sizeof(int)  ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
-      if (typeA == typeof(nuint))                                 unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(nuint),                                 System.TypeCode.Char => typeof(nuint),                                 System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128), System.TypeCode.Int32 => sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128), System.TypeCode.Int64 => sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128), System.TypeCode.SByte => sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128), System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(nuint),                                 System.TypeCode.UInt32 => sizeof(nuint) <= sizeof(uint) ? typeof(uint) : typeof(nuint), System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(nuint) ? typeof(nuint)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null }; }
-      if (typeA == typeof(sbyte))                                 unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(sbyte),                                                        System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
-      if (typeA == typeof(short))                                 unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(short),                                                        System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
-      if (typeA == typeof(uint))                                  unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(uint),                                  System.TypeCode.Char => typeof(uint),                                  System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(long),                                                         System.TypeCode.Int32 => typeof(long),                                                         System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(long),                                                         System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(uint),                                  System.TypeCode.UInt32 => typeof(uint),                                                 System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(long)                                                         : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(uint) : typeof(nuint)         : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null }; }
-      if (typeA == typeof(ulong))                                          return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(ulong),                                 System.TypeCode.Char => typeof(ulong),                                 System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(System.Int128),                                                System.TypeCode.Int32 => typeof(System.Int128),                                                System.TypeCode.Int64 => typeof(System.Int128),                                                System.TypeCode.SByte => typeof(System.Int128),                                                System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(ulong),                                 System.TypeCode.UInt32 => typeof(ulong),                                                System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(System.Int128)                                                : typeB == typeof(nuint) ? typeof(ulong)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
-      if (typeA == typeof(ushort))                                         return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(ushort),                                System.TypeCode.UInt32 => typeof(uint),                                                 System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? typeof(nuint)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
-      if (typeA == typeof(System.Half))                                    return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Half),                           System.TypeCode.Char => typeof(System.Half),                           System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(System.Half),                                                  System.TypeCode.Int32 => typeof(System.Half),                                                  System.TypeCode.Int64 => typeof(System.Half),                                                  System.TypeCode.SByte => typeof(System.Half),                                                  System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(System.Half),                           System.TypeCode.UInt32 => typeof(System.Half),                                          System.TypeCode.UInt64 => typeof(System.Half),                           _ => typeB == typeof(nint) ? typeof(System.Half)                                                  : typeB == typeof(nuint) ? typeof(System.Half)                                                  : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Half)                           : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.Half)                           : null };
-      if (typeA == typeof(System.Int128))                                  return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Int128),                         System.TypeCode.Char => typeof(System.Int128),                         System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(System.Int128),                                                System.TypeCode.Int32 => typeof(System.Int128),                                                System.TypeCode.Int64 => typeof(System.Int128),                                                System.TypeCode.SByte => typeof(System.Int128),                                                System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(System.Int128),                         System.TypeCode.UInt32 => typeof(System.Int128),                                        System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(System.Int128)                                                : typeB == typeof(nuint) ? typeof(System.Int128)                                                : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Runtime.InteropServices.NFloat) : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? null                            : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null };
-      if (typeA == typeof(System.Numerics.BigInteger))                     return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Numerics.BigInteger),            System.TypeCode.Char => typeof(System.Numerics.BigInteger),            System.TypeCode.Decimal => null,            System.TypeCode.Double => null,                            System.TypeCode.Int16 => typeof(System.Numerics.BigInteger),                                   System.TypeCode.Int32 => typeof(System.Numerics.BigInteger),                                   System.TypeCode.Int64 => typeof(System.Numerics.BigInteger),                                   System.TypeCode.SByte => typeof(System.Numerics.BigInteger),                                   System.TypeCode.Single => null,                                                                                                                           System.TypeCode.UInt16 => typeof(System.Numerics.BigInteger),            System.TypeCode.UInt32 => typeof(System.Numerics.BigInteger),                           System.TypeCode.UInt64 => typeof(System.Numerics.BigInteger),            _ => typeB == typeof(nint) ? typeof(System.Numerics.BigInteger)                                   : typeB == typeof(nuint) ? typeof(System.Numerics.BigInteger)                                   : typeB == typeof(System.Half) ? null                                          : typeB == typeof(System.Int128) ? typeof(System.Numerics.BigInteger)            : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? null                            : typeB == typeof(System.Runtime.InteropServices.NFloat) ? null                                                                                                                           : typeB == typeof(System.UInt128) ? typeof(System.Numerics.BigInteger)            : null };
-      if (typeA == typeof(System.Numerics.Complex))                        return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Numerics.Complex),               System.TypeCode.Char => typeof(System.Numerics.Complex),               System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(System.Numerics.Complex), System.TypeCode.Int16 => typeof(System.Numerics.Complex),                                      System.TypeCode.Int32 => typeof(System.Numerics.Complex),                                      System.TypeCode.Int64 => typeof(System.Numerics.Complex),                                      System.TypeCode.SByte => typeof(System.Numerics.Complex),                                      System.TypeCode.Single => typeof(System.Numerics.Complex),                                                                                                System.TypeCode.UInt16 => typeof(System.Numerics.Complex),               System.TypeCode.UInt32 => typeof(System.Numerics.Complex),                              System.TypeCode.UInt64 => typeof(System.Numerics.Complex),               _ => typeB == typeof(nint) ? typeof(System.Numerics.Complex)                                      : typeB == typeof(nuint) ? typeof(System.Numerics.Complex)                                      : typeB == typeof(System.Half) ? typeof(System.Numerics.Complex)               : typeB == typeof(System.Int128) ? null                                          : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Numerics.Complex)                                                                                                : typeB == typeof(System.UInt128) ? null                                          : null };
-      if (typeA == typeof(System.Runtime.InteropServices.NFloat)) unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Runtime.InteropServices.NFloat), System.TypeCode.Char => typeof(System.Runtime.InteropServices.NFloat), System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(System.Runtime.InteropServices.NFloat),                        System.TypeCode.Int32 => typeof(System.Runtime.InteropServices.NFloat),                        System.TypeCode.Int64 => typeof(System.Runtime.InteropServices.NFloat),                        System.TypeCode.SByte => typeof(System.Runtime.InteropServices.NFloat),                        System.TypeCode.Single => sizeof(float) <= sizeof(System.Runtime.InteropServices.NFloat) ? typeof(float) : typeof(System.Runtime.InteropServices.NFloat), System.TypeCode.UInt16 => typeof(System.Runtime.InteropServices.NFloat), System.TypeCode.UInt32 => typeof(System.Runtime.InteropServices.NFloat),                System.TypeCode.UInt64 => typeof(System.Runtime.InteropServices.NFloat), _ => typeB == typeof(nint) ? typeof(System.Runtime.InteropServices.NFloat)                        : typeB == typeof(nuint) ? typeof(System.Runtime.InteropServices.NFloat)                        : typeB == typeof(System.Half) ? typeof(System.Runtime.InteropServices.NFloat) : typeB == typeof(System.Int128) ? typeof(System.Runtime.InteropServices.NFloat) : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.Runtime.InteropServices.NFloat) : null }; }
-      if (typeA == typeof(System.UInt128))                                 return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.UInt128),                        System.TypeCode.Char => typeof(System.UInt128),                        System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => null,                                                                 System.TypeCode.Int32 => null,                                                                 System.TypeCode.Int64 => null,                                                                 System.TypeCode.SByte => null,                                                                 System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(System.UInt128),                        System.TypeCode.UInt32 => typeof(System.UInt128),                                       System.TypeCode.UInt64 => typeof(System.UInt128),                        _ => typeB == typeof(nint) ? null                                                                 : typeB == typeof(nuint) ? typeof(System.UInt128)                                               : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? null                                          : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? null                            : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
+      if (System.Nullable.GetUnderlyingType(typeA) is System.Type nullableTypeA) return Promote(nullableTypeA, typeB);
+      if (System.Nullable.GetUnderlyingType(typeB) is System.Type nullableTypeB) return Promote(typeA, nullableTypeB);
+      if (typeA == typeB)                                                        return typeA;
+      if (typeof(System.Enum).IsAssignableFrom(typeA))                           return Promote(System.Enum.GetUnderlyingType(typeA), typeB);
+      if (typeof(System.Enum).IsAssignableFrom(typeB))                           return Promote(typeA, System.Enum.GetUnderlyingType(typeB));
+      if (typeA == typeof(byte))                                                 return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(byte),                                  System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(uint),                                                 System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? typeof(nuint)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
+      if (typeA == typeof(char))                                                 return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(char),                                  System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(uint),                                                 System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? typeof(nuint)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
+      if (typeA == typeof(decimal))                                              return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(decimal),                               System.TypeCode.Char => typeof(decimal),                               System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => null,                            System.TypeCode.Int16 => typeof(decimal),                                                      System.TypeCode.Int32 => typeof(decimal),                                                      System.TypeCode.Int64 => typeof(decimal),                                                      System.TypeCode.SByte => typeof(decimal),                                                      System.TypeCode.Single => null,                                                                                                                           System.TypeCode.UInt16 => typeof(decimal),                               System.TypeCode.UInt32 => typeof(decimal),                                              System.TypeCode.UInt64 => typeof(decimal),                               _ => typeB == typeof(nint) ? typeof(decimal)                                                      : typeB == typeof(nuint) ? typeof(decimal)                                                      : typeB == typeof(System.Half) ? null                                          : typeB == typeof(System.Int128) ? null                                          : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? null                            : typeB == typeof(System.Runtime.InteropServices.NFloat) ? null                                                                                                                           : typeB == typeof(System.UInt128) ? null                                          : null };
+      if (typeA == typeof(double))                                               return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(double),                                System.TypeCode.Char => typeof(double),                                System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(double),                                                       System.TypeCode.Int32 => typeof(double),                                                       System.TypeCode.Int64 => typeof(double),                                                       System.TypeCode.SByte => typeof(double),                                                       System.TypeCode.Single => typeof(double),                                                                                                                 System.TypeCode.UInt16 => typeof(double),                                System.TypeCode.UInt32 => typeof(double),                                               System.TypeCode.UInt64 => typeof(double),                                _ => typeB == typeof(nint) ? typeof(double)                                                       : typeB == typeof(nuint) ? typeof(double)                                                       : typeB == typeof(System.Half) ? typeof(double)                                : typeB == typeof(System.Int128) ? typeof(double)                                : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(double)                                                                                                                 : typeB == typeof(System.UInt128) ? typeof(double)                                : null };
+      if (typeA == typeof(float))                                       unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(float),                                 System.TypeCode.Char => typeof(float),                                 System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(float),                                                        System.TypeCode.Int32 => typeof(float),                                                        System.TypeCode.Int64 => typeof(float),                                                        System.TypeCode.SByte => typeof(float),                                                        System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(float),                                 System.TypeCode.UInt32 => typeof(float),                                                System.TypeCode.UInt64 => typeof(float),                                 _ => typeB == typeof(nint) ? typeof(float)                                                        : typeB == typeof(nuint) ? typeof(float)                                                        : typeB == typeof(System.Half) ? typeof(float)                                 : typeB == typeof(System.Int128) ? typeof(float)                                 : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? sizeof(float) <= sizeof(System.Runtime.InteropServices.NFloat) ? typeof(float) : typeof(System.Runtime.InteropServices.NFloat) : typeB == typeof(System.UInt128) ? typeof(float)                                 : null }; }
+      if (typeA == typeof(int))                                         unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? sizeof(int) <= sizeof(nint) ? typeof(int) : typeof(nint)             : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
+      if (typeA == typeof(long))                                        unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(long),                                  System.TypeCode.Char => typeof(long),                                  System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(long),                                                         System.TypeCode.Int32 => typeof(long),                                                         System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(long),                                                         System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(long),                                  System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(long)                                                         : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
+      if (typeA == typeof(nint))                                        unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(nint),                                  System.TypeCode.Char => typeof(nint),                                  System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(nint),                                                         System.TypeCode.Int32 => sizeof(nint)  <= sizeof(int)  ? typeof(int)  : typeof(nint),          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(nint),                                                         System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(nint),                                  System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? sizeof(nint)  <= sizeof(int)  ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
+      if (typeA == typeof(nuint))                                       unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(nuint),                                 System.TypeCode.Char => typeof(nuint),                                 System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128), System.TypeCode.Int32 => sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128), System.TypeCode.Int64 => sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128), System.TypeCode.SByte => sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128), System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(nuint),                                 System.TypeCode.UInt32 => sizeof(nuint) <= sizeof(uint) ? typeof(uint) : typeof(nuint), System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(nuint) ? typeof(nuint)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null }; }
+      if (typeA == typeof(sbyte))                                       unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(sbyte),                                                        System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
+      if (typeA == typeof(short))                                       unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(short),                                                        System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(int),                                   System.TypeCode.UInt32 => typeof(long),                                                 System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(long) : typeof(System.Int128) : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null }; }
+      if (typeA == typeof(uint))                                        unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(uint),                                  System.TypeCode.Char => typeof(uint),                                  System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(long),                                                         System.TypeCode.Int32 => typeof(long),                                                         System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(long),                                                         System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(uint),                                  System.TypeCode.UInt32 => typeof(uint),                                                 System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(long)                                                         : typeB == typeof(nuint) ? sizeof(nuint) <= sizeof(uint) ? typeof(uint) : typeof(nuint)         : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null }; }
+      if (typeA == typeof(ulong))                                                return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(ulong),                                 System.TypeCode.Char => typeof(ulong),                                 System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(System.Int128),                                                System.TypeCode.Int32 => typeof(System.Int128),                                                System.TypeCode.Int64 => typeof(System.Int128),                                                System.TypeCode.SByte => typeof(System.Int128),                                                System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(ulong),                                 System.TypeCode.UInt32 => typeof(ulong),                                                System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(System.Int128)                                                : typeB == typeof(nuint) ? typeof(ulong)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
+      if (typeA == typeof(ushort))                                               return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(int),                                   System.TypeCode.Char => typeof(int),                                   System.TypeCode.Decimal => typeof(decimal), System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(int),                                                          System.TypeCode.Int32 => typeof(int),                                                          System.TypeCode.Int64 => typeof(long),                                                         System.TypeCode.SByte => typeof(int),                                                          System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(ushort),                                System.TypeCode.UInt32 => typeof(uint),                                                 System.TypeCode.UInt64 => typeof(ulong),                                 _ => typeB == typeof(nint) ? typeof(nint)                                                         : typeB == typeof(nuint) ? typeof(nuint)                                                        : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Int128)                         : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
+      if (typeA == typeof(System.Half))                                          return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Half),                           System.TypeCode.Char => typeof(System.Half),                           System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(System.Half),                                                  System.TypeCode.Int32 => typeof(System.Half),                                                  System.TypeCode.Int64 => typeof(System.Half),                                                  System.TypeCode.SByte => typeof(System.Half),                                                  System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(System.Half),                           System.TypeCode.UInt32 => typeof(System.Half),                                          System.TypeCode.UInt64 => typeof(System.Half),                           _ => typeB == typeof(nint) ? typeof(System.Half)                                                  : typeB == typeof(nuint) ? typeof(System.Half)                                                  : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Half)                           : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.Half)                           : null };
+      if (typeA == typeof(System.Int128))                                        return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Int128),                         System.TypeCode.Char => typeof(System.Int128),                         System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(System.Int128),                                                System.TypeCode.Int32 => typeof(System.Int128),                                                System.TypeCode.Int64 => typeof(System.Int128),                                                System.TypeCode.SByte => typeof(System.Int128),                                                System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(System.Int128),                         System.TypeCode.UInt32 => typeof(System.Int128),                                        System.TypeCode.UInt64 => typeof(System.Int128),                         _ => typeB == typeof(nint) ? typeof(System.Int128)                                                : typeB == typeof(nuint) ? typeof(System.Int128)                                                : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? typeof(System.Runtime.InteropServices.NFloat) : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? null                            : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? null                                          : null };
+      if (typeA == typeof(System.Numerics.BigInteger))                           return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Numerics.BigInteger),            System.TypeCode.Char => typeof(System.Numerics.BigInteger),            System.TypeCode.Decimal => null,            System.TypeCode.Double => null,                            System.TypeCode.Int16 => typeof(System.Numerics.BigInteger),                                   System.TypeCode.Int32 => typeof(System.Numerics.BigInteger),                                   System.TypeCode.Int64 => typeof(System.Numerics.BigInteger),                                   System.TypeCode.SByte => typeof(System.Numerics.BigInteger),                                   System.TypeCode.Single => null,                                                                                                                           System.TypeCode.UInt16 => typeof(System.Numerics.BigInteger),            System.TypeCode.UInt32 => typeof(System.Numerics.BigInteger),                           System.TypeCode.UInt64 => typeof(System.Numerics.BigInteger),            _ => typeB == typeof(nint) ? typeof(System.Numerics.BigInteger)                                   : typeB == typeof(nuint) ? typeof(System.Numerics.BigInteger)                                   : typeB == typeof(System.Half) ? null                                          : typeB == typeof(System.Int128) ? typeof(System.Numerics.BigInteger)            : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? null                            : typeB == typeof(System.Runtime.InteropServices.NFloat) ? null                                                                                                                           : typeB == typeof(System.UInt128) ? typeof(System.Numerics.BigInteger)            : null };
+      if (typeA == typeof(System.Numerics.Complex))                              return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Numerics.Complex),               System.TypeCode.Char => typeof(System.Numerics.Complex),               System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(System.Numerics.Complex), System.TypeCode.Int16 => typeof(System.Numerics.Complex),                                      System.TypeCode.Int32 => typeof(System.Numerics.Complex),                                      System.TypeCode.Int64 => typeof(System.Numerics.Complex),                                      System.TypeCode.SByte => typeof(System.Numerics.Complex),                                      System.TypeCode.Single => typeof(System.Numerics.Complex),                                                                                                System.TypeCode.UInt16 => typeof(System.Numerics.Complex),               System.TypeCode.UInt32 => typeof(System.Numerics.Complex),                              System.TypeCode.UInt64 => typeof(System.Numerics.Complex),               _ => typeB == typeof(nint) ? typeof(System.Numerics.Complex)                                      : typeB == typeof(nuint) ? typeof(System.Numerics.Complex)                                      : typeB == typeof(System.Half) ? typeof(System.Numerics.Complex)               : typeB == typeof(System.Int128) ? null                                          : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Numerics.Complex)                                                                                                : typeB == typeof(System.UInt128) ? null                                          : null };
+      if (typeA == typeof(System.Runtime.InteropServices.NFloat))       unsafe { return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.Runtime.InteropServices.NFloat), System.TypeCode.Char => typeof(System.Runtime.InteropServices.NFloat), System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => typeof(System.Runtime.InteropServices.NFloat),                        System.TypeCode.Int32 => typeof(System.Runtime.InteropServices.NFloat),                        System.TypeCode.Int64 => typeof(System.Runtime.InteropServices.NFloat),                        System.TypeCode.SByte => typeof(System.Runtime.InteropServices.NFloat),                        System.TypeCode.Single => sizeof(float) <= sizeof(System.Runtime.InteropServices.NFloat) ? typeof(float) : typeof(System.Runtime.InteropServices.NFloat), System.TypeCode.UInt16 => typeof(System.Runtime.InteropServices.NFloat), System.TypeCode.UInt32 => typeof(System.Runtime.InteropServices.NFloat),                System.TypeCode.UInt64 => typeof(System.Runtime.InteropServices.NFloat), _ => typeB == typeof(nint) ? typeof(System.Runtime.InteropServices.NFloat)                        : typeB == typeof(nuint) ? typeof(System.Runtime.InteropServices.NFloat)                        : typeB == typeof(System.Half) ? typeof(System.Runtime.InteropServices.NFloat) : typeB == typeof(System.Int128) ? typeof(System.Runtime.InteropServices.NFloat) : typeB == typeof(System.Numerics.BigInteger) ? null                               : typeB == typeof(System.Numerics.Complex) ? typeof(System.Numerics.Complex) : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.Runtime.InteropServices.NFloat) : null }; }
+      if (typeA == typeof(System.UInt128))                                       return System.Type.GetTypeCode(typeB) switch { System.TypeCode.Byte => typeof(System.UInt128),                        System.TypeCode.Char => typeof(System.UInt128),                        System.TypeCode.Decimal => null,            System.TypeCode.Double => typeof(double),                  System.TypeCode.Int16 => null,                                                                 System.TypeCode.Int32 => null,                                                                 System.TypeCode.Int64 => null,                                                                 System.TypeCode.SByte => null,                                                                 System.TypeCode.Single => typeof(float),                                                                                                                  System.TypeCode.UInt16 => typeof(System.UInt128),                        System.TypeCode.UInt32 => typeof(System.UInt128),                                       System.TypeCode.UInt64 => typeof(System.UInt128),                        _ => typeB == typeof(nint) ? null                                                                 : typeB == typeof(nuint) ? typeof(System.UInt128)                                               : typeB == typeof(System.Half) ? typeof(System.Half)                           : typeB == typeof(System.Int128) ? null                                          : typeB == typeof(System.Numerics.BigInteger) ? typeof(System.Numerics.BigInteger) : typeB == typeof(System.Numerics.Complex) ? null                            : typeB == typeof(System.Runtime.InteropServices.NFloat) ? typeof(System.Runtime.InteropServices.NFloat)                                                                                  : typeB == typeof(System.UInt128) ? typeof(System.UInt128)                        : null };
 
       return null;
     }
@@ -8464,7 +8639,7 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
   public  const  int           ExecutionOrder        = int.MinValue; //    ^^
   private static GameBehaviour Main                  = null!;        // ->> Only one instance of `GameBehaviour` should exist
 
-  /* … */
+  /* ... */
   private void Awake() {
     GameBehaviour.Main ??= this;
 
@@ -8481,7 +8656,7 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
   private void LateUpdate() {
     double timestamp = UnityEngine.Time.realtimeSinceStartupAsDouble;
 
-    // …
+    // ...
     if (GameBehaviour.Main == this) {
       Game.Util.UI  .LateUpdate(timestamp);
       Game.Util.Game.LateUpdate(timestamp);
@@ -8511,7 +8686,7 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
       if (!Game.Util.Game.IsQuitting) {
         string message = $"Unexpected exit: God object `{typeof(GameBehaviour)} Game.Util.Game.Object` was destroyed"; // ->> Not a `System.Exception`
 
-        // …
+        // ...
         System.Console.WriteLine(message);
         #if UNITY_EDITOR
           UnityEngine.Debug.Log(Game.Util.Log.Formatted ? $"{"<color=#" + UnityEngine.ColorUtility.ToHtmlStringRGB(Game.Util.Log.ErrorColor) + '>'}Unexpected exit: God object </color><b>`</b>{"<color=#" + UnityEngine.ColorUtility.ToHtmlStringRGB(Game.Util.Log.TypeColor) + '>'}{typeof(GameBehaviour)}</color>{"<color=#" + UnityEngine.ColorUtility.ToHtmlStringRGB(Game.Util.Log.ErrorColor) + '>'}<b> Game.Util.Game.Object`</b> was destroyed</color>" : message);
@@ -8529,7 +8704,7 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
     if (GameBehaviour.Main == this) {
       UnityEngine.ISerializationCallbackReceiver[] pending = Game.Collections.RefReadOnlyList<UnityEngine.GameObject>.Pending.ToArray();
 
-      // …
+      // ...
       Game.Util.Game.Object = this.gameObject;
 
       Game.Collections.RefReadOnlyList<UnityEngine.GameObject>.Pending.Clear();
@@ -8547,7 +8722,7 @@ internal sealed class GameBehaviour : UnityEngine.MonoBehaviour {
   private void Update() {
     double timestamp = UnityEngine.Time.realtimeSinceStartupAsDouble;
 
-    // …
+    // ...
     if (GameBehaviour.Main == this) {
       Game.Util.UI  .Update(timestamp);
       Game.Util.Game.Update(timestamp);
