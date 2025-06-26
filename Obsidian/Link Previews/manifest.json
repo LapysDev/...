@@ -1,0 +1,11 @@
+{
+	"author":       "Lapys",
+	"authorUrl":    "https://github.com/LapysDev",
+	"description":  "Rich previews for URLs – using automatic fetching and rendering of link metadata.",
+	"fundingUrl":   "https://obsidian.md/pricing",
+	"id": 					"link-previews",
+	"isDesktopOnly": false,
+	"minAppVersion": "0.15.0",
+	"name":    			 "Link Previews",
+	"version": 			 "1.0.0"
+}

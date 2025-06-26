@@ -8308,6 +8308,12 @@ namespace Game /* ->> …everything else */ {
     public static Game.RefReadOnlyConverter<T, U> GetConverter<T, U>() {
       if (!Util.Converters.TryGetValue((typeof(T), typeof(U)), out System.Delegate converter)) {
         [GameMethod(Inlined)]
+        static System.Converter<object, T> GetUnmanagedCaster(System.Type type) {
+          System.Linq.Expressions.ParameterExpression parameter = System.Linq.Expressions.Expression.Parameter(typeof(object), "obj");
+          return System.Linq.Expressions.Expression.Lambda<System.Converter<object, T>>(System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.Convert(parameter, type), typeof(T)), parameter).Compile();
+        }
+
+        [GameMethod(Inlined)]
         static Game.RefReadOnlyConverter<T, U> GetUnmanagedConverter() {
           System.Linq.Expressions.ParameterExpression parameter = System.Linq.Expressions.Expression.Parameter(typeof(T).MakeByRefType());
           return System.Linq.Expressions.Expression.Lambda<Game.RefReadOnlyConverter<T, U>>(System.Linq.Expressions.Expression.Convert(parameter, typeof(U)), parameter).Compile();

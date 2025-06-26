@@ -1,20 +1,28 @@
-Basic HTML Meta Tags
+Custom Meta Tags
+• <meta content=… name="…"/>
+
+HTML Meta Tags
 • <meta charset="UTF-8"/>
 
 • <meta content="accelerometer 'none'; ambient-light-sensor 'none'; autoplay 'none'; battery 'none'; camera 'none'; display-capture 'none'; document-domain 'none'; encrypted-media 'none'; fullscreen 'none'; gamepad 'none'; geolocation 'none'; gyroscope 'none'; layout-animations 'none'; legacy-image-formats 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; oversized-images 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; speaker-selection 'none'; sync-xhr 'none'; usb 'none'; screen-wake-lock 'none'; web-share 'none'; xr-spatial-tracking 'none'" http-equiv="Feature-Policy"/>
 • <meta content="accelerometer=(none), ambient-light-sensor=(none), autoplay=(none), battery=(none), camera=(none), display-capture=(none), document-domain=(none), encrypted-media=(none), fullscreen=(none), gamepad=(none), geolocation=(none), gyroscope=(none), layout-animations=(none), legacy-image-formats=(none), magnetometer=(none), microphone=(none), midi=(none), oversized-images=(none), payment=(none), picture-in-picture=(none), publickey-credentials-get=(none), speaker-selection=(none), sync-xhr=(none), usb=(none), screen-wake-lock=(none), web-share=(none), xr-spatial-tracking=(none)" http-equiv="Permissions-Policy"/>
 • <meta content="max-age=1800, max-stale, public, stale-if-error=259200, stale-while-revalidate=86400"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               http-equiv=Cache-Control rem="max-age=30minutes"/>
+• <meta content=on                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   http-equiv="cleartype"/>
 • <meta content=0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    http-equiv="Expires"/>
 • <meta content=no-cache                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             http-equiv="Pragma"/>
+• <meta content=no                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   http-equiv="imagetoolbar"/>
+• <meta content=off                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  http-equiv="x-dns-prefetch-control"/>
 
 • <meta content=""                                                                                                                                       name="abstract"/>
 • <meta content="Expected evaluation"                                                                                                                    name="assert"/>
 • <meta content=all                                                                                                                                      name="audience"/>
 • <meta content="LapysDev, lapysdev@gmail.com"                                                                                                           name="author"/>
+• <meta content=medium                                                                                                                                   name="blog"/>
 • <meta content=""                                                                                                                                       name="category"/>
 • <meta content=Business                                                                                                                                 name="Classification"/>
 • <meta content="2024, Copyright Holder"                                                                                                                 name="copyright"/>
 • <meta content=Worldwide                                                                                                                                name="coverage"/>
+• <meta content="Sep. 27, 2010"                                                                                                                          name="date"/>
 • <meta content="Description of the webpage"                                                                                                             name="description"/>
 • <meta content=""                                                                                                                                       name="designer"/>
 • <meta content=submission                                                                                                                               name="directory"/>
@@ -23,13 +31,18 @@ Basic HTML Meta Tags
 • <meta content=https://lapys.dev                                                                                                                        name="identifier-URL"/>
 • <meta content="Comma, separated, description"                                                                                                          name="keywords"/>
 • <meta content=ES                                                                                                                                       name="language"/>
+• <meta content=320                                                                                                                                      name="MobileOptimized"/>
 • <meta content=""                                                                                                                                       name="owner"/>
+• <meta content=LapysDev                                                                                                                                 name="pagename"/>
 • <meta content="adult, General, RTA-5042-1996-1400-1577-RTA"                                                                                            name="rating"/>
 • <meta content=oluwafunmitoo@gmail.com                                                                                                                  name="reply-to"/>
+• <meta content=""                                                                                                                                       name="ResourceLoaderDynamicStyles"/>
 • <meta content="Sunday, July 18th, 2010, 5:15pm"                                                                                                        name="revised"/>
 • <meta content="7 days"                                                                                                                                 name="revisit-after"/>
 • <meta content="archive, follow, imageindex, index, max-image-preview:standard, max-snippet:69, max-video-preview:42, noindex, odp, snippet, translate" name="robots"/>
+• <meta content="2010-09-27"                                                                                                                             name="search_date"/>
 • <meta content="Subject of the webpage"                                                                                                                 name="subject"/>
+• <meta content="Lapys’ Development"                                                                                                                     name="subtitle"/>
 • <meta content=""                                                                                                                                       name="summary"/>
 • <meta content=all                                                                                                                                      name="target"/>
 • <meta content=#0000FF                                                                                                                                  name="theme-color"/>
@@ -37,29 +50,37 @@ Basic HTML Meta Tags
 • <meta content=on                                                                                                                                       name="uri-translation"/>
 • <meta content=https://lapys.dev                                                                                                                        name="url"/>
 
-Company/ Service Meta Tags
-  ClaimID
-    • <meta content=… name="microid"/>
-
-  Apple Meta Tags
+Vendor Meta Tags
+  Apple
     • <meta content="address=no, date=no, email=no, telephone=no, url=no"                                                                             name="format-detection"/>
     • <meta content="height=device-height, initial-scale=1.0, maximum-scale=1.0, minimal-ui, minimum-scale=1.0, user-scalable=no, width=device-width" name="viewport"/>
     • <meta content=yes                                                                                                                               name="apple-mobile-web-app-capable"/>
     • <meta content=#0000FF                                                                                                                           name="apple-mobile-web-app-status-bar-style"/>
+    • <meta content="Lapys"                                                                                                                           name="apple-mobile-web-app-title"/>
     • <meta content=yes                                                                                                                               name="apple-touch-fullscreen"/>
 
-  Apple Tags
-    • <link href=icon.114x114.ico rel="apple-touch-icon" sizes="114x114"/>
-    • <link href=icon.72x72.ico   rel="apple-touch-icon" sizes="72x72"/>
-    • <link href=icon.ico         rel="apple-touch-icon"/>
-    • <link href=icon.png         rel="apple-touch-icon" type="image/png"/>
-    • <link href=startup-icon.ico rel="apple-touch-startup-image"/>
-
-  Blog Catalog Meta Tags
+  Blog Catalog
     • <meta name="blogcatalog"/>
 
-  Internet Explorer Meta Tags
-    • <link href=icon.ico rel="shortcut icon"/>
+  ClaimID
+    • <meta content="WordPress 3.3.1"                                                                                                                  name="generator"/>
+    • <meta content=4SMIedO1X4IkYrYuhEC2VuovdQM36Xxb0btUjElqQyg                                                                                        name="google-site-verification"/>
+    • <meta content="40.746990, -73.980537"                                                                                                            name="ICBM"/>
+    • <meta content=mailto+http:sha1:e6058ed7fca4a1921cq91d7f1f3b8736cd3cc1g7                                                                          name="microid"/>
+    • <meta content="tz8iotmk-pkhui406y41y5bfmfxdwmaa4a-yc0hm6r0fga7s6j0j27qmgqkmc7oovihzghbzhbdjk-uiyrz438nxsjdbj3fggwgl8oq2nf4ko8gi7j4z7t78kegbidl4" name="norton-safeweb-site-verification"/>
+    • <meta content=E7aEHvVQpWc8VHDqKvaB2Z58hek2EAv2HuLuegv7                                                                                           name="readability-verification"/>
+
+  Facebook/ Instagram
+    • <meta content=0123456789   name="fb:admins"/>
+    • <meta content=0123456789   name="fb:app_id"/>
+    • <meta content=0123456789   name="fb:page_id"/>
+    • <meta content=abc123xyz456 name="facebook-domain-verification"/>
+
+  Google
+    • <meta content="World Cup, Brazil 2014, Spain vs Netherlands, soccer, football" name="news_keywords"/>
+
+  Internet Explorer
+    • <link href=icon.ico rel="shortcut icon" sizes="any"/>
 
     • <meta content=RevealTrans(Duration=2.0,Transition=2)  http-equiv="Page-Enter"/>
     • <meta content=RevealTrans(Duration=3.0,Transition=12) http-equiv="Page-Exit"/>
@@ -79,169 +100,200 @@ Company/ Service Meta Tags
       ▴ [IE=EmulateIE8]  Emulate IE8 mode tells Internet Explorer to use the `<!DOCTYPE>` directive to determine how to render content. Standards mode directives are displayed in Internet Explorer 8 standards mode and quirks mode directives are displayed in IE5 mode
       ▴ [IE=EmulateIE9]  Emulate IE9 mode tells Internet Explorer to use the `<!DOCTYPE>` directive to determine how to render content. Standards mode directives are displayed in Internet Explorer 9 standards mode and quirks mode directives are displayed in IE5 mode
 
-    • <meta content="LapysDev Application"          name="application-name"/>
-    • <meta content=#0000FF                         name="msapplication-navbutton-color"/>
-    • <meta content=#                               name="msapplication-starturl"/>
-    • <meta content="LapysDev Application Tooltip"  name="msapplication-tooltip"/>
-    • <meta content=height=600;width=800            name="msapplication-window"/>
-    • <meta content=true                            name="mssmarttagspreventparsing"/>
-    • <meta content=no                              name="MSThemeCompatible"/>
-    • <meta content=SKYPE_TOOLBAR_PARSER_COMPATIBLE name="SKYPE_TOOLBAR"/>
+    • <meta content="LapysDev Application"           name="application-name"/>
+    • <meta content=#0000FF                          name="msapplication-navbutton-color"/>
+    • <meta content=#                                name="msapplication-starturl"/>
+    • <meta content="LapysDev Application Tooltip"   name="msapplication-tooltip"/>
+    • <meta content=height=600;width=800             name="msapplication-window"/>
+    • <meta content=true                             name="mssmarttagspreventparsing"/>
+    • <meta content=no                               name="MSThemeCompatible"/>
+    • <meta content=6E3AD52DC176461A3C81DD6E98003BC9 name="msvalidate.01"/>
+    • <meta content=SKYPE_TOOLBAR_PARSER_COMPATIBLE  name="SKYPE_TOOLBAR"/>
 
-  Rails Meta Tags
-    • <meta content="authenticity_token" name="csrf-param"/>
-    • <meta content=…                    name="csrf-token"/>
+  Rails
+    • <meta content=authenticity_token                             name="csrf-param"/>
+    • <meta content="/bZVwvomkAnwAI1Qd37lFeewvpOIiackk9121fFwWwc=" name="csrf-token"/>
 
-  TweetMeme Meta Tags
-    • <meta name="tweetmeme-title" content="Retweet Button Explained"/>
+  TweetMeme
+    • <meta content="Retweet Button Explained" name="tweetmeme-title"/>
 
-Create Custom Meta Tags
-  • <meta content=… name="…"/>
+  Twitter
+    • <meta content=US                                           name="twitter:app:country"/>                <!-- … -->
+    • <meta content=PlayStoreID                                  name="twitter:app:id:googleplay"/>          <!-- … -->
+    • <meta content=iTunesAppStoreID                             name="twitter:app:id:ipad"/>                <!-- … -->
+    • <meta content=iTunesAppStoreID                             name="twitter:app:id:iphone"/>              <!-- … -->
+    • <meta content=LapysAndroidApp                              name="twitter:app:name:googleplay"/>        <!-- … -->
+    • <meta content=LapysIPadApp                                 name="twitter:app:name:ipad"/>              <!-- … -->
+    • <meta content=LapysIPhoneApp                               name="twitter:app:name:iphone"/>            <!-- … -->
+    • <meta content=custom://url-scheme                          name="twitter:app:url:googleplay"/>         <!-- … -->
+    • <meta content=custom://url-scheme                          name="twitter:app:url:ipad"/>               <!-- … -->
+    • <meta content=custom://url-scheme                          name="twitter:app:url:iphone"/>             <!-- … -->
+    • <meta content=app | player | summary | summary_large_image name="twitter:card"/>                       <!-- `og:type` -->
+    • <meta content=@Lapys                                       name="twitter:creator"/>                    <!-- … -->
+    • <meta content=0123456789                                   name="twitter:creator:id"/>                 <!-- 200 characters maximum -->
+    • <meta content=…                                            name="twitter:description"/>                <!-- `og:description` -->
+    • <meta content=…                                            name="twitter:image"/>                      <!-- `og:image`; <5MB; GIF; JPG, PNG, WEBP -->
+    • <meta content=…                                            name="twitter:image:alt"/>                  <!-- `og:image:alt` -->
+    • <meta content=video.url                                    name="twitter:player"/>                     <!-- Minimal `<iframe>` support -->
+    • <meta content=1080                                         name="twitter:player:height"/>              <!-- … -->
+    • <meta content=1920                                         name="twitter:player:width"/>               <!-- … -->
+    • <meta content=video.url                                    name="twitter:player:stream"/>              <!-- … -->
+    • <meta content=video/mp4                                    name="twitter:player:stream:content_type"/> <!-- … -->
+    • <meta content=@Lapys                                       name="twitter:site"/>                       <!-- … -->
+    • <meta content=0123456789                                   name="twitter:site:id"/>                    <!-- … -->
+    • <meta content=…                                            name="twitter:title"/>                      <!-- `og:title` -->
 
 HTML Link Tags
-  • <link href=#                                                          rel="first"/>
-  • <link href=#                                                          rel="last"/>
-  • <link href=#                                                          rel="pingback"/>
-  • <link href=#                                                          rel=EditURI   title=…   type="application/rsd+xml"/>
-  • <link href=base.css media="only screen and (max-device-width: 480px)" rel=stylesheet          type="text/css"/>
-  • <link href=fluid-icon.png                                             rel=fluid-icon          type="image/png"/>
-  • <link href=http://feeds.lapys.com/                                    rel=alternate title=RSS type="application/rss+xml"/>
-  • <link href=https://af.lapys.dev hreflang=af                           rel="alternate"/>
-  • <link href=https://ar.lapys.dev hreflang=ar                           rel="alternate"/>
-  • <link href=https://be.lapys.dev hreflang=be                           rel="alternate"/>
-  • <link href=https://bg.lapys.dev hreflang=bg                           rel="alternate"/>
-  • <link href=https://bn.lapys.dev hreflang=bn                           rel="alternate"/>
-  • <link href=https://bs.lapys.dev hreflang=bs                           rel="alternate"/>
-  • <link href=https://ca.lapys.dev hreflang=ca                           rel="alternate"/>
-  • <link href=https://cs.lapys.dev hreflang=cs                           rel="alternate"/>
-  • <link href=https://da.lapys.dev hreflang=da                           rel="alternate"/>
-  • <link href=https://de.lapys.dev hreflang=de                           rel="alternate"/>
-  • <link href=https://el.lapys.dev hreflang=el                           rel="alternate"/>
-  • <link href=https://en.lapys.dev hreflang=en                           rel="alternate"/>
-  • <link href=https://es.lapys.dev hreflang=es                           rel="alternate"/>
-  • <link href=https://et.lapys.dev hreflang=et                           rel="alternate"/>
-  • <link href=https://fa.lapys.dev hreflang=fa                           rel="alternate"/>
-  • <link href=https://fi.lapys.dev hreflang=fi                           rel="alternate"/>
-  • <link href=https://fr.lapys.dev hreflang=fr                           rel="alternate"/>
-  • <link href=https://hi.lapys.dev hreflang=hi                           rel="alternate"/>
-  • <link href=https://hr.lapys.dev hreflang=hr                           rel="alternate"/>
-  • <link href=https://hu.lapys.dev hreflang=hu                           rel="alternate"/>
-  • <link href=https://id.lapys.dev hreflang=id                           rel="alternate"/>
-  • <link href=https://it.lapys.dev hreflang=it                           rel="alternate"/>
-  • <link href=https://iw.lapys.dev hreflang=he                           rel="alternate"/>
-  • <link href=https://ja.lapys.dev hreflang=ja                           rel="alternate"/>
-  • <link href=https://jw.lapys.dev hreflang=jv                           rel="alternate"/>
-  • <link href=https://ka.lapys.dev hreflang=ka                           rel="alternate"/>
-  • <link href=https://ko.lapys.dev hreflang=ko                           rel="alternate"/>
-  • <link href=https://ku.lapys.dev hreflang=ku                           rel="alternate"/>
-  • <link href=https://lt.lapys.dev hreflang=lt                           rel="alternate"/>
-  • <link href=https://lv.lapys.dev hreflang=lv                           rel="alternate"/>
-  • <link href=https://mn.lapys.dev hreflang=mn                           rel="alternate"/>
-  • <link href=https://ms.lapys.dev hreflang=ms                           rel="alternate"/>
-  • <link href=https://my.lapys.dev hreflang=my                           rel="alternate"/>
-  • <link href=https://ne.lapys.dev hreflang=ne                           rel="alternate"/>
-  • <link href=https://nl.lapys.dev hreflang=nl                           rel="alternate"/>
-  • <link href=https://no.lapys.dev hreflang=no                           rel="alternate"/>
-  • <link href=https://pa.lapys.dev hreflang=pa                           rel="alternate"/>
-  • <link href=https://pl.lapys.dev hreflang=pl                           rel="alternate"/>
-  • <link href=https://ps.lapys.dev hreflang=ps                           rel="alternate"/>
-  • <link href=https://pt.lapys.dev hreflang=pt                           rel="alternate"/>
-  • <link href=https://ro.lapys.dev hreflang=ro                           rel="alternate"/>
-  • <link href=https://ru.lapys.dev hreflang=ru                           rel="alternate"/>
-  • <link href=https://sk.lapys.dev hreflang=sk                           rel="alternate"/>
-  • <link href=https://sl.lapys.dev hreflang=sl                           rel="alternate"/>
-  • <link href=https://sr.lapys.dev hreflang=sr                           rel="alternate"/>
-  • <link href=https://sv.lapys.dev hreflang=sv                           rel="alternate"/>
-  • <link href=https://ta.lapys.dev hreflang=ta                           rel="alternate"/>
-  • <link href=https://te.lapys.dev hreflang=te                           rel="alternate"/>
-  • <link href=https://th.lapys.dev hreflang=th                           rel="alternate"/>
-  • <link href=https://tl.lapys.dev hreflang=tl                           rel="alternate"/>
-  • <link href=https://tr.lapys.dev hreflang=tr                           rel="alternate"/>
-  • <link href=https://uk.lapys.dev hreflang=uk                           rel="alternate"/>
-  • <link href=https://ur.lapys.dev hreflang=ur                           rel="alternate"/>
-  • <link href=https://vi.lapys.dev hreflang=vi                           rel="alternate"/>
-  • <link href=https://zh-lapys.dev hreflang=zh-CN                        rel="alternate"/>
-  • <link href=https://zh-lapys.dev hreflang=zh-TW                        rel="alternate"/>
-  • <link href=https://www.lapys/                                         rel=me                  type="text/html"/>
-  • <link href=https://www.lapys/*.php?                                   rel=self                type="application/atom+xml"/>
-  • <link href=https://www.lapys/archives/                                rel=archives  title="May 2003"/>
-  • <link href=https://www.lapys/redirect/                                rel="canonical"/>
-  • <link href=https://www.lapys/index/?                                  rel=index     title="…"/>
-  • <link href=https://www.lapys/search.xml                               rel=search    title=…   type="application/opensearchdescription+xml"/>
-  • <link href=https://www.lapys/shortlink/                               rel="shortlink"/>
-  • <link href=https://www.lapys/start/?                                  rel=start     title="…"/>
-  • <link href=icon.ico                                                   rel="icon"/>
-  • <link href=icon.ico                                                   rel="mask-icon"/>
-  • <link href=icon.ico                                                   rel="shortcut icon"/>
-  • <link href=javascript:history.go(-1)                                  rel=prev      title="Preload previous Web document in series"/>
-  • <link href=javascript:history.go(+1)                                  rel=next      title="Preload next Web document in series"/>
+• <link href=http://feeds.lapys.com/                                    rel=alternate title=RSS type="application/rss+xml"/>
+• <link href=https://af.lapys.dev hreflang=af                           rel="alternate"/>
+• <link href=https://ar.lapys.dev hreflang=ar                           rel="alternate"/>
+• <link href=https://be.lapys.dev hreflang=be                           rel="alternate"/>
+• <link href=https://bg.lapys.dev hreflang=bg                           rel="alternate"/>
+• <link href=https://bn.lapys.dev hreflang=bn                           rel="alternate"/>
+• <link href=https://bs.lapys.dev hreflang=bs                           rel="alternate"/>
+• <link href=https://ca.lapys.dev hreflang=ca                           rel="alternate"/>
+• <link href=https://cs.lapys.dev hreflang=cs                           rel="alternate"/>
+• <link href=https://da.lapys.dev hreflang=da                           rel="alternate"/>
+• <link href=https://de.lapys.dev hreflang=de                           rel="alternate"/>
+• <link href=https://el.lapys.dev hreflang=el                           rel="alternate"/>
+• <link href=https://en.lapys.dev hreflang=en                           rel="alternate"/>
+• <link href=https://es.lapys.dev hreflang=es                           rel="alternate"/>
+• <link href=https://et.lapys.dev hreflang=et                           rel="alternate"/>
+• <link href=https://fa.lapys.dev hreflang=fa                           rel="alternate"/>
+• <link href=https://fi.lapys.dev hreflang=fi                           rel="alternate"/>
+• <link href=https://fr.lapys.dev hreflang=fr                           rel="alternate"/>
+• <link href=https://hi.lapys.dev hreflang=hi                           rel="alternate"/>
+• <link href=https://hr.lapys.dev hreflang=hr                           rel="alternate"/>
+• <link href=https://hu.lapys.dev hreflang=hu                           rel="alternate"/>
+• <link href=https://id.lapys.dev hreflang=id                           rel="alternate"/>
+• <link href=https://it.lapys.dev hreflang=it                           rel="alternate"/>
+• <link href=https://iw.lapys.dev hreflang=he                           rel="alternate"/>
+• <link href=https://ja.lapys.dev hreflang=ja                           rel="alternate"/>
+• <link href=https://jw.lapys.dev hreflang=jv                           rel="alternate"/>
+• <link href=https://ka.lapys.dev hreflang=ka                           rel="alternate"/>
+• <link href=https://ko.lapys.dev hreflang=ko                           rel="alternate"/>
+• <link href=https://ku.lapys.dev hreflang=ku                           rel="alternate"/>
+• <link href=https://lt.lapys.dev hreflang=lt                           rel="alternate"/>
+• <link href=https://lv.lapys.dev hreflang=lv                           rel="alternate"/>
+• <link href=https://mn.lapys.dev hreflang=mn                           rel="alternate"/>
+• <link href=https://ms.lapys.dev hreflang=ms                           rel="alternate"/>
+• <link href=https://my.lapys.dev hreflang=my                           rel="alternate"/>
+• <link href=https://ne.lapys.dev hreflang=ne                           rel="alternate"/>
+• <link href=https://nl.lapys.dev hreflang=nl                           rel="alternate"/>
+• <link href=https://no.lapys.dev hreflang=no                           rel="alternate"/>
+• <link href=https://pa.lapys.dev hreflang=pa                           rel="alternate"/>
+• <link href=https://pl.lapys.dev hreflang=pl                           rel="alternate"/>
+• <link href=https://ps.lapys.dev hreflang=ps                           rel="alternate"/>
+• <link href=https://pt.lapys.dev hreflang=pt                           rel="alternate"/>
+• <link href=https://ro.lapys.dev hreflang=ro                           rel="alternate"/>
+• <link href=https://ru.lapys.dev hreflang=ru                           rel="alternate"/>
+• <link href=https://sk.lapys.dev hreflang=sk                           rel="alternate"/>
+• <link href=https://sl.lapys.dev hreflang=sl                           rel="alternate"/>
+• <link href=https://sr.lapys.dev hreflang=sr                           rel="alternate"/>
+• <link href=https://sv.lapys.dev hreflang=sv                           rel="alternate"/>
+• <link href=https://ta.lapys.dev hreflang=ta                           rel="alternate"/>
+• <link href=https://te.lapys.dev hreflang=te                           rel="alternate"/>
+• <link href=https://th.lapys.dev hreflang=th                           rel="alternate"/>
+• <link href=https://tl.lapys.dev hreflang=tl                           rel="alternate"/>
+• <link href=https://tr.lapys.dev hreflang=tr                           rel="alternate"/>
+• <link href=https://uk.lapys.dev hreflang=uk                           rel="alternate"/>
+• <link href=https://ur.lapys.dev hreflang=ur                           rel="alternate"/>
+• <link href=https://vi.lapys.dev hreflang=vi                           rel="alternate"/>
+• <link href=https://zh-lapys.dev hreflang=zh-CN                        rel="alternate"/>
+• <link href=https://zh-lapys.dev hreflang=zh-TW                        rel="alternate"/>
+• <link href=https://www.lapys/archives/                                rel=archives   title="May 2003"/>
+• <link href=https://www.lapys/styleguide/                              rel="bookmark" title="…"/>
+• <link href=https://www.lapys/redirect/                                rel="canonical"/>
+• <link href=#                                                          rel=EditURI title=… type="application/rsd+xml"/>
+• <link href=#                                                          rel="first"/>
+• <link href=fluid-icon.png                                             rel=fluid-icon type="image/png"/>
+• <link href=icon.ico                                                   rel=icon sizes="any 512x512"/>
+• <link href=https://www.lapys/index/?                                  rel=index title="…"/>
+• <link href=https://www.lapys/                                         rel=me type="text/html"/>
+• <link href=#                                                          rel="last"/>
+• <link href=icon.ico                                                   rel="mask-icon"/>
+• <link href=javascript:history.go(+1)                                  rel=next title="Preload next Web document in series"/>
+• <link href=#                                                          rel="pingback"/>
+• <link href=javascript:history.go(-1)                                  rel=prev     title="Preload previous Web document in series"/>
+• <link href=javascript:history.go(-1)                                  rel=previous title="Preload previous Web document in series"/>
+• <link href=https://www.lapys/search.xml                               rel=search   title=… type="application/opensearchdescription+xml"/>
+• <link href=https://www.lapys/*.php?                                   rel=self type="application/atom+xml"/>
+• <link href=icon.ico                                                   rel="shortcut icon"/>
+• <link href=https://www.lapys/shortlink/                               rel="shortlink"/>
+• <link href=https://www.lapys/start/?                                  rel=start title="…"/>
+• <link href=base.css media="only screen and (max-device-width: 480px)" rel=stylesheet  type="text/css"/>
+• <link href=https://www.example.com/wp-includes/wlwmanifest.xml        rel=wlwmanifest type="application/wlwmanifest+xml"/>
+
+Vendor Link Tags
+  Apple Tags
+    • <link href=icon.png         rel=apple-touch-icon sizes="any"/>
+    • <link href=icon.180x180.ico rel=apple-touch-icon sizes="180x180"/>
+    • <link href=icon.ico         rel="apple-touch-icon"/>
+    • <link href=icon.png         rel="apple-touch-icon" type="image/png"/>
+    • <link href=startup-icon.ico rel="apple-touch-startup-image"/>
 
 Dublin Core
-  Types
-    • DC.abstract
-    • DC.accessRights
-    • DC.accrualMethod
-    • DC.accrualPeriodicity
-    • DC.accrualPolicy
-    • DC.alternative
-    • DC.audience
-    • DC.available
-    • DC.bibliographicCitation
-    • DC.conformsTo
-    • DC.contributor
-    • DC.coverage
-    • DC.created
-    • DC.creator
-    • DC.date
-    • DC.dateAccepted
-    • DC.dateCopyrighted
-    • DC.dateSubmitted
-    • DC.description
-    • DC.educationLevel
-    • DC.extent
-    • DC.format
-    • DC.hasFormat
-    • DC.hasPart
-    • DC.hasVersion
-    • DC.identifier
-    • DC.instructionalMethod
-    • DC.isFormatOf
-    • DC.isPartOf
-    • DC.isReferencedBy
-    • DC.isReplacedBy
-    • DC.isRequiredBy
-    • DC.issued
-    • DC.isVersionOf
-    • DC.language
-    • DC.license
-    • DC.mediator
-    • DC.medium
-    • DC.modified
-    • DC.provenance
-    • DC.publisher
-    • DC.references
-    • DC.relation
-    • DC.replaces
-    • DC.requires
-    • DC.rights
-    • DC.rightsHolder
-    • DC.source
-    • DC.spatial
-    • DC.subject
-    • DC.tableOfContents
-    • DC.temporal
-    • DC.title
-    • DC.type
-    • DC.valid
-
-  …
-    • <meta content="…" name="DC.…"/>
+  • DC.abstract
+  • DC.accessRights
+  • DC.accrualMethod
+  • DC.accrualPeriodicity
+  • DC.accrualPolicy
+  • DC.alternative
+  • DC.audience
+  • DC.available
+  • DC.bibliographicCitation
+  • DC.conformsTo
+  • DC.contributor
+  • DC.coverage
+  • DC.created
+  • DC.creator
+  • DC.date
+  • DC.dateAccepted
+  • DC.dateCopyrighted
+  • DC.dateSubmitted
+  • DC.description
+  • DC.educationLevel
+  • DC.extent
+  • DC.format
+  • DC.hasFormat
+  • DC.hasPart
+  • DC.hasVersion
+  • DC.identifier
+  • DC.instructionalMethod
+  • DC.isFormatOf
+  • DC.isPartOf
+  • DC.isReferencedBy
+  • DC.isReplacedBy
+  • DC.isRequiredBy
+  • DC.issued
+  • DC.isVersionOf
+  • DC.language
+  • DC.license
+  • DC.mediator
+  • DC.medium
+  • DC.modified
+  • DC.provenance
+  • DC.publisher
+  • DC.references
+  • DC.relation
+  • DC.replaces
+  • DC.requires
+  • DC.rights
+  • DC.rightsHolder
+  • DC.source
+  • DC.spatial
+  • DC.subject
+  • DC.tableOfContents
+  • DC.temporal
+  • DC.title
+  • DC.type
+  • DC.valid
 
 Open Graph
   The Open Graph protocol enables any Web page to become a rich object in a social graph.
 
   Types
-    Article [http://ogp.me/ns/article]
+    Article
       • article:author          [profile array] → Writers of the article
       • article:expiration_time [datetime]      → When the article is out of date after
       • article:modified_time   [datetime]      → When the article was last changed
@@ -249,13 +301,16 @@ Open Graph
       • article:section         [string]        → A high-level section name e.g.: Technology e.t.c.
       • article:tag             [string array]  → Tag words associated with this article
 
-    Book [http://ogp.me/ns/book]
+    Book
       • book:author       [profile array] → Who wrote this book
       • book:isbn         [string]        → The ISBN
       • book:release_date [datetime]      → The date the book was released
       • book:tag          [string array]  → Tag words associated with this book
 
-    Game
+    Geography
+      • latitude
+      • longitude
+
     Music
       music.album
         • music:musician     [profile]      → The musician that made this song
@@ -280,13 +335,13 @@ Open Graph
         • music:duration    [integer >= 1]      → The song`s length in seconds
         • music:musician    [profile array]     → The musician that made this song
 
-    Profile [http://ogp.me/ns/profile]
+    Profile
       • profile:first_name [string]             → A name normally given to an individual by a parent or self-chosen
       • profile:gender     [enum(male, female)] → Their gender
       • profile:last_name  [string]             → A name inherited from a family or marriage and by which the individual is commonly known
       • profile:username   [string]             → A short unique string to identify them
 
-    Video [http://ogp.me/ns/video]
+    Video
       • video.episode
         ▴ video:actor → Identical to `video.movie`
         ▴ video:actor:role
@@ -312,11 +367,12 @@ Open Graph
       • video.tv_show
         ▴ A multi-episode TV show. The metadata is identical to `video.movie`
 
-    Website [http://ogp.me/ns/website]
+    …
+      • email
+      • fax_number
+      • phone_number
 
   …
-    • <meta content="…" name="fb:page_id"/>
-
     • <meta content=Britain                                                            name="og:country-name"/>
     • <meta content="Lapys Arts is a platform for creative expression through the Web" name="og:description"/>
     • <meta content=lapysdev@gmail.com                                                 name="og:email"/>
