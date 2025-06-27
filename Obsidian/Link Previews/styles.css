@@ -22,7 +22,6 @@
     box-shadow               : 0 0 5px 0 rgba(0, 0, 0, 0.5) !important;
     color                    : var(--text-normal);
     cursor                   : pointer;
-    /*display                  : none;*/
     font-family              : monospace;
     font-size                : 90%;
     font-weight              : 900;
@@ -40,14 +39,9 @@
     z-index                  : 3
   }
 
-  .link-preview:hover .link-preview-close {
-    /*display: flex;*/
-    opacity: 1.0
-  }
+  .link-preview:hover .link-preview-close { opacity: 1.0 }
     .link-preview-close:active,
-    .link-preview-close:focus {
-      box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.5), inset 0 -10px 10px 0 red !important
-    }
+    .link-preview-close:focus { box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.5), inset 0 -10px 10px 0 red !important }
 
     .link-preview-close span {
       align-self: center;
@@ -102,7 +96,8 @@
       font-style  : italic;
       margin-right: 2.5%;
       text-align  : right;
-      width       : auto
+      width       : 80%;
+      z-index     : 0
     }
       .link-preview-url:focus,
       .link-preview-url:hover { color: var(--interactive-accent-hover) }
@@ -136,6 +131,8 @@
     background-position-y: center;
     background-repeat    : no-repeat;
     background-size      : contain;
+    border-right         : 1px solid var(--background-modifier-border);
+    box-shadow           : inset 10px 0 10px 0 rgba(0, 0, 0, 0.2);
     height               : inherit;
     position             : absolute; /* ->> Allow `link-preview-content` to `width: 100%` */
     width                : 125px;
