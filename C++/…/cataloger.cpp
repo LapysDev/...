@@ -136,14 +136,14 @@ int main(int count, char* arguments[]) /* noexcept */ {
     union  formatinfo            { unsigned char metadata[32]; };                                                                                           // ->> Arbitrarily-sized
     enum   formatstyle           { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN };                                                                     // ->> Mutually-exclusive
     enum   parsediag             { PARSED, PARSE_NAME, PARSE_NOT_NAME, PARSE_NOT_TAG, PARSE_NOT_VALUE, PARSE_TAG, PARSE_VALUE, REPARSED, REPARSE_COMMAND }; // ->> Command-line option   parsing
-    enum   parsestyle            { PARSE_INITIAL  = 0x00u, PARSE_TRIMMED = 0x01u, PARSE_UNCASED = 0x02u };                                                  // ->> Command-line argument interpretation
+    enum   parsestyle            { PARSE_INITIAL = 0x00u, PARSE_TRIMMED = 0x01u, PARSE_UNCASED = 0x02u };                                                   // ->> Command-line argument interpretation
     struct parsecmd  /* final */ {                                                                                                                          //
       /* ... ->> `NULL` `::…name`s represent unrecognized command-line arguments */
       enum command {                                                                                     //
-        ABOUT,                                                                                           //   ->> "About" command prompted
+        ABOUT,                                                                                           //   ->> “About” command prompted
         CLOCK,                                                                                           //   ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
-        HELP,                                                                                            //   ->> "Help" command prompted
-        LOG,                                                                                             //   ->> Filesystem location for storing catalogs;          Assume NUL-terminated
+        HELP,                                                                                            //   ->> “Help” command prompted
+        LOG,                                                                                             //   ->> Filesystem location for storing catalogs; Assume NUL-terminated
         RERUN                                                                                            //   ->> Catalog is re-executed
       }                   /* const */ command;                                                           // ->> Command-line option identifier
       union { char const */* const */ text,      *const name; };                                         // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
@@ -155,7 +155,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       bool                          (*diagnosis)(enum parsediag, char[], struct parsecmd const*, void*); // ->> Predicate function determining the validity of the command-line option; Called through command-line `parse()`; Optionally `NULL`
       struct parse /* final */ {                                                                         // ->> Set through command-line `parse()`
         char                                                                              *argument;     //   ->> Command-line argument representing the command-line option; Initially `NULL`
-        struct /* final */ { union { std::ptrdiff_t name, text; }; std::ptrdiff_t value; } offsets;      //   ->> Offsets denoting particular attributes of the command-line option;
+        struct /* final */ { union { std::ptrdiff_t name, text; }; std::ptrdiff_t value; } offsets;      //   ->> Offsets denoting particular attributes of the command-line option
       } parsed;                                                                                          //
     };
 

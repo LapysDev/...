@@ -85,6 +85,12 @@
       width                : 95%;
       -webkit-line-clamp   : 2
     }
+      .link-preview-description:empty::after {
+        content   : "No description";
+        display   : inline;
+        font-style: italic;
+        opacity   : 0.5
+      }
 
     .link-preview-end { display: none !important }
 

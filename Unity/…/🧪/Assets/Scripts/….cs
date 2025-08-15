@@ -4,11 +4,15 @@ public static class Program {
   private static void Main() => new UnityEngine.GameObject("…", typeof(ProgramBehaviour));
 }
 
+internal sealed class Meh : UnityEngine.MonoBehaviour {
+  internal UnityEngine.Transform _transform = null!;
+  internal new ref readonly UnityEngine.Transform transform { get { this._transform = null == this._transform ? base.transform : this._transform; return ref this._transform; } }
+}
+
 internal sealed class ProgramBehaviour : UnityEngine.MonoBehaviour {
   private void Awake() {
-    /* Do something… */
+    Meh meh = new UnityEngine.GameObject("meh").AddComponent<Meh>();
+    meh.GetComponent<UnityEngine.Transform>().localPosition += UnityEngine.Vector3.one * 2.0f;
+    UnityEngine.Debug.Log($"{meh.transform.position} {meh.GetComponent<UnityEngine.Transform>().position}");
   }
-
-  private void FixedUpdate() {}
-  private void OnDestroy  () {}
 }
