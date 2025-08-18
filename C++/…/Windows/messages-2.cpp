@@ -18,8 +18,8 @@
 #ifndef _WIN32_WINNT            //
 #  define _WIN32_WINNT 0x0600 // --> _WIN32_WINNT_WINXP+
 #endif
-#include <windows.h>    // --> CS_HREDRAW, CS_VREDRAW, CW_USEDEFAULT, FALSE, IDC_ARROW, GWL_STYLE, LOWORD(…), MAKELONG(…), MAKELPARAM(…), MAX_PATH, SW_SHOW, WS_CHILD, WS_OVERLAPPEDWINDOW, WS_VISIBLE, ZeroMemory(…), …; HBRUSH, HICON, HINSTANCE, HMODULE, HWND, INT_PTR, LPARAM, LPCWSTR, LPSTR, MSG, POINT, RECT, UINT, WCHAR, WINAPI, WNDCLASSEXW, WORD, WPARAM; ::CreateWindowExW(…), ::DefWindowProcW(…), ::DestroyWindow(…), ::DispatchMessageW(…), ::ExtractIconW(…), ::GetClientRect(…), ::GetCurrentProcess(…), ::GetMessageW(…), ::GetModuleFileNameW(…), ::GetSysColorBrush(…), ::GetWindowLongPtrW(…), ::LoadCursor(…), ::PostQuitMessage(…), ::RegisterClassExW(…), ::SendMessage(…), ::ShowWindow(…), ::TranslateMessage(…), ::UpdateWindow(…), ::UnregisterClassW(…)
-#  include <commctrl.h> // --> BTNS_BUTTON, CCS_NOPARENTALIGN, CCS_NORESIZE, HINST_COMMCTRL, I_IMAGENONE, ICC_BAR_CLASSES, ICC_DATE_CLASSES, ICC_USEREX_CLASSES, IDB_STD_SMALL_COLOR, STD_HELP, TB_BUTTONSTRUCTSIZE, TB_ADDBITMAP, TBSTATE_ENABLED, TBSTYLE_WRAPABLE, TOOLBARCLASSNAME; INITCOMMONCONTROLSEX, TBADDBITMAP, TBBUTTON; ::InitCommonControlsEx(…)
+#include <windows.h>    // --> CS_HREDRAW, CS_VREDRAW, CW_USEDEFAULT, FALSE, IDC_ARROW, GWL_STYLE, LOWORD(…), MAKELONG(…), MAKELPARAM(…), MAX_PATH, SW_SHOW, TRUE, WS_CHILD, WS_OVERLAPPEDWINDOW, WS_VISIBLE, ZeroMemory(…), …; HBRUSH, HICON, HINSTANCE, HMODULE, HWND, INT_PTR, LPARAM, LPCWSTR, LPSTR, MSG, POINT, RECT, UINT, WCHAR, WINAPI, WNDCLASSEXW, WORD, WPARAM; ::CreateWindowExW(…), ::DefWindowProcW(…), ::DestroyWindow(…), ::DispatchMessageW(…), ::ExtractIconW(…), ::GetClientRect(…), ::GetCurrentProcess(…), ::GetMessageW(…), ::GetModuleFileNameW(…), ::GetSysColorBrush(…), ::GetWindowLongPtrW(…), ::LoadCursor(…), ::PostQuitMessage(…), ::RegisterClassExW(…), ::SendMessage(…), ::ScreenToClient(…), ::ShowWindow(…), ::TranslateMessage(…), ::UpdateWindow(…), ::UnregisterClassW(…)
+#  include <commctrl.h> // --> BTNS_BUTTON, CCS_NOPARENTALIGN, CCS_NORESIZE, HINST_COMMCTRL, I_IMAGENONE, ICC_BAR_CLASSES, ICC_DATE_CLASSES, ICC_USEREX_CLASSES, IDB_STD_SMALL_COLOR, SB_SETPARTS, SB_SETTEXT, SBT_NOBORDERS, SBT_NOTABPARSING, STATUSCLASSNAME, STD_HELP, TB_BUTTONSTRUCTSIZE, TB_ADDBITMAP, TBSTATE_ENABLED, TBSTYLE_WRAPABLE, TOOLBARCLASSNAME; INITCOMMONCONTROLSEX, TBADDBITMAP, TBBUTTON; ::InitCommonControlsEx(…)
 
 /* Main */
 int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int const windowAppearance) {
@@ -142,6 +142,7 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
 
           for (struct windowbase::children windowbase:: *const *layout = window -> layout; NULL != *layout; ++layout) {
             struct windowbase::info *information;
+            RECT                     windowClientBounds     = {0L, 0L, 480L, 320L};
             std::size_t              windowCollectionsIndex = 0u;
 
             // ...
@@ -149,6 +150,7 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
               ++windowCollectionsIndex;
 
             information = (window ->* *layout).information + --windowCollectionsCounts[windowCollectionsIndex];
+            (void) ::GetClientRect(window -> information.handle, &windowClientBounds);
 
             // ...
             if (false) {}
@@ -164,29 +166,40 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
             else if (*layout == &windowbase::scrollbars) {}
             else if (*layout == &windowbase::spinners) {}
             else if (*layout == &windowbase::statusbars) {
-              HWND hStatus = CreateWindowEx(0, STATUSCLASSNAME, NULL,
-                  WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP,
-                  0, 0, 0, 0, hwnd, (HMENU)(IDC_BASE + 9100), hInst, NULL);
-              int parts[] = {150, -1};
-              SendMessage(hStatus, SB_SETPARTS, 2, (LPARAM)parts);
-              SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)L"Ready");
+              HWND const statusbar             = information -> handle = ::CreateWindowExW(0x00u, STATUSCLASSNAME, static_cast<LPCWSTR>(NULL), (CCS_NOPARENTALIGN | CCS_NORESIZE) /* ->> Automatic layout otherwise */ | SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE, windowChildBounds.left, windowChildBounds.top, windowClientBounds.right, 69, window -> information.handle, reinterpret_cast<HMENU>(0) /* ->> Arbitrary integer identifier */, window -> information.classInformation.hInstance, static_cast<LPVOID>(NULL));
+              RECT       statusbarClientBounds = {};
+              int const  statusbarParts[]      = {50, 150, -1}; // ->> Right bound of each slice of the bar
+
+              // ...
+              if (NULL != statusbar) {
+                (void) ::GetWindowRect(statusbar, &statusbarClientBounds);
+                (void) ::ScreenToClient(window -> information.handle, reinterpret_cast<LPPOINT>(&statusbarClientBounds.left)); // ->> Recommend using actual `POINT`s, instead
+                (void) ::ScreenToClient(window -> information.handle, reinterpret_cast<LPPOINT>(&statusbarClientBounds.right));
+
+                (void) ::MoveWindow (statusbar, statusbarClientBounds.left, statusbarClientBounds.top, statusbarClientBounds.right - statusbarClientBounds.left, statusbarClientBounds.bottom - statusbarClientBounds.top, TRUE);
+                (void) ::SendMessage(statusbar, SB_SETPARTS, 3u /* ->> `<= 256u` */,                                     reinterpret_cast<LPARAM>(statusbarParts)); // --> FALSE, TRUE
+                (void) ::SendMessage(statusbar, SB_SETTEXT,  MAKEWPARAM(0u, SBT_NOBORDERS | SBT_NOTABPARSING /* | … */), reinterpret_cast<LPARAM>(L"Hello"));       // --> FALSE, TRUE ->> See `SBT_OWNERDRAW` too
+                (void) ::SendMessage(statusbar, SB_SETTEXT,  MAKEWPARAM(1u, 0x00u),                                      reinterpret_cast<LPARAM>(L"World!"));      //
+
+                windowChildBounds.bottom += statusbarClientBounds.bottom - statusbarClientBounds.top;
+                windowChildBounds.left    = 0L;
+                windowChildBounds.right   = statusbarClientBounds.right  - statusbarClientBounds.left;
+                windowChildBounds.top    += statusbarClientBounds.bottom - statusbarClientBounds.top;
+              }
             }
 
             else if (*layout == &windowbase::tabControls) {}
             else if (*layout == &windowbase::toolbars) {
-              RECT         windowClientBounds                 = {0L, 0L, 480L, 320L};
               HWND         toolbar                            = NULL;
-              TBADDBITMAP  toolbarAddedBitmaps                = {};
-              RECT         toolbarBounds                      = {};
+              TBADDBITMAP  toolbarAddedBitmaps                = {}; // ->> Non-`const`
+              RECT         toolbarClientBounds                = {};
               WPARAM const toolbarButtonCount                 = 2u;
               TBBUTTON     toolbarButtons[toolbarButtonCount] = {};
               WORD const   toolbarButtonHeight                = 42u; // ->> 24×22 pixels by default --- CITE (Lapys) -> https://learn.microsoft.com/en-us/windows/win32/controls/toolbar-controls-overview
               WORD const   toolbarButtonWidth                 = 42u;
 
               // ...
-              ZeroMemory(toolbarButtons, sizeof toolbarButtons);
-
-              (void) ::GetClientRect(window -> information.handle, &windowClientBounds);
+              ZeroMemory(toolbarButtons, sizeof toolbarButtons); // ->> Zero-initialize reserved members
 
               information -> handle       = ::CreateWindowExW(0x00u, TOOLBARCLASSNAME, static_cast<LPCWSTR>(NULL), (CCS_NOPARENTALIGN | CCS_NORESIZE) /* ->> Automatic layout otherwise */ | TBSTYLE_WRAPABLE | WS_CHILD | WS_VISIBLE, windowChildBounds.left, windowChildBounds.top, windowClientBounds.right, toolbarButtonHeight, window -> information.handle, reinterpret_cast<HMENU>(0) /* ->> Arbitrary integer identifier */, window -> information.classInformation.hInstance, static_cast<LPVOID>(NULL));
               toolbar                     = information -> handle;
@@ -204,25 +217,34 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
               toolbarButtons[1].iString   = reinterpret_cast<INT_PTR>(L"Help");
 
               if (NULL != toolbar) {
-                (void) ::GetWindowRect(toolbar, &toolbarBounds);
-                (void) ::SendMessage  (toolbar, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON),   0x00L);
-                (void) ::SendMessage  (toolbar, TB_ADDBITMAP,        0x00u,              reinterpret_cast<LPARAM>(&toolbarAddedBitmaps));
-                (void) ::SendMessage  (toolbar, TB_ADDBUTTONS,       toolbarButtonCount, reinterpret_cast<LPARAM>(&toolbarButtons));
+                (void) ::SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON),                   0x00L);                                          // --> …
+                (void) ::SendMessage(toolbar, TB_ADDBITMAP,        0x00u /* --> toolbarBitmapCount */, reinterpret_cast<LPARAM>(&toolbarAddedBitmaps)); // ->> Index of first `toolbarAddedBitmaps` or `-1L`
+                (void) ::SendMessage(toolbar, TB_ADDBUTTONS,       toolbarButtonCount,                 reinterpret_cast<LPARAM>(&toolbarButtons));      // --> FALSE, TRUE
 
                 if (0x00L != (::GetWindowLongPtrW(toolbar, GWL_STYLE) & CCS_NORESIZE))
-                  (void) ::SendMessage(toolbar, TB_SETBUTTONSIZE, 0x00u, MAKELPARAM(toolbarButtonWidth, toolbarButtonHeight)); // ->> `TB_SETPADDING` and 16×15-default `TB_SETBITMAPSIZE` also available
+                  (void) ::SendMessage(toolbar, TB_SETBUTTONSIZE, 0x00u, MAKELPARAM(toolbarButtonWidth, toolbarButtonHeight)); // --> FALSE, TRUE ->> `TB_SETPADDING` and 16×15-default `TB_SETBITMAPSIZE` also available
 
-                (void) ::SendMessage(toolbar, TB_AUTOSIZE, 0x00u, 0x00L);
-                (void) ::ShowWindow (toolbar, SW_NORMAL /* --> SW_SHOWNORMAL */);
+                (void) ::SendMessage  (toolbar, TB_AUTOSIZE, 0x00u, 0x00L); // --> …
+                (void) ::ShowWindow   (toolbar, SW_NORMAL /* --> SW_SHOWNORMAL */);
+                (void) ::GetClientRect(toolbar, &toolbarClientBounds);
 
-                windowChildBounds.bottom += toolbarBounds.bottom - toolbarBounds.top;
+                windowChildBounds.bottom += toolbarClientBounds.bottom;
                 windowChildBounds.left    = 0L;
-                windowChildBounds.right   = toolbarBounds.right  - toolbarBounds.left;
-                windowChildBounds.top    += toolbarBounds.bottom - toolbarBounds.top;
+                windowChildBounds.right   = toolbarClientBounds.right;
+                windowChildBounds.top    += toolbarClientBounds.bottom;
               }
             }
 
-            else if (*layout == &windowbase::tooltips) {}
+            else if (*layout == &windowbase::tooltips) {
+              // HWND hTooltip = CreateWindowEx(WS_EX_TOPMOST, TOOLTIPS_CLASS, NULL,
+              //     WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+              //     CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+              //     hwnd, NULL, hInst, NULL);
+              // SetWindowPos(hTooltip, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+              // TOOLINFO ti = { sizeof(TOOLINFO), TTF_SUBCLASS, hwnd, 0, NULL, L"Tooltip text" };
+              // GetClientRect(hwnd, &ti.rect);
+              // SendMessage(hTooltip, TTM_ADDTOOL, 0, (LPARAM)&ti);
+            }
 
             // ... ->> `windowbase::children` not created successfully
             if (NULL == information -> handle) {
@@ -234,15 +256,6 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
               }
             }
           }
-
-          // HWND hTooltip = CreateWindowEx(WS_EX_TOPMOST, TOOLTIPS_CLASS, NULL,
-          //     WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
-          //     CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-          //     hwnd, NULL, hInst, NULL);
-          // SetWindowPos(hTooltip, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-          // TOOLINFO ti = { sizeof(TOOLINFO), TTF_SUBCLASS, hwnd, 0, NULL, L"Tooltip text" };
-          // GetClientRect(hwnd, &ti.rect);
-          // SendMessage(hTooltip, TTM_ADDTOOL, 0, (LPARAM)&ti);
 
           // CreateWindowEx(0, WC_BUTTON, L"Btn", WS_CHILD | WS_VISIBLE,
           //     20 + (int)i * 80, y, 75, 23, hwnd, (HMENU)(IDC_BASE + i), hInst, NULL);
