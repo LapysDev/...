@@ -62,10 +62,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       static void exit() /* extern "C" */ {
         for (struct libraryinfo *library = libraries; library != libraries + (NULL == libraries ? 0u : librariesLength); ++library) {
           if (NULL != library -> moduleHandle and NULL != library -> moduleUnloader)
-            library -> moduleUnloader(library -> moduleHandle); // --> FreeLibrary(…)
-
-          library -> moduleHandle   = NULL;
-          library -> moduleUnloader = NULL;
+          library -> moduleUnloader(library -> moduleHandle); // --> FreeLibrary(…)
         }
       }
     } l[librariesLength] = {
