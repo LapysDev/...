@@ -31,6 +31,8 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
     WNDCLASSEXW          classInformation;
 
     /* ... */
+    static void log(char const string[], ...) /* noexcept */ {}
+
     static LRESULT CALLBACK procedure(HWND windowHandle, UINT message, WPARAM parameter, LPARAM subparameter) /* noexcept */ {
       switch (message) {
         case WM_COMMAND: {
@@ -40,6 +42,12 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
             (void) std::printf("Command recieved: %i" "\r\n", static_cast<int>(LOWORD(parameter)));
             break;
           }
+        } break;
+
+        case WM_NOTIFY: {
+          // int const ;
+
+          // (void)
         } break;
       }
 

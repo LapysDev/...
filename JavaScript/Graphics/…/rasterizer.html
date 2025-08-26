@@ -60,10 +60,9 @@
 
     <!-- Document Script -->
     <script defer language=javascript type=text/javascript>
-      var canvasData       = null;
-      var context          = canvas.getContext("2d", {"alpha": false, "colorSpace": "srgb", "desynchronized": true, "willReadFrequently": false});
-      var offscreenCanvas  = canvas; // ->> Access named element
-      var offscreenContext = context;
+      var buffer    = null;
+      var context   = canvas.getContext("2d", {"alpha": false, "colorSpace": "srgb", "desynchronized": true, "willReadFrequently": false});
+      var offscreen = (struct) ("canvas", canvas, "context", context); // ->> Access named element
 
       /* Constant */
       var colors = (struct) (
@@ -82,6 +81,73 @@
         "yellow",  rgb(1.0, 1.0, 0.0)
       );
 
+      /* Class */
+      function irgb(red, green, blue) /* ->> Specified for integer channels between `0x00u` and `0xFFu` */ {
+        return (blue << 0x00) | (green << 0x08) | (red << 0x10)
+      }
+        function ib(color) { return (color >>> 0x00) & 0xFF }
+        function ig(color) { return (color >>> 0x08) & 0xFF }
+        function ir(color) { return (color >>> 0x10) & 0xFF }
+
+      function rgb(red, green, blue) /* ->> Specified for floating-point channels between `+0.0` and `1.0` */ {
+        return (((uint) (blue * 0xFF)) << 0x00) | (((uint) (green * 0xFF)) << 0x08) | (((uint) (red * 0xFF)) << 0x10)
+      }
+        function b(color) { return ib(color) / 0xFF }
+        function g(color) { return ig(color) / 0xFF }
+        function r(color) { return ir(color) / 0xFF }
+
+      function ref(value) {
+        if (false === this instanceof ref)
+        return new ref(value); // ->> Static construct
+
+        this._ = value
+      }
+        ref.prototype = (struct) ('_', null);
+
+      function struct(...properties) /* ->> For ease of debugging */ {
+        var object = Object.create(null); // --> {[properties[… + 0]]: properties[… + 1], …}
+
+        // ...
+        for (var index = 0, length = properties.length - 1; index < length; ) {
+          var name  = properties[index++];
+          var value = properties[index++];
+
+          // ...
+          object[name] = value;
+
+          if (value instanceof ref)
+          void function(reference) { Object.defineProperty(object, name, {
+            configurable: false,
+            enumerable  : false,
+            get         : function()      { return this[reference] },
+            set         : function(value) { this[reference] = value }
+          }) }(value._)
+        }
+
+        return object
+      }
+
+      function vector() {}
+        vector.prototype = (struct) (
+          0,          (ref) ('x'), 1,       (ref) ('y'), 2,       (ref) ('z'), 3,     (ref) ('w'),
+          "bottom",   (ref) ('w'), "left",  (ref) ('x'), "right", (ref) ('z'), "top", (ref) ('y'),
+          "height",   (ref) ('y'), "width", (ref) ('x'),
+          "red",      (ref) ('x'), "green", (ref) ('y'), "blue", (ref) ('z'),
+          "toString", function toString() { return '(' + (null !== this.x ? this.x.toPrecision(2) + (null !== this.y ? ", " + this.y.toPrecision(2) + (null !== this.z ? ", " + this.z.toPrecision(2) + (null !== this.w ? ", " + this.w.toPrecision(2) : "") : "") : "") : "…") + ')' },
+          'w',        null, 'x', null, 'y', null, 'z', null
+        );
+
+        function vec2(x, y)       { if (false === this instanceof vector) return new vec2(x, y);       if (false !== x instanceof vector) { this.x = x.x; this.y = x.y;                             return } this.x = (int) (x); this.y = (int) (y) }
+        function vec3(x, y, z)    { if (false === this instanceof vector) return new vec3(x, y, z);    if (false !== x instanceof vector) { this.x = x.x; this.y = x.y; this.z = x.z;               return } this.x = (int) (x); this.y = (int) (y); this.z = (int) (z) }
+        function vec4(x, y, z, w) { if (false === this instanceof vector) return new vec4(x, y, z, w); if (false !== x instanceof vector) { this.w = x.w; this.x = x.x; this.y = x.y; this.z = x.z; return } this.x = (int) (x); this.y = (int) (y); this.z = (int) (z); this.w = (int) (w) }
+          vec2.prototype = vector.prototype;
+          vec3.prototype = vector.prototype;
+          vec4.prototype = vector.prototype;
+
+        function srgb(red, green, blue) { return new vec3(red, green, blue) }
+        function sz  (width, height)    { return new vec2((uint) (width), (uint) (height)) }
+        function xy  (x, y)             { return new vec2(x, y) }
+
       /* Function */
       // [Draw] ... ->> Sub-pixel coordinates unsupported, Transparency unsupported
       function draw3DCone(height, radii, ...draw) /* TODO (Lapys) ->> See `persp(…)` */ {}
@@ -98,11 +164,8 @@
       function draw3DUVSphere(segments /* ->> Meridian */, rings /* ->> Parallel */, ...draw) /* TODO (Lapys) ->> See `persp(…)` */ {}
 
       function drawArc(origin, target, ...draw) /* TODO (Lapys) ->> See `drawSpline(…)` */ {}
-
       function drawArchimedeanSpiral(...draw) /* TODO (Lapys) */ {}
-
       function drawBeveledRect(...draw) /* TODO (Lapys) */ {}
-
       function drawChamferedRect(...draw) /* TODO (Lapys) */ {}
 
       function drawCircle(origin, size, ...draw) /* ->> See `drawEllipse(origin, xy(size, size), ...draw)` */ {
@@ -286,32 +349,32 @@
       function drawMetaballs(...draw) /* TODO (Lapys) */ {}
       function drawNgon(...draw) /* TODO (Lapys) */ {}
 
-      function drawPoint(coordinates, color = colors.white, transform = I, filter = I) /* ->> Comparatively slow compared to direct bit-block transfers (bit-blt) */ {
+      function drawPoint(coordinates, color = colors.white, transform = I, filter = I) /* ->> Slower compared to direct bit-block transfers (bitblt) with i.e. `CanvasRenderingContext2D::putImageData(…)` */ {
         var width       = canvas.width;
         var height      = canvas.height;
         var coordinates = transform(coordinates);
-        var color       = filter   (color);
-        var channels    = {blue: ib(color), green: ig(color), red: ir(color)};
+        var color       = filter(color);
+        var color       = srgb(ir(color), ig(color), ib(color));
 
         // ...
-        if (null !== canvasData)
-        if (coordinates.x >= 0 && coordinates.x < width && coordinates.y >= 0 && coordinates.y < height) {
+        if (null !== buffer) {
+          if (coordinates.x < 0 || coordinates.x >= width || coordinates.y < 0 || coordinates.y >= height) return;
           var index = (coordinates.x + (coordinates.y * width)) * 4;
 
           // ...
-          canvasData.data[index + 0] = channels.red;
-          canvasData.data[index + 1] = channels.green;
-          canvasData.data[index + 2] = channels.blue;
-
-          return
+          buffer.data[index + 0] = color.red;
+          buffer.data[index + 1] = color.green;
+          buffer.data[index + 2] = color.blue
         }
 
-        offscreenContext.fillStyle = "rgb(" + channels.red + ", " + channels.green + ", " + channels.blue + ')';
-        offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
+        else {
+          offscreen.context.fillStyle = "rgb(" + color.red + ", " + color.green + ", " + color.blue + ')';
+          offscreen.context.fillRect(coordinates.x, coordinates.y, 1, 1)
+        }
       }
 
-      function drawPolyline(...draw) /* TODO (Lapys) */ {}
       function drawPolygon(...draw) /* TODO (Lapys) ->> See `drawPolyline(…)` */ {}
+      function drawPolyline(...draw) /* TODO (Lapys) */ {}
 
       function drawQuadrant(origin, target, ...draw) /* ->> See `drawEllipse(…)`  */ {
         var direction = xy(sign(origin.x - target.x), sign(origin.y - target.y));
@@ -512,10 +575,6 @@
         return number < +0.0 ? -number : +number
       }
 
-      function b(color) {
-        return ib(color) / 0xFF
-      }
-
       function clamp(number, minimum, maximum) /* ->> Inclusive */ {
         return number > maximum ? maximum : number < minimum ? number : minimum
       }
@@ -530,10 +589,6 @@
 
       function float(number) {
         return +number
-      }
-
-      function g(color) {
-        return ig(color) / 0xFF
       }
 
       function gauss_sum(count) /* ->> Summation of `(uint) 1` through `(uint) count` */ {
@@ -553,17 +608,9 @@
         return (integerA + integerB) >> 1
       }
 
-      function ib(color) {
-        return (color >>> 0x00) & 0xFF
-      }
-
       function iclamp(integer, minimum, maximum) /* ->> Inclusive */ {
         var integer = integer - ((integer - maximum) & ((maximum - integer) >>> 31));
         return integer - ((integer - minimum) & ((integer - minimum) >>> 31))
-      }
-
-      function ig(color) {
-        return (color >>> 0x08) & 0xFF
       }
 
       function imod2(integer, divisor) /* ->> `is_ipow2(divisor) === true` */ {
@@ -602,14 +649,6 @@
 
       function imin(integerA, integerB) {
         return (integerB ^ ((integerA ^ integerB) & -(integerA < integerB)))
-      }
-
-      function ir(color) {
-        return (color >>> 0x10) & 0xFF
-      }
-
-      function irgb(red, green, blue) /* ->> Specified for integer channels between `0x00` and `0xFF` */ {
-        return (blue << 0x00) | (green << 0x08) | (red << 0x10)
       }
 
       function is_ieven(integer) {
@@ -669,24 +708,8 @@
         return ((number + (number >>> 4) & 0xF0F0F0F) * 0x1010101) >>> 24
       }
 
-      function ptr(value) {
-        if (false === this instanceof ptr)
-        return new ptr(value);
-
-        this.ref = value
-      }
-        ptr.prototype = (struct) ("ref", null);
-
-      function r(color) {
-        return ir(color) / 0xFF
-      }
-
-      function rgb(red, green, blue) /* ->> Specified for floating-point channels between `+0.0` and `1.0` */ {
-        return (((uint) (blue * 0xFF)) << 0x00) | (((uint) (green * 0xFF)) << 0x08) | (((uint) (red * 0xFF)) << 0x10)
-      }
-
-      function series_sum(count, begin, end) /* ->> Summation of `begin` through `end` */ {
-        return (count * (begin + end)) / 2
+      function series_sum(count, begin, end) /* ->> Summation (of `count` terms) between `begin` through `end` */ {
+        return (count * (begin + end)) >>> 1
       }
 
       function sign(number) {
@@ -699,33 +722,6 @@
 
       function sqr(number) {
         return number * number
-      }
-
-      function struct(...properties) {
-        var object = Object.create(null); // --> {[properties[… + 0]]: properties[… + 1], …}
-
-        // ...
-        for (var index = 0, length = properties.length - 1; index < length; ) {
-          var name  = properties[index++];
-          var value = properties[index++];
-
-          // ...
-          object[name] = value;
-
-          if (value instanceof ptr)
-          (function(reference) { Object.defineProperty(object, name, {
-            configurable: false,
-            enumerable  : false,
-            get         : function()      { return this[reference] },
-            set         : function(value) { this[reference] = value }
-          }) })(value.ref)
-        }
-
-        return object
-      }
-
-      function sz(width, height) {
-        return new vec2((uint) (width), (uint) (height))
       }
 
       function uint(number) /* ->> See `int(…)` */ {
@@ -748,48 +744,14 @@
         return (uint) (number)  & 0xFFFFFFFF
       }
 
-      function vector() {}
-        vector.prototype = (struct) (
-          'x', null, // --> '0', (ptr) 'x',
-          'y', null, // --> '1', (ptr) 'y',
-          'z', null, // --> '2', (ptr) 'z',
-          'w', null, // --> '3', (ptr) 'w',
-          "height",   (ptr) ('y'),
-          "toString", function toString() { return '(' + (null !== this.x ? this.x.toPrecision(2) + (null !== this.y ? ", " + this.y.toPrecision(2) + (null !== this.z ? ", " + this.z.toPrecision(2) + (null !== this.w ? ", " + this.w.toPrecision(2) : "") : "") : "") : "…") + ')' },
-          "width",    (ptr) ('x')
-        );
-
-      function vec2(x, y) {
-        if (false === this instanceof vector) return new vec2(x, y);                 // ->> Static construct
-        if (false !== x    instanceof vector) { this.x = x.x; this.y = x.y; return } // ->> Copy   construct
-
-        this.x = (int) (x);
-        this.y = (int) (y)
-      }
-        vec2.prototype = vector.prototype;
-
-      function vec3(x, y, z) {
-        if (false === this instanceof vector) return new vec3(x, y, z);                            // ->> Static construct
-        if (false !== x    instanceof vector) { this.x = x.x; this.y = x.y; this.z = x.z; return } // ->> Copy   construct
-
-        this.x = (int) (x);
-        this.y = (int) (y);
-        this.z = (int) (z)
-      }
-        vec3.prototype = vector.prototype;
-
-      function xy(x, y) {
-        return new vec2(x, y)
-      }
-
       // ...
       function render() {
         var height = canvas.height;
         var width  = canvas.width;
 
         // ... ->> Clear previous render
-        if (null === canvasData) offscreenContext.clearRect(0, 0, width, height);              // ->> Unneeded for non-proxied `canvasData`
-        else { for (var index = height * width * 4; index; ) canvasData.data[--index] = 0x00 } // ->> Unneeded for `resize(…)` events
+        if (null === buffer) offscreen.context.clearRect(0, 0, width, height);             // ->> Unneeded for non-proxied `data`
+        else { for (var index = height * width * 4; index; ) buffer.data[--index] = 0x00 } // ->> Unneeded for `resize(…)` events
 
         // ...
         drawSpline(4, xy(100, height - 100), xy(100, 200), xy(width / 2, 100), xy(width - 100, 200), xy(width - 100, height - 100), colors.cyan);    // ⚠️
@@ -799,8 +761,10 @@
         // drawGlyph(xy(100, 100), xy(width - 100, height - 100), 'A', "font.ttf"); // 🚫
 
         // ... ->> Display current render
-        if (null !== canvasData) offscreenContext.putImageData(canvasData, 0, 0);
-        context.drawImage(offscreenCanvas, 0, 0)
+        if (null !== buffer)
+          offscreen.context.putImageData(buffer, 0, 0);
+
+        context.drawImage(offscreen.canvas, 0, 0)
       }
 
       function resize() {
@@ -819,26 +783,26 @@
         style  .height                = size + "px";
         style  .width                 = size + "px";
 
-        if (canvas === offscreenCanvas && typeof HTMLCanvasElement.prototype.transferControlToOffscreen === "function") {
-          offscreenCanvas  = canvas.ownerDocument.createElement("canvas").transferControlToOffscreen();
-          offscreenContext = offscreenCanvas.getContext("2d", {"alpha": false, "willReadFrequently": false});
+        if (canvas === offscreen.canvas && typeof HTMLCanvasElement.prototype.transferControlToOffscreen === "function") {
+          offscreen.canvas  = canvas.ownerDocument.createElement("canvas").transferControlToOffscreen();
+          offscreen.context = offscreen.canvas.getContext("2d", {"alpha": false, "willReadFrequently": false});
 
-          offscreenContext.imageSmoothingEnabled = false;
-          offscreenContext.imageSmoothingQuality = "low"
+          offscreen.context.imageSmoothingEnabled = false;
+          offscreen.context.imageSmoothingQuality = "low"
         }
 
-        offscreenCanvas.height = canvas.height;
-        offscreenCanvas.width  = canvas.width;
+        offscreen.canvas.height = canvas.height;
+        offscreen.canvas.width  = canvas.width;
 
         if (typeof CanvasRenderingContext2D.prototype.getImageData === "function" && typeof CanvasRenderingContext2D.prototype.putImageData === "function") {
-          try { canvasData = offscreenContext.getImageData(0, 0, canvas.width, canvas.height, {"colorSpace": "srgb"}) }
+          try { buffer = offscreen.context.getImageData(0, 0, canvas.width, canvas.height, {"colorSpace": "srgb"}) }
           catch (error) {}
         }
 
-        if (false && null === canvasData && typeof Proxy === "function")
-        canvasData = (struct) ("data", new Proxy([], {
+        if (false && null === buffer && typeof Proxy === "function")
+        buffer = (struct) ("data", new Proxy([], {
           get: function(data, index) { return undefined },
-          has: function(data, index) { return index >= 0 && index < (canvas.height * canvas.width) * 4 },
+          has: function(data, index) { return index >= 0 && index < canvas.height * canvas.width * 4 },
           set: function(data, index, value) {
             // ... ->> Polyfill `ImageData` slower than modifying actual `ImageData` or direct `CanvasRenderingContext2D::fillRect(…)`
             if (this.has(data, index)) {
@@ -850,14 +814,14 @@
               var color;
 
               // ...
-              canvas.setAttribute("style", (style ? style + "; " : "") + "color: " + offscreenContext.fillStyle + " !important");
+              canvas.setAttribute("style", (style ? style + "; " : "") + "color: " + offscreen.context.fillStyle + " !important");
 
-              color                      = getComputedStyle(canvas).getPropertyValue("color").match(/(\d+), (\d+), (\d+)/) || [, 0x00, 0x00, 0x00];
-              color[channel]             = value & 0xFF;
-              offscreenContext.fillStyle = "rgb(" + color[1] + ", " + color[2] + ", " + color[3] + ')';
+              color                       = getComputedStyle(canvas).getPropertyValue("color").match(/(\d+), (\d+), (\d+)/) || [, 0x00, 0x00, 0x00];
+              color[channel]              = value & 0xFF;
+              offscreen.context.fillStyle = "rgb(" + color[1] + ", " + color[2] + ", " + color[3] + ')';
 
               canvas.setAttribute("style", style);
-              offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
+              offscreen.context.fillRect(coordinates.x, coordinates.y, 1, 1)
             }
           }
         }), /* "colorSpace", ‥, "height", ‥, "", "width", ‥, "", … */);
