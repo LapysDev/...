@@ -10,7 +10,7 @@ union refl /* final */ {
   template <typename>                        union  count_aggregate_initializers;
   template <typename, typename, std::size_t> struct info;
 
-  // private:
+  private:
     enum /* : std::size_t */ { count_maximum = (REFL_MAX) };
 
     /* ... */
@@ -192,6 +192,14 @@ union refl /* final */ {
     };
 
     /* ... */
+    template <typename base, typename addresser, std::size_t arity>
+    static std::size_t format(struct refl::info<base, addresser, arity> const& information, char const string[]) {
+      (void) information;
+      (void) string;
+
+      return 0u; // or amount to be written
+    }
+
     #if __cplusplus >= 201103L or defined _MSC_VER
       template <typename type>
       static typename refl::inspector<type>::type inspect(type&& object) {
@@ -209,8 +217,8 @@ union refl /* final */ {
   template <typename base>
   struct refl::assert_aggregate_initialization /* final */ : public refl::base_aggregate_initialization {
     using refl::base_aggregate_initialization::evaluate;
+    template <typename type, typename refl::parse<sizeof(type{refl::member<0>(), 0x00u})>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u];
 
-    template <typename type, typename refl::parse<sizeof(type{0x00u, 0x00u})>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u];
     enum /* : bool */ { value = sizeof(bool[false + 1u]) == sizeof refl::assert_aggregate_initialization<base>::evaluate<unsigned char[1], static_cast<unsigned char>(0x00u)>("") };
   };
 
@@ -229,14 +237,14 @@ union refl /* final */ {
   template <typename base>
   struct refl::assert_aggregate_initialization /* final */ : public refl::base_aggregate_initialization {
     using refl::base_aggregate_initialization::evaluate;
+    template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), 0x00u}>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u];
 
-    template <typename type, typename refl::parse<sizeof (type) {0x00u, 0x00u}>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u];
     enum /* : bool */ { value = sizeof(bool[false + 1u]) == sizeof refl::assert_aggregate_initialization<base>::evaluate<unsigned char[1], static_cast<unsigned char>(0x00u)>("") };
   };
 
-  template <typename base> class refl::can_aggregate_initialize<base, 1u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 1u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof (type) {refl::member<0>()}>                                      ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
-  template <typename base> class refl::can_aggregate_initialize<base, 2u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 2u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), refl::member<0>()}>                   ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
-  template <typename base> class refl::can_aggregate_initialize<base, 3u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 3u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>()}>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+  template <typename base> class refl::can_aggregate_initialize<base, 1u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 1u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>()}                                       + 1u]; };
+  template <typename base> class refl::can_aggregate_initialize<base, 2u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 2u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>(), refl::member<0>()}                    + 1u]; };
+  template <typename base> class refl::can_aggregate_initialize<base, 3u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 3u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>()} + 1u]; };
 # if defined __clang__
 #   pragma clang diagnostic pop
 # elif defined __GNUC__
@@ -245,27 +253,28 @@ union refl /* final */ {
 #endif
 
 /* Main */
-// static int                    array[2]  = {1, 2};
+template <bool> union assert;
+template <>     union assert<true> {};
+
+#define assert(condition, message) typedef assert<(condition)> _##message
+assert(false, bruh_must_be_5);
+
 struct aggregate { int x, y; struct {} z; };
-// static union  U { int x, y; } variant   = {5};
-// static class  C { public: union { int x1; double x2; }; enum {} : 8; int y; } whacky = {{6}, 7};
+// static union  U { int x, y; };
+// static class  C { public: union { int x1; double x2; }; enum {} : 8; int y; };
 
 int main(int, char*[]) /* noexcept */ {
-  // (void) array;
-  // (void) aggregate;
-  // (void) variant;
-  // (void) whacky;
-
-  // std::printf("%u" "\r\n\n", (unsigned) sizeof((int[2]) {refl::member<0>(), refl::member<0>()}));
+  // NVIDIA SAYS “eRrOr: ToO mAnY iNiTiAlIzEr VaLuEs”
+  std::printf("%u" "\r\n\n", (unsigned) sizeof((int[2]) {refl::member<0>(), refl::member<0>()}));
   (void) std::printf("%4.5s" "\r\n", refl::assert_aggregate_initialization<void>::value ? "true" : "false");
   (void) std::puts("");
   (void) std::printf("%4.5s" "\r\n", refl::can_aggregate_initialize<int[1],           2u>::value ? "false" : "true");
   (void) std::printf("%4.5s" "\r\n", refl::can_aggregate_initialize<int[2],           2u>::value ? "true"  : "false");
   (void) std::printf("%4.5s" "\r\n", refl::can_aggregate_initialize<struct aggregate, 3u>::value ? "true"  : "false");
   (void) std::puts("");
-  (void) std::printf("%u"    "\r\n", (unsigned) refl::count_aggregate_initializers<int[1]>          ::value);
-  (void) std::printf("%u"    "\r\n", (unsigned) refl::count_aggregate_initializers<int[2]>          ::value);
-  (void) std::printf("%u"    "\r\n", (unsigned) refl::count_aggregate_initializers<struct aggregate>::value);
+  (void) std::printf("%u" "\r\n", (unsigned) refl::count_aggregate_initializers<int[1]>          ::value);
+  (void) std::printf("%u" "\r\n", (unsigned) refl::count_aggregate_initializers<int[2]>          ::value);
+  (void) std::printf("%u" "\r\n", (unsigned) refl::count_aggregate_initializers<struct aggregate>::value);
 
   // std::printf("\n" "[#]: %p %p" "\r\n", (void*) &array[0],     (void*) &array[1]);    for (void *const *member = refl::inspect(array);     NULL != *member; ++member) std::printf("%p" "\r\n", *member);
   // std::printf("\n" "[#]: %p %p" "\r\n", (void*) &aggregate.x,  (void*) &aggregate.y); for (void *const *member = refl::inspect(aggregate); NULL != *member; ++member) std::printf("%p" "\r\n", *member);
