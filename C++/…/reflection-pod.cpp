@@ -1,4 +1,4 @@
-#define REFL_MAX 4u
+#define REFL_MAX 6u
 #include <ciso646>
 #include <cstddef>
 #include <cstdio>
@@ -6,9 +6,9 @@
 
 /* ... */
 union refl /* final */ {
-  template <typename, std::size_t, bool>     class  can_aggregate_initialize;
-  template <typename>                        union  count_aggregate_initializers;
-  template <typename, typename, std::size_t> struct info;
+  template <typename, std::size_t, bool>            class  can_aggregate_initialize;
+  template <typename>                               union  count_aggregate_initializers;
+  template <typename, std::size_t, typename = void> struct info;
 
   private:
     enum /* : std::size_t */ { count_maximum = (REFL_MAX) };
@@ -23,11 +23,11 @@ union refl /* final */ {
     };
 
     template <typename base, typename addresser = void> // ->> Setup for `struct refl::info<…> refl::inspect(…);`
-    struct inspector { typedef struct refl::info<base, addresser, refl::count_aggregate_initializers<base>::value> type; };
-      template <typename base>                     struct inspector<base&>                          /* final */ : public refl::inspector<base>                      {};
-      template <typename base, typename addresser> struct inspector<base const,          addresser> /* final */ : public refl::inspector<base, void const>          {};
-      template <typename base, typename addresser> struct inspector<base const volatile, addresser> /* final */ : public refl::inspector<base, void const volatile> {};
-      template <typename base, typename addresser> struct inspector<base volatile,       addresser> /* final */ : public refl::inspector<base, void volatile>       {};
+    struct inspect_aggregate_initialized { typedef struct refl::info<base, refl::count_aggregate_initializers<base>::value, addresser> type; };
+      template <typename base>                     struct inspect_aggregate_initialized<base&>                          /* final */ : public refl::inspect_aggregate_initialized<base>                      {};
+      template <typename base, typename addresser> struct inspect_aggregate_initialized<base const,          addresser> /* final */ : public refl::inspect_aggregate_initialized<base, void const>          {};
+      template <typename base, typename addresser> struct inspect_aggregate_initialized<base const volatile, addresser> /* final */ : public refl::inspect_aggregate_initialized<base, void const volatile> {};
+      template <typename base, typename addresser> struct inspect_aggregate_initialized<base volatile,       addresser> /* final */ : public refl::inspect_aggregate_initialized<base, void volatile>       {};
 
     template <std::size_t capacity, unsigned char = 0x00u> // ->> Patterned data member value
     struct member /* final */ {
@@ -39,11 +39,11 @@ union refl /* final */ {
 
       /* ... */
       template <typename base, typename addresser, std::size_t arity>
-      /* constexpr */ member(struct refl::info<base, addresser, arity>* const information, std::size_t const index, unsigned char const pattern, bool const patterned) /* noexcept */ :
+      /* constexpr */ member(struct refl::info<base, arity, addresser>* const information, std::size_t const index, unsigned char const pattern, bool const patterned) /* noexcept */ :
         pattern  (pattern),
         patterned(patterned),
-        size     (information -> size + index),
-        type     (information -> type + index),
+        size     (information -> sizes + index),
+        type     (information -> types + index),
         value    ()
       {}
 
@@ -58,8 +58,8 @@ union refl /* final */ {
         *(this -> size) =  sizeof(type);
         *(this -> type) = &typeid(type);
 
-        if (not this -> patterned) { for (std::size_t index = sizeof(type); index; ) this -> value[--index] = 0x00u; }
-        else for (std::size_t index = 0u; index != sizeof(type); ) { this -> value[index++] = this -> pattern; refl::member<capacity>::next(&this -> pattern); }
+        for (std::size_t index = 0u; index != sizeof(type); ++index, refl::member<capacity>::next(&this -> pattern))
+        this -> value[index] = not this -> patterned ? 0x00u : this -> pattern;
 
         return *reinterpret_cast<type*>(this -> value);
       }
@@ -74,16 +74,26 @@ union refl /* final */ {
     union parse { typedef unsigned char type; };
 
     template <std::size_t arity, unsigned char = 0x00u> // ->> Aggregate-initialized object with patterned non-static data members
-    union sentinel /* static_assert(false, …) */ { template <typename base, typename addresser> static base evaluate(struct refl::info<base, addresser, arity>* const, ...) /* noexcept = delete; */; };
-      template <unsigned char _> union sentinel<0u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, addresser, 0u>* const,             std::size_t const,       unsigned char const)         /* noexcept */ {                                                   base const value = {};                                                                                                                                            return value; } };
-      template <unsigned char _> union sentinel<1u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, addresser, 1u>* const information, std::size_t const index, unsigned char const pattern) /* noexcept */ { typedef struct refl::member<sizeof(base)> member; base const value = {member(information, 0u, pattern, index == 0u)};                                                                                               return value; } };
-      template <unsigned char _> union sentinel<2u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, addresser, 2u>* const information, std::size_t const index, unsigned char const pattern) /* noexcept */ { typedef struct refl::member<sizeof(base)> member; base const value = {member(information, 0u, pattern, index == 0u), member(information, 1u, pattern, index == 1u)};                                                return value; } };
-      template <unsigned char _> union sentinel<3u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, addresser, 3u>* const information, std::size_t const index, unsigned char const pattern) /* noexcept */ { typedef struct refl::member<sizeof(base)> member; base const value = {member(information, 0u, pattern, index == 0u), member(information, 1u, pattern, index == 1u), member(information, 2u, pattern, index == 2u)}; return value; } };
+    union sentinel /* static_assert(false, …) */ { template <typename base, typename addresser> static base evaluate(struct refl::info<base, arity, addresser>* const, ...) /* noexcept = delete; */; };
+      #if defined __clang__
+      # pragma clang diagnostic push
+      # pragma clang diagnostic ignored "-Wmissing-braces"
+      # pragma clang diagnostic ignored "-Wmissing-field-initializers"
+      #endif
+        template <unsigned char _> union sentinel<0u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, 0u, addresser>* const,             std::size_t const,       unsigned char const)         /* noexcept */ {                                                   base const value = {};                                                                                                                                                                                                                                          return value; } };
+        template <unsigned char _> union sentinel<1u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, 1u, addresser>* const information, std::size_t const index, unsigned char const pattern) /* noexcept */ { typedef struct refl::member<sizeof(base)> member; base const value = {member(information, 0u, pattern, index == 0u)};                                                                                                                                                                                             return value; } };
+        template <unsigned char _> union sentinel<2u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, 2u, addresser>* const information, std::size_t const index, unsigned char const pattern) /* noexcept */ { typedef struct refl::member<sizeof(base)> member; base const value = {member(information, 0u, pattern, index == 0u), member(information, 1u, pattern, index == 1u)};                                                                                                                                              return value; } };
+        template <unsigned char _> union sentinel<3u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, 3u, addresser>* const information, std::size_t const index, unsigned char const pattern) /* noexcept */ { typedef struct refl::member<sizeof(base)> member; base const value = {member(information, 0u, pattern, index == 0u), member(information, 1u, pattern, index == 1u), member(information, 2u, pattern, index == 2u)};                                                                                               return value; } };
+        template <unsigned char _> union sentinel<4u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, 4u, addresser>* const information, std::size_t const index, unsigned char const pattern) /* noexcept */ { typedef struct refl::member<sizeof(base)> member; base const value = {member(information, 0u, pattern, index == 0u), member(information, 1u, pattern, index == 1u), member(information, 2u, pattern, index == 2u), member(information, 3u, pattern, index == 3u)};                                                return value; } };
+        template <unsigned char _> union sentinel<5u, _> { template <typename base, typename addresser> static base evaluate(struct refl::info<base, 5u, addresser>* const information, std::size_t const index, unsigned char const pattern) /* noexcept */ { typedef struct refl::member<sizeof(base)> member; base const value = {member(information, 0u, pattern, index == 0u), member(information, 1u, pattern, index == 1u), member(information, 2u, pattern, index == 2u), member(information, 3u, pattern, index == 3u), member(information, 4u, pattern, index == 4u)}; return value; } };
+      #if defined __clang__
+      # pragma clang diagnostic pop
+      #endif
 
     /* ... */
-    template <class type /* --> struct refl::info<…> */>
-    static type inspect(unsigned char inspected[]) {
-      return type(inspected);
+    template <class info>
+    static info inspect(unsigned char inspected[]) {
+      return info(inspected);
     }
 
   public:
@@ -109,9 +119,10 @@ union refl /* final */ {
         enum /* : std::size_t */ { value = refl::count_aggregate_initializers<base>::counter<0u, refl::assert_aggregate_initialization<base>::value>::value };
     };
 
-    template <typename base, typename addresser, std::size_t arity>
+    template <typename base, std::size_t arity, typename addresser>
     struct info /* final */ /* ->> Result of `refl::inspect(…)`; While more types are generated this way, this is more conservative with space requirements and thread-safety */ {
-      friend struct info<base, addresser, arity> refl::inspect(unsigned char[]);
+      template <class info>
+      friend info refl::inspect(unsigned char[]);
 
       public:
         enum /* : std::size_t */ { count = arity };
@@ -137,31 +148,33 @@ union refl /* final */ {
           // [000][789][000][000]END
           // NEXT MEMBER
           for (std::size_t index = 0u; arity != index; ++index)
-          for (std::size_t const size = this -> sizes[index] /* ->> Sentinel member byte size */; ; ) {
+          while (true) {
             unsigned char const *address    = NULL;
             std::size_t          count      = 0u;
             bool                 duplicate  = false;
             unsigned char        enumerator = pattern;
-            base const           sentinel   = refl::sentinel<arity>::evaluate(this, index, pattern);
+            base        const    sentinel   = refl::sentinel<arity>::evaluate(this, index, pattern);
+            std::size_t const    size       = this -> sizes[index]; // ->> `sentinel` member byte size
 
-            // ...
+            // ... --- CITE (Lapys) -> https://wandbox.org/permlink/90WlTdW1ntfmVecQ
             for (unsigned char const *iterator = &reinterpret_cast<unsigned char const&>(sentinel) + offset, *const end = iterator + (sizeof(base) - offset); end != iterator; ++iterator) {
+              if (enumerator != *iterator) {
+                iterator -= enumerator != pattern;
+                goto reset;
+              }
+
+              count++;
+              refl::member<capacity>::next(&enumerator);
+
               if (count == size) {
                 if (NULL != address) {
                   duplicate = true;
                   break;
                 }
 
-                address = iterator - size;
+                address = iterator - (size - 1u);
                 goto reset;
               }
-
-              if (enumerator != *iterator)
-                goto reset;
-
-              // ...
-              count++;
-              refl::member<capacity>::next(&enumerator);
 
               continue;
               reset: {
@@ -170,14 +183,23 @@ union refl /* final */ {
               }
             }
 
+            std::printf("[%u]: {duplicate: %4.5s, @:", (unsigned) index, duplicate ? "true" : "false");
+              for (unsigned char const *i = &reinterpret_cast<unsigned char const&>(sentinel), *const n = i + sizeof(base); i != n; ++i)
+              std::printf(" %02hX", (unsigned short) *i);
+            std::printf(", type: \"%s\" size: %lu, pattern: %02hX..", types[index] -> name(), (unsigned long) size, (unsigned short) pattern);
+              for ((count = size), (enumerator = pattern); count--; )
+              refl::member<capacity>::next(&enumerator);
+            std::printf("%02hX}" "\r\n", (unsigned short) enumerator - 1u);
+
             // ...
-            for (std::size_t count = size; count--; )
+            for (count = size; count--; )
             refl::member<capacity>::next(&pattern); // ->> Reseeding once can be fine
 
             if (not duplicate) {
               std::size_t const location = NULL != address ? address - &reinterpret_cast<unsigned char const&>(sentinel) : offset;
 
               // ...
+              std::printf("  \toffset @ %li (%s)" "\r\n", (long) location, NULL == address ? "estimated" : "reality");
               this -> addresses[index] = inspected + location; // ->> Alignment of `inspected` and its member remains unknown
               offset                   = size      + location;
 
@@ -192,8 +214,8 @@ union refl /* final */ {
     };
 
     /* ... */
-    template <typename base, typename addresser, std::size_t arity>
-    static std::size_t format(struct refl::info<base, addresser, arity> const& information, char const string[]) {
+    template <typename base, std::size_t arity, typename addresser>
+    static std::size_t format(struct refl::info<base, arity, addresser> const& information, char const string[]) {
       (void) information;
       (void) string;
 
@@ -202,72 +224,75 @@ union refl /* final */ {
 
     #if __cplusplus >= 201103L or defined _MSC_VER
       template <typename type>
-      static typename refl::inspector<type>::type inspect(type&& object) {
-        return refl::inspect<refl::inspector<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object)));
+      static typename refl::inspect_aggregate_initialized<type>::type inspect(type&& object) {
+        return refl::inspect<refl::inspect_aggregate_initialized<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object)));
       }
     #else
-      template <typename type> static struct refl::inspector<type>::type inspect(type&                object) { return refl::inspect<refl::inspector<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
-      template <typename type> static struct refl::inspector<type>::type inspect(type const&          object) { return refl::inspect<refl::inspector<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
-      template <typename type> static struct refl::inspector<type>::type inspect(type const volatile& object) { return refl::inspect<refl::inspector<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
-      template <typename type> static struct refl::inspector<type>::type inspect(type       volatile& object) { return refl::inspect<refl::inspector<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
+      template <typename type> static typename refl::inspect_aggregate_initialized<type>::type inspect(type&                object) { return refl::inspect<typename refl::inspect_aggregate_initialized<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
+      template <typename type> static typename refl::inspect_aggregate_initialized<type>::type inspect(type const&          object) { return refl::inspect<typename refl::inspect_aggregate_initialized<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
+      template <typename type> static typename refl::inspect_aggregate_initialized<type>::type inspect(type const volatile& object) { return refl::inspect<typename refl::inspect_aggregate_initialized<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
+      template <typename type> static typename refl::inspect_aggregate_initialized<type>::type inspect(type       volatile& object) { return refl::inspect<typename refl::inspect_aggregate_initialized<type>::type>(const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
     #endif
 };
+  #if __cplusplus >= 201103L or defined _MSC_VER or (!defined __clang__ and (defined __ECC or defined __ICC or defined __ICL or defined __INTEL_COMPILER or defined __INTEL_COMPILER_BUILD_DATE or defined __INTEL_LLVM_COMPILER)) // --> __cpp_initializer_lists
+    template <typename base>
+    struct refl::assert_aggregate_initialization /* final */ : public refl::base_aggregate_initialization {
+      using refl::base_aggregate_initialization::evaluate;
+      template <typename type, typename refl::parse<sizeof(type{refl::member<0>(), 0x00u})>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u];
 
-#if __cplusplus >= 201103L or defined _MSC_VER or (!defined __clang__ and (defined __ECC or defined __ICC or defined __ICL or defined __INTEL_COMPILER or defined __INTEL_COMPILER_BUILD_DATE or defined __INTEL_LLVM_COMPILER)) // --> __cpp_initializer_lists
-  template <typename base>
-  struct refl::assert_aggregate_initialization /* final */ : public refl::base_aggregate_initialization {
-    using refl::base_aggregate_initialization::evaluate;
-    template <typename type, typename refl::parse<sizeof(type{refl::member<0>(), 0x00u})>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u];
+      enum /* : bool */ { value = sizeof(bool[false + 1u]) == sizeof refl::assert_aggregate_initialization<base>::evaluate<unsigned char[1], static_cast<unsigned char>(0x00u)>("") };
+    };
 
-    enum /* : bool */ { value = sizeof(bool[false + 1u]) == sizeof refl::assert_aggregate_initialization<base>::evaluate<unsigned char[1], static_cast<unsigned char>(0x00u)>("") };
-  };
+    template <typename base> class refl::can_aggregate_initialize<base, 1u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 1u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof(type {refl::member<0>()})>                                                                            ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+    template <typename base> class refl::can_aggregate_initialize<base, 2u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 2u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof(type {refl::member<0>(), refl::member<0>()})>                                                         ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+    template <typename base> class refl::can_aggregate_initialize<base, 3u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 3u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof(type {refl::member<0>(), refl::member<0>(), refl::member<0>()})>                                      ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+    template <typename base> class refl::can_aggregate_initialize<base, 4u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 4u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof(type {refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>()})>                   ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+    template <typename base> class refl::can_aggregate_initialize<base, 5u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 5u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof(type {refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>()})>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+  #elif defined __clang__ or defined __GNUC__ // ->> Compound literals (C99 extension)
+  # if defined __clang__ // ->> Clang frontend
+  #   pragma clang diagnostic push
+  #   pragma clang diagnostic ignored "-Wc99-extensions"
+  #   pragma clang diagnostic ignored "-Wmissing-braces"
+  #   pragma clang diagnostic ignored "-Wmissing-field-initializers"
+  # elif defined __GNUC__
+  #   pragma GCC diagnostic push
+  #   pragma GCC diagnostic ignored "-Wpedantic"
+  # endif
+    template <typename base>
+    struct refl::assert_aggregate_initialization /* final */ : public refl::base_aggregate_initialization {
+      using refl::base_aggregate_initialization::evaluate;
+      template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), 0x00u}>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u];
 
-  template <typename base> class refl::can_aggregate_initialize<base, 1u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 1u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof(type {refl::member<0>()})>                                      ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
-  template <typename base> class refl::can_aggregate_initialize<base, 2u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 2u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof(type {refl::member<0>(), refl::member<0>()})>                   ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
-  template <typename base> class refl::can_aggregate_initialize<base, 3u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 3u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof(type {refl::member<0>(), refl::member<0>(), refl::member<0>()})>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
-#elif defined __clang__ or defined __GNUC__ // ->> Compound literals (C99 extension)
-# if defined __clang__
-#   pragma clang diagnostic push
-#   pragma clang diagnostic ignored "-Wc99-extensions"
-#   pragma clang diagnostic ignored "-Wmissing-field-initializers"
-# elif defined __GNUC__
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Wpedantic"
-# endif
-  template <typename base>
-  struct refl::assert_aggregate_initialization /* final */ : public refl::base_aggregate_initialization {
-    using refl::base_aggregate_initialization::evaluate;
-    template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), 0x00u}>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u];
+      enum /* : bool */ { value = sizeof(bool[false + 1u]) == sizeof refl::assert_aggregate_initialization<base>::evaluate<unsigned char[1], static_cast<unsigned char>(0x00u)>("") };
+    };
 
-    enum /* : bool */ { value = sizeof(bool[false + 1u]) == sizeof refl::assert_aggregate_initialization<base>::evaluate<unsigned char[1], static_cast<unsigned char>(0x00u)>("") };
-  };
-
-  template <typename base> class refl::can_aggregate_initialize<base, 1u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 1u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>()}                                       + 1u]; };
-  template <typename base> class refl::can_aggregate_initialize<base, 2u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 2u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>(), refl::member<0>()}                    + 1u]; };
-  template <typename base> class refl::can_aggregate_initialize<base, 3u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 3u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>()} + 1u]; };
-# if defined __clang__
-#   pragma clang diagnostic pop
-# elif defined __GNUC__
-#   pragma GCC diagnostic pop
-# endif
-#endif
+    #if defined __apple_build_version__ or defined __clang_major__ or defined __clang_minor__ or defined __clang_patchlevel__ or defined __clang_version__ // ->> Clang compiler
+      template <typename base> class refl::can_aggregate_initialize<base, 1u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 1u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>()}                                                                             + 1u]; };
+      template <typename base> class refl::can_aggregate_initialize<base, 2u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 2u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>(), refl::member<0>()}                                                          + 1u]; };
+      template <typename base> class refl::can_aggregate_initialize<base, 3u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 3u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>()}                                       + 1u]; };
+      template <typename base> class refl::can_aggregate_initialize<base, 4u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 4u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>()}                    + 1u]; };
+      template <typename base> class refl::can_aggregate_initialize<base, 5u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 5u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, unsigned char> static bool const (&evaluate(char const[]) /* noexcept */)[sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>()} + 1u]; };
+    #else
+      template <typename base> class refl::can_aggregate_initialize<base, 1u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 1u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof (type) {refl::member<0>()}>                                                                            ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+      template <typename base> class refl::can_aggregate_initialize<base, 2u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 2u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), refl::member<0>()}>                                                         ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+      template <typename base> class refl::can_aggregate_initialize<base, 3u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 3u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>()}>                                      ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+      template <typename base> class refl::can_aggregate_initialize<base, 4u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 4u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>()}>                   ::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+      template <typename base> class refl::can_aggregate_initialize<base, 5u, true> /* final */ : private refl::base_aggregate_initialization { friend class refl::can_aggregate_initialize<base, 5u>; friend union refl::count_aggregate_initializers<base>; using refl::base_aggregate_initialization::evaluate; template <typename type, typename refl::parse<sizeof (type) {refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>(), refl::member<0>()}>::type> static bool const (&evaluate(char const[]) /* noexcept */)[true + 1u]; };
+    #endif
+  # if defined __clang__
+  #   pragma clang diagnostic pop
+  # elif defined __GNUC__
+  #   pragma GCC diagnostic pop
+  # endif
+  #endif
 
 /* Main */
-template <bool> union assert;
-template <>     union assert<true> {};
-
-#define assert(condition, message) typedef assert<(condition)> _##message
-assert(false, bruh_must_be_5);
-
-struct aggregate { int x, y; struct {} z; };
+struct aggregate { short a; void *b; struct { char _[3]; } c; struct {} d; enum {} : 5; short e; };
+// struct aggregate { int a; double b; unsigned char c[3]; struct {} d; };
 // static union  U { int x, y; };
 // static class  C { public: union { int x1; double x2; }; enum {} : 8; int y; };
 
 int main(int, char*[]) /* noexcept */ {
-  // NVIDIA SAYS “eRrOr: ToO mAnY iNiTiAlIzEr VaLuEs”
-  std::printf("%u" "\r\n\n", (unsigned) sizeof((int[2]) {refl::member<0>(), refl::member<0>()}));
-  (void) std::printf("%4.5s" "\r\n", refl::assert_aggregate_initialization<void>::value ? "true" : "false");
-  (void) std::puts("");
   (void) std::printf("%4.5s" "\r\n", refl::can_aggregate_initialize<int[1],           2u>::value ? "false" : "true");
   (void) std::printf("%4.5s" "\r\n", refl::can_aggregate_initialize<int[2],           2u>::value ? "true"  : "false");
   (void) std::printf("%4.5s" "\r\n", refl::can_aggregate_initialize<struct aggregate, 3u>::value ? "true"  : "false");
@@ -275,6 +300,9 @@ int main(int, char*[]) /* noexcept */ {
   (void) std::printf("%u" "\r\n", (unsigned) refl::count_aggregate_initializers<int[1]>          ::value);
   (void) std::printf("%u" "\r\n", (unsigned) refl::count_aggregate_initializers<int[2]>          ::value);
   (void) std::printf("%u" "\r\n", (unsigned) refl::count_aggregate_initializers<struct aggregate>::value);
+  (void) std::puts("");
+
+  refl::inspect(aggregate());
 
   // std::printf("\n" "[#]: %p %p" "\r\n", (void*) &array[0],     (void*) &array[1]);    for (void *const *member = refl::inspect(array);     NULL != *member; ++member) std::printf("%p" "\r\n", *member);
   // std::printf("\n" "[#]: %p %p" "\r\n", (void*) &aggregate.x,  (void*) &aggregate.y); for (void *const *member = refl::inspect(aggregate); NULL != *member; ++member) std::printf("%p" "\r\n", *member);

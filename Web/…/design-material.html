@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html charset=UTF-8 dir=ltr encoding=UTF-8 lang=en-US language=English>
+    <head>
+        <!-- Document Metadata -->
+        <meta charset="UTF-8"/>
+        <meta content="height=device-height, initial-scale=1.0, maximum-scale=1.0, minimal-ui, minimum-scale=1.0, user-scalable=no, width=device-width" name="viewport"/>
+        <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
+
+        <!-- Stylesheets -->
+        <style media=all type=text/css>
+            /* DOM Elements > ... */
+            body { margin: 0 }
+            body, html { width: 100% }
+
+            /* Components > ... */
+            .icon { float: right }
+            .placeholder, .text { position: absolute }
+
+            .task, .task-banner, .task-content { width: 100% }
+              .task-banner, .task-content {
+                padding-bottom: 5px;
+                padding-top: 5px
+              }
+                .task-banner thead th {
+                  color: #4F5E65;
+                  cursor: default;
+                  font-weight: normal;
+                  text-align: left;
+                  user-select: none
+                }
+                  .task-banner button {
+                    background-color: #4F5E65;
+                    border-color: transparent;
+                    color: #FFFFFF;
+                    cursor: pointer;
+                    display: inline-block;
+                    font-weight: lighter
+                  }
+                    .task-banner button span {
+                        display: inline-block;
+                        width: auto
+                    }
+
+                  .task-banner button, .task-banner input {
+                    behavior: url(pie.htc);
+                    border-color: #4F5E65;
+                    border-radius: 5px;
+                    width: 100%
+                  }
+
+                  .task-banner button, .task-banner input, .task-banner .placeholder {
+                    border-style: solid;
+                    border-width: 2.5px;
+                    padding-bottom: 10px;
+                    padding-top: 10px
+                  }
+
+                  .task-banner input {
+                    height: 100%;
+                    padding-left: 3%
+                  }
+
+                  .task-banner input, .task-banner .placeholder {
+                    box-sizing: border-box;
+                    padding-right: 3%
+                  }
+
+                  .task-banner td, .task-banner th {
+                    padding-left: 7.5px;
+                    padding-right: 7.5px
+                  }
+
+                  .task-banner .placeholder {
+                    border-color: transparent;
+                    color: #A0A0A0;
+                    text-indent: 7.5%;
+                    white-space: nowrap
+                  }
+
+              .task-content {
+                background-color: #E5F1EF;
+                border-top: 3px solid #4F5E65;
+                padding-left: 2%;
+                padding-right: 2%
+              }
+                .task-content button { cursor: pointer }
+                .task-content-about, .task-content-details { color: #4F5E65 }
+                .task-content-about button, .task-content-details { user-select: none }
+                  .task-content-body .task-content-about div {
+                    padding-bottom: 5px;
+                    padding-left: 0;
+                    padding-right: 10%;
+                    padding-top: 5px;
+                    width: 90%
+                  }
+                    .task-content-body .task-content-about div * {
+                      margin: 0;
+                      text-indent: 0
+                    }
+
+                  .task-content-body .task-content-about h1 {
+                    font-weight: bold;
+                    margin: 0;
+                    text-transform: capitalize
+                  }
+
+                  .task-content-body .task-content-details button {
+                    cursor: default;
+                    display: inline-block;
+                    font-weight: lighter;
+                    margin-bottom: 5px;
+                    margin-top: 5px;
+                    padding-bottom: 5px;
+                    padding-top: 5px;
+                    width: 90%
+                  }
+
+                  .task-content-body .task-content-details td { text-align: center }
+                  .task-content-body .task-content-details td, .task-content-body .task-content-details th { overflow: hidden }
+                  .task-content-body .task-content-details th {
+                    cursor: default;
+                    text-transform: capitalize;
+                    text-overflow: ellipsis
+                  }
+
+                  .task-content-footer .task-content-about button {
+                    background-color: #FFFFFF;
+                    border: 3px solid #4F5E65;
+                    border-radius: 5px;
+                    box-sizing: border-box;
+                    color: inherit;
+                    font-size: 15px;
+                    font-weight: 500;
+                    margin-bottom: 5px;
+                    margin-left: 2.5px;
+                    margin-right: 2.5px;
+                    margin-top: 5px;
+                    padding-bottom: 2.5px;
+                    padding-left: 4%;
+                    padding-right: 4%;
+                    padding-top: 2.5px
+                  }
+
+                  .task-content-details button {
+                    background-color: #4F5E65;
+                    border: none;
+                    border-radius: 5px;
+                    color: #FFFFFF
+                  }
+                    .task-content-details button span { display: inline-block }
+
+                  .task-content-footer .task-content-details button {
+                    float: right;
+                    font-size: 16px;
+                    font-weight: 600;
+                    height: 35px;
+                    margin-bottom: 5px;
+                    margin-left: 7.5px;
+                    margin-right: 7.5px;
+                    margin-top: 5px;
+                    padding-left: 2%;
+                    padding-right: 2%
+                  }
+
+            /* Features > ...  */
+            #main { width: 100% }
+              #taskListContent {
+                /*margin-left: auto;*/
+                margin-left: 9.5%;
+                /*margin-right: auto;*/
+                margin-right: 9.5%;
+                width: 80%
+              }
+
+              #taskListContent, #taskListContent table {
+                border-spacing: 0px;
+                table-layout: fixed
+              }
+                #taskListContent table, #taskListContent tbody, #taskListContent thead, #taskListContent tr { width: 100% }
+        </style>
+
+        <!-- Document Title -->
+        <title> Task List </title>
+    </head>
+
+    <body>
+        <!-- Main -->
+        <div id=main>
+            <!-- Task List -->
+            <div id=taskList>
+                <table id=taskListContent> <tbody> </tbody> </table>
+                <button onclick=addTaskItem()> Add Task </button>
+            </div>
+        </div>
+
+        <!-- Scripts -->
+        <script language=javascript type=text/javascript>
+            /* Global > ... */
+            var taskListContentBody = (function(childNodes) {
+                for (var iterator = childNodes.length; iterator--; )
+                if ("TBODY" === childNodes.item(iterator).nodeName) return childNodes.item(iterator);
+            })(taskListContent.childNodes) || taskListContent;
+
+            /* Function > Add Task Item */
+            addTaskItem();
+            function addTaskItem() {
+                var roles = ["Designer", "Developer", "Manager", "Marketer"];
+                var taskItemSectionHidden = false;
+
+                var taskItem = document.createElement("tr");
+                 var taskItemContent = document.createElement("td");
+                  var taskItemBanner = document.createElement("table");
+                   var taskItemBannerBody = document.createElement("tbody");
+                    var taskItemBannerBodyContent = document.createElement("tr");
+                     var taskItemBannerFields = [document.createElement("td"), document.createElement("td"), document.createElement("td"), document.createElement("td")];
+                      var taskItemBannerControls = [document.createElement("input"), document.createElement("input"), document.createElement("input"), document.createElement("button")];
+                      var taskItemBannerPlaceholders = [document.createElement("div"), document.createElement("div"), document.createElement("div"), document.createElement("div")];
+                   var taskItemBannerHead = document.createElement("thead");
+                    var taskItemBannerHeadContent = document.createElement("tr");
+                     var taskItemBannerLabels = [document.createElement("th"), document.createElement("th"), document.createElement("th"), document.createElement("th")];
+                  var taskItemSection = document.createElement("table");
+                   var taskItemSectionBody = document.createElement("tbody");
+                    var taskItemSectionBodyContent = document.createElement("tr");
+                   var taskItemSectionFooter = document.createElement("tfoot");
+                    var taskItemSectionFooterContent = document.createElement("tr");
+
+                   var taskItemSectionAboutBody = document.createElement("td");
+                   var taskItemSectionAboutFooter = document.createElement("td");
+                   var taskItemSectionDetailsBody = document.createElement("td");
+                   var taskItemSectionDetailsFooter = document.createElement("td");
+                    var taskItemSectionAboutBodyBody = document.createElement("div");
+                    var taskItemSectionAboutBodyHeading = document.createElement("h1");
+                    var taskItemSectionAboutFooterControls = [document.createElement("button"), document.createElement("button"), document.createElement("button")];
+                    var taskItemSectionDetailsBodyBody = document.createElement("table");
+                     var taskItemSectionDetailsBodyBodyHead = document.createElement("thead");
+                      var taskItemSectionDetailsBodyBodyHeadContent = document.createElement("tr");
+                     var taskItemSectionDetailsBodyBodyBody = document.createElement("tbody");
+                      var taskItemSectionDetailsBodyBodyBodyContent = document.createElement("tr");
+                     var taskItemSectionDetailsFooterControls = [document.createElement("button"), document.createElement("button"), document.createElement("button")];
+
+                // Function > Toggle Task Item Section
+                function toggleTaskItemSection() {
+                    taskItemSectionHidden = !taskItemSectionHidden;
+                    taskItemSection.style.display = taskItemSectionHidden ? "none" : ""
+                }
+
+                // Modification > ...
+                taskItem.className = "task";
+                taskItemBanner.className = "task-banner";
+                taskItemBannerControls[1].readOnly = true;
+                taskItemBannerControls[2].readOnly = true;
+                taskItemBannerControls[3].innerHTML = "<span class=text> More </span> <span class=icon> &#9776; </span>";
+                taskItemBannerFields[0].style.paddingLeft = '0';
+                taskItemBannerFields[taskItemBannerFields.length - 1].style.paddingRight = '0';
+                taskItemBannerLabels[0].style.paddingLeft = '0';
+                taskItemBannerLabels[0].innerHTML = "Title";
+                taskItemBannerLabels[1].innerHTML = "Time used";
+                taskItemBannerLabels[2].innerHTML = "Time estimated";
+                taskItemBannerPlaceholders[0].className = "placeholder";
+                taskItemBannerPlaceholders[0].innerHTML = "Some kind of task name";
+                taskItemBannerPlaceholders[1].className = "placeholder";
+                taskItemBannerPlaceholders[1].innerHTML = ((Math.random() * 24) | +0) + "h " + ((Math.random() * 60) | +0) + 'm';
+                taskItemBannerPlaceholders[2].className = "placeholder";
+                taskItemBannerPlaceholders[2].innerHTML = ((Math.random() * 24) | +0) + "h " + ((Math.random() * 60) | +0) + 'm';
+                taskItemBannerLabels[taskItemBannerLabels.length - 1].style.paddingRight = '0';
+                taskItemSection.className = "task-content";
+                taskItemSectionAboutBody.className = "task-content-about";
+                taskItemSectionAboutFooter.className = "task-content-about";
+                taskItemSectionAboutBodyBody.innerHTML = "<p> Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. </p>";
+                taskItemSectionAboutBodyHeading.innerHTML = "About";
+                taskItemSectionAboutFooterControls[0].innerHTML = "Wiki";
+                taskItemSectionAboutFooterControls[1].innerHTML = "Track";
+                taskItemSectionAboutFooterControls[2].innerHTML = "Chat";
+                taskItemSectionBody.className = "task-content-body";
+                taskItemSectionDetailsBody.className = "task-content-details";
+                taskItemSectionDetailsFooter.className = "task-content-details";
+                taskItemSectionDetailsFooterControls[0].innerHTML = "<span> Done </span>";
+                taskItemSectionDetailsFooterControls[0].style.backgroundColor = "#89E6A8";
+                taskItemSectionDetailsFooterControls[1].innerHTML = "<span> Delete </span>";
+                taskItemSectionDetailsFooterControls[1].style.backgroundColor = "#E66767";
+                taskItemSectionDetailsFooterControls[2].innerHTML = "<span> &#9937; </span> <span> Assign </span>";
+                taskItemSectionFooter.className = "task-content-footer";
+
+                // Events > ...
+                taskItemBannerControls[3].onclick  = toggleTaskItemSection;
+
+                for (var iterator = taskItemBannerControls.length; iterator--; )
+                void function(index) {
+                  taskItemBannerControls[index].onblur   = function() { if ("" === taskItemBannerControls[index].value) taskItemBannerPlaceholders[index].style.visibility = "" };
+                  taskItemBannerControls[index].onchange = function() { if ("" === taskItemBannerControls[index].value) taskItemBannerPlaceholders[index].style.visibility = "" };
+                  taskItemBannerControls[index].onfocus  = function() { taskItemBannerPlaceholders[index].style.visibility = "hidden" }
+                }(iterator);
+
+                for (var iterator = taskItemBannerPlaceholders.length; iterator--; )
+                void function(index) {
+                  taskItemBannerPlaceholders[index].onclick = function() { taskItemBannerControls[index].focus() }
+                }(iterator);
+
+                // Insertion ...
+                taskItem.appendChild(taskItemContent);
+                 taskItemContent.appendChild(taskItemBanner);
+                  taskItemBanner.appendChild(taskItemBannerHead);
+                   taskItemBannerHead.appendChild(taskItemBannerHeadContent);
+                    for (var iterator = +0; iterator !== taskItemBannerLabels.length; ++iterator) {
+                     taskItemBannerHeadContent.appendChild(taskItemBannerLabels[iterator])
+                    }
+                  taskItemBanner.appendChild(taskItemBannerBody);
+                   taskItemBannerBody.appendChild(taskItemBannerBodyContent);
+                    for (var iterator = +0; iterator !== taskItemBannerFields.length; ++iterator) {
+                     taskItemBannerBodyContent.appendChild(taskItemBannerFields[iterator]);
+
+                     taskItemBannerFields[iterator].appendChild(taskItemBannerPlaceholders[iterator]);
+                      taskItemBannerFields[iterator].appendChild(taskItemBannerControls[iterator])
+                    }
+
+                 taskItemContent.appendChild(taskItemSection);
+                  taskItemSection.appendChild(taskItemSectionBody);
+                   taskItemSectionBody.appendChild(taskItemSectionBodyContent);
+                    taskItemSectionBodyContent.appendChild(taskItemSectionAboutBody);
+                     taskItemSectionAboutBody.appendChild(taskItemSectionAboutBodyHeading);
+                     taskItemSectionAboutBody.appendChild(taskItemSectionAboutBodyBody);
+                    taskItemSectionBodyContent.appendChild(taskItemSectionDetailsBody);
+                     taskItemSectionDetailsBody.appendChild(taskItemSectionDetailsBodyBody);
+                      taskItemSectionDetailsBodyBody.appendChild(taskItemSectionDetailsBodyBodyHead);
+                       taskItemSectionDetailsBodyBodyHead.appendChild(taskItemSectionDetailsBodyBodyHeadContent);
+                      taskItemSectionDetailsBodyBody.appendChild(taskItemSectionDetailsBodyBodyBody);
+                       taskItemSectionDetailsBodyBodyBody.appendChild(taskItemSectionDetailsBodyBodyBodyContent);
+                        for (var counter = ((Math.random() * 4) | +0) + 1; counter; --counter) {
+                         var roleIndex = (Math.random() * roles.length) | +0;
+                         var taskItemSectionDetailsBodyBodyBodyContentContent = document.createElement("td");
+                         var taskItemSectionDetailsBodyBodyHeadContentLabel   = document.createElement("th");
+
+                         // ...
+                         taskItemSectionDetailsBodyBodyHeadContentLabel.innerHTML = roles[roleIndex];
+                         taskItemSectionDetailsBodyBodyHeadContentLabel.setAttribute("title", roles[roleIndex]);
+                         taskItemSectionDetailsBodyBodyBodyContent.appendChild(taskItemSectionDetailsBodyBodyBodyContentContent);
+                         taskItemSectionDetailsBodyBodyHeadContent.appendChild(taskItemSectionDetailsBodyBodyHeadContentLabel);
+
+                         for (var subcounter = ((Math.random() * 2) | +0) + 2; subcounter--; ) {
+                          var taskItemSectionDetailsBodyBodyBodyContentControl = document.createElement("button");
+
+                          if (+0 !== subcounter) taskItemSectionDetailsBodyBodyBodyContentControl.innerHTML = "<span> You </span>";
+                          else {
+                           taskItemSectionDetailsBodyBodyBodyContentControl.innerHTML = "<span class=text> More </span> <span class=icon> &#9660; </span>";
+                           taskItemSectionDetailsBodyBodyBodyContentControl.style.cursor = "pointer"
+                          }
+
+                          taskItemSectionDetailsBodyBodyBodyContentContent.appendChild(taskItemSectionDetailsBodyBodyBodyContentControl);
+                          taskItemSectionDetailsBodyBodyBodyContentContent.appendChild(document.createElement("br"))
+                         }
+
+                         // ...
+                         roles[roleIndex] = roles[roles.length - 1];
+                         --roles.length
+                        }
+
+                  taskItemSection.appendChild(taskItemSectionFooter);
+                   taskItemSectionFooter.appendChild(taskItemSectionFooterContent);
+                    taskItemSectionFooterContent.appendChild(taskItemSectionAboutFooter);
+                     for (var iterator = +0; iterator !== taskItemSectionAboutFooterControls.length; ++iterator) {
+                      taskItemSectionAboutFooter.appendChild(taskItemSectionAboutFooterControls[iterator])
+                     }
+                    taskItemSectionFooterContent.appendChild(taskItemSectionDetailsFooter);
+                     for (var iterator = +0; iterator !== taskItemSectionDetailsFooterControls.length; ++iterator) {
+                      taskItemSectionDetailsFooter.appendChild(taskItemSectionDetailsFooterControls[iterator])
+                     }
+
+                // ...
+                for (var iterator = taskListContentBody.childNodes.length; iterator--; ) {
+                    var taskListContentBodyChildNode = taskListContentBody.childNodes.item(iterator);
+
+                    if ("TR" === taskListContentBodyChildNode.nodeName)
+                    if ("task" === taskListContentBodyChildNode.getAttribute("class")) {
+                        toggleTaskItemSection();
+                        break
+                    }
+                }
+
+                // ...
+                return taskListContentBody.appendChild(taskItem)
+            }
+        </script>
+    </body>
+</html>

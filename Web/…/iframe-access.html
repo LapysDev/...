@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style media=all type=text/css>
+      body {
+        margin: 0;
+        overflow-y: hidden
+      }
+
+      body, html {
+        height: 100%;
+        width: 100%
+      }
+
+      button {
+        box-shadow: 0 3px 3px 0 #AAAAAA;
+        cursor: pointer;
+        float: left;
+        font-size: 14px;
+        margin-left: 5%;
+        width: 20%
+      }
+        button:focus, button:hover {
+          background-color: #909090;
+          bottom: 0.5%;
+          box-shadow: 0 3px 6px 0 #C0C0C0
+        }
+
+        button:active {
+          bottom: 0;
+          box-shadow: 0 3px 3px 0 #AAAAAA;
+          transition-duration: 150ms
+        }
+
+      button, iframe {
+        font-family: Roboto
+      }
+
+      button, textarea {
+        background-color: #666666;
+        border: 2px solid #333333;
+        border-radius: 5px;
+        bottom: 0;
+        color: #F0F0F0;
+        padding: 1%;
+        position: relative;
+        transition: 300ms ease-out
+      }
+
+      iframe {
+        background-color: #F9F9F9;
+        border: 2px solid #CCCCCC;
+        display: block;
+        height: 50%;
+        margin: 20px 10%;
+        resize: none;
+        width: 80%
+      }
+
+      textarea {
+        background-color: #FFFFFF;
+        color: #333333;
+        cursor: text;
+        float: right;
+        font-family: Iosevka;
+        font-size: 16px;
+        height: 25%;
+        margin-right: 5%;
+        outline: none;
+        resize: none;
+        padding: 0.5%;
+        width: 65%
+      }
+        textarea:focus {
+          border-color: #909090
+        }
+    </style>
+  </head>
+
+  <body>
+    <iframe id=output sandbox="allow-same-origin allow-scripts" scrolling=auto src=about:blank> </iframe>
+
+    <button id=submit> Add HTML To Inline Frame </button>
+    <textarea id=input placeholder="HTML here...">&lt;Hello, World!&gt;</textarea>
+
+    <script language=javascript type=text/javascript>
+      var outputHasContent = false;
+
+      // ...
+      input.innerHTML = (
+        "<!DOCTYPE html>" + '\n' +
+        "<html>" + '\n' +
+        "  <body>" + '\n' +
+        "    <p> Hello, World! </p>" + '\n' +
+        "  </body>" + '\n' +
+        "</html>"
+      );
+
+      submit.onclick = function() {
+        var source = input.value;
+
+        if (false === outputHasContent) {
+          outputHasContent = true;
+
+          if ("string" === typeof output.srcdoc) output.srcdoc = source;
+          else if ("function" === typeof Blob && "function" === typeof URL) output.src = URL.createObjectURL(new Blob([source], {type: "text/html"}))
+        }
+
+        else (
+          output.contentWindow.document.getElementsByTagName("body").item(+0) ||
+          output.contentWindow.document.getElementsByTagName("html").item(+0)
+        ).innerHTML = source
+      }
+    </script>
+  </body>
+</html>

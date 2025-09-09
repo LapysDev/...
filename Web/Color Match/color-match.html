@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Document Stylesheet -->
+    <style media=all type=text/css>
+      /* @font-face */
+      @font-face { font-family: "Google Sans";                                   src: local("Google Sans"), url(fonts/google_sans.ttf)        format("opentype") }
+      @font-face { font-family: "Google Sans"; font-weight: 500 600 700 800 900; src: local("Google Sans"), url(fonts/google_sans-bold.ttf)   format("opentype") }
+      @font-face { font-family: "Google Sans"; font-style: italic;               src: local("Google Sans"), url(fonts/google_sans-italic.ttf) format("opentype") }
+
+      /* DOM Elements */
+        /* <a> */
+        a {
+          color          : inherit;
+          text-decoration: none
+        }
+          /* :visited */
+          a:visited { color: inherit }
+
+        /* <a>, <button> */
+        a, button { cursor: pointer }
+
+        /* <body> */
+        body {
+          color      : #303030;
+          filter     : blur(1.25px);
+          font-family: Tahoma, "Google Sans", sans-serif;
+          margin     : 0;
+          opacity    : 0.9;
+          overflow-x : hidden;
+          transition : filter, opacity 450ms linear 0ms
+        }
+          /* @media */
+          @media screen and (prefers-color-scheme: dark) {
+            body { color: #CFCFCF }
+          }
+
+          /* :hover */
+          body:hover {
+            filter : blur(0.0px);
+            opacity: 1.0
+          }
+
+        /* <body>, <html> */
+        body, html {
+          background-color: #FCFCFC;
+          height          : 100%;
+          width           : 100%
+        }
+          /* @media */
+          @media screen and (prefers-color-scheme: dark) {
+            body, html { background-color: #363636 }
+          }
+
+        /* <button>, <input>, <select> */
+        button, input, select {
+          color: inherit;
+          font : inherit
+        }
+          /* :focus */
+          button:focus,
+          input:focus,
+          select:focus { outline: none }
+
+        /* <table> */
+        table {
+          border-collapse: collapse;
+          border-spacing : 0;
+          vertical-align : middle
+        }
+
+        /* <td>, <th> */
+        td, th { padding: 0 }
+
+      /* Features */
+        /* ... */
+        #colortip,
+        #console .toggle,
+        #controls th,
+        #count,
+        #download,
+        #footer,
+        #format,
+        #input,
+        #range input,
+        #rangeToggle *,
+        #render .status,
+        #tooltip {
+          touch-action: none;
+          user-select : none
+        }
+          /* ::selection */
+          #colortip::selection,
+          #console .toggle::selection,
+          #controls th::selection,
+          #count::selection,
+          #download::selection,
+          #footer::selection,
+          #format::selection,
+          #input::selection,
+          #range input::selection,
+          #rangeToggle ::selection,
+          #render .status::selection,
+          #tooltip::selection {
+            background-color: inherit;
+            background-color: rgba(0, 0, 0, 0.0);
+            background-color: transparent;
+            color           : inherit;
+            text-shadow     : none
+          }
+
+        /* Controls */
+        #controls {
+          margin-bottom: 20px;
+          margin-left  : 12.5%;
+          margin-right : 12.5%;
+          margin-top   : 20px;
+          width        : 75%
+        }
+          /* Colors */
+            /* <table> */
+            #controls .colors table { width: 90% }
+              /* Ratios */
+                /* <table> */
+                #controls .color-ratios table {
+                  border-radius: 8px;
+                  height       : 8px;
+                  margin-bottom: 15px;
+                  margin-left  : 5%;
+                  margin-right : 5%;
+                  margin-top   : 10px;
+                  overflow     : hidden;
+                  width        : 90%
+                }
+                  /* Ratio */
+                  #controls .color-ratio {
+                    background-color: rgba(0, 0, 0, 0.125);
+                    border-bottom   : 1px solid rgba(0, 0, 0, 0.125);
+                    border-top      : 1px solid rgba(0, 0, 0, 0.125);
+                    height          : 100%
+                  }
+                    /* @media */
+                    @media screen and (prefers-color-scheme: dark) {
+                      #controls .color-ratio { border-color: rgba(255, 255, 255, 0.125) }
+                    }
+
+                    /* <div> */
+                    #controls .color-ratio div {
+                      animation: color_ratio__entry 250ms ease-in 30ms 1 normal both running;
+                      height   : 100%;
+                      width    : 100%
+                    }
+                      /* @keyframes */
+                      @keyframes color_ratio__entry {
+                        000% { width: 0%   }
+                        100% { width: 100% }
+                      }
+
+              /* Ratios, Units */
+                /* Ratio, Unit */
+                #controls .color-ratio,
+                #controls .color-unit {
+                  opacity   : 0.8;
+                  transition: opacity 200ms ease-in 0ms
+                }
+                  /* :hover */
+                  #controls .color-ratio:hover,
+                  #controls .color-unit:hover { opacity: 1.0 }
+
+              /* Units */
+                /* <table> */
+                #controls .color-units table {
+                  margin-bottom: 5px;
+                  margin-left  : 2.5%;
+                  margin-right : 2.5%;
+                  margin-top   : 5px;
+                  width        : 95%
+                }
+
+                /* <td> */
+                  /* <div> */
+                  #controls .color-units td div {
+                    max-height: 300px;
+                    overflow-x: hidden;
+                    overflow-y: auto
+                  }
+
+                /* Unit */
+                #controls .color-unit {
+                  animation    : color_unit__entry 250ms ease-in 0ms 1 normal both running;
+                  border       : 1px solid rgba(0, 0, 0, 0.5);
+                  border-radius: 3px;
+                  display      : block;
+                  float        : left;
+                  font-family  : monospace;
+                  font-size    : 0px;
+                  line-height  : 0.0;
+                  margin-bottom: 2.5px;
+                  margin-left  : 5px;
+                  margin-right : 5px;
+                  margin-top   : 2.5px;
+                  padding      : 12.5px;
+                  position     : relative
+                }
+                  /* @keyframes */
+                  @keyframes color_unit__entry {
+                    000% { left: 50px; opacity: 0.0; visibility: hidden  }
+                    001% {                           visibility: visible }
+                    100% { left: 0px;  opacity: 1.0; visibility: visible }
+                  }
+
+                  @media screen and (prefers-color-scheme: dark) {
+                    #controls .color-unit { border-color: rgba(255, 255, 255, 0.5) }
+                  }
+
+          /* Console ..., Count, Download, Format, Range ... */
+          #count,
+          #download,
+          #format,
+          #range input {
+            border      : 1px solid #606060;
+            border-color: rgba(0, 0, 0, 0.5);
+            font-size   : 18px;
+            transition  : border-color 200ms ease-in 0ms
+          }
+
+          #console .toggle[disabled],
+          #count[disabled],
+          #download[disabled],
+          #format[disabled],
+          #range [disabled] {
+            border-color: #999999 !important;
+            border-color: rgba(0, 0, 0, 0.25) !important;
+            opacity     : 0.7
+          }
+
+          #console .toggle[disabled],
+          #count[disabled],
+          #download[disabled],
+          #format[disabled],
+          #range [disabled],
+          #rangeToggle .range-toggle[disabled] { cursor: not-allowed }
+            /* @media */
+            @media screen and (prefers-color-scheme: dark) {
+              #count,
+              #download,
+              #format,
+              #range input {
+                border-color: #AAAAAA;
+                border-color: rgba(255, 255, 255, 0.5)
+              }
+
+              #console .toggle[disabled],
+              #count[disabled],
+              #download[disabled],
+              #format[disabled],
+              #range [disabled] {
+                border-color: #666666 !important;
+                border-color: rgba(255, 255, 255, 0.25) !important
+              }
+            }
+
+            /* :focus */
+            #console .toggle:focus,
+            #count:focus,
+            #download:focus,
+            #format:focus,
+            #range:focus,
+            #range :focus { border-color: #0099FF !important }
+
+            /* :hover */
+            #count:hover,
+            #download:hover,
+            #format:hover,
+            #range input:hover,
+            #rangeToggle :hover { border-color: #0F0F0F }
+              /* @media */
+              @media screen and (prefers-color-scheme: dark) {
+                #count:hover,
+                #download:hover,
+                #format:hover,
+                #range input:hover,
+                #rangeToggle :hover { border-color: #CCCCCC }
+              }
+
+          /* Count, Format, Range ... */
+          #count,
+          #format,
+          #range {
+            margin-bottom: 5px;
+            margin-left  : 3%;
+            margin-top   : 5px
+          }
+
+          #count,
+          #format,
+          #range input {
+            background-color   : inherit;
+            color              : inherit;
+            font-family        : monospace;
+            padding-bottom     : 5px;
+            padding-left       : 10px;
+            padding-right      : 10px;
+            padding-top        : 5px;
+            transition-duration: 0ms
+          }
+
+          #count,
+          #format,
+          #range,
+          #rangeAllStep .range-all-step,
+          #rangeRGBStep .range-rgb-step { border-radius: 4px }
+
+          /* Download */
+          #download {
+            background   : none;
+            border       : 1px solid rgba(0, 0, 0, 0.25);
+            border-radius: 3px;
+            color        : inherit;
+            display      : block;
+            float        : right;
+            font         : inherit;
+            font-size    : 165%;
+            font-weight  : 400;
+            height       : 35px;
+            overflow     : hidden;
+            text-align   : center;
+            width        : 35px
+          }
+            /* @media */
+            @media screen and (prefers-color-scheme: dark) {
+              #download { border-color: rgba(255, 255, 255, 0.25) }
+            }
+
+          #download:focus,
+          #range:focus {
+            border     : 2px solid #0099FF;
+            border     : 2px solid rgba(0, 153, 255, 0.9);
+            border-left: 2px solid #0099FF;
+            border-left: 2px solid rgba(0, 153, 255, 0.9);
+            outline    : none
+          }
+
+          /* Range */
+          #range {
+            border         : 2px solid transparent;
+            border-collapse: initial;
+            border-left    : none;
+            box-sizing     : border-box !important;
+            height         : 70px;
+            overflow       : hidden;
+            transition     : border-color 100ms ease-out 0ms;
+            width          : 100%
+          }
+            /* (All, RGB) Step */
+            #rangeAllStep,
+            #rangeRGBStep {
+              padding-left : 20px;
+              padding-right: 20px
+            }
+              /* (All, RGB) Step */
+              #rangeAllStep .range-all-step,
+              #rangeRGBStep .range-rgb-step {
+                margin-bottom: 5px;
+                margin-top   : 5px
+              }
+
+            /* RGB Step */
+              /* RGB Step */
+              #rangeRGBStep .range-rgb-step {
+                display     : inline-block;
+                float       : left;
+                overflow    : hidden;
+                margin-right: 15px
+              }
+                /* <input> */
+                #rangeRGBStep .range-rgb-step input { border-left: none }
+
+                /* Icon */
+                #rangeRGBStep .range-rgb-step .icon {
+                  box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.075);
+                  width     : 20px
+                }
+
+            /* Toggle */
+            #rangeToggle {
+              overflow  : hidden;
+              text-align: center;
+              width     : 50px
+            }
+              /* Toggle */
+              #rangeToggle .range-toggle {
+                background-color: #CCCCCC;
+                box-shadow      : 0 0 60px 0 #606060;
+                cursor          : pointer;
+                height          : 30%
+              }
+
+              /* Toggle ... */
+              #rangeToggle .range-toggle,
+              #rangeToggle .range-toggle-all,
+              #rangeToggle .range-toggle-rgb { overflow-y: hidden }
+
+              /* Toggle (All, RGB) */
+              #rangeToggle .range-toggle-all,
+              #rangeToggle .range-toggle-rgb {
+                background-color: #909090;
+                color           : #F0F0F0;
+                height          : 0%;
+                transition      : height 100ms linear 0ms
+              }
+
+              #rangeToggle.range-all .range-toggle-all,
+              #rangeToggle.range-rgb .range-toggle-rgb { height: 70% }
+                /* <table> */
+                #rangeToggle .range-toggle-all table,
+                #rangeToggle .range-toggle-rgb table {
+                  height  : 100%;
+                  overflow: hidden;
+                  width   : 100%
+                }
+                  /* <tbody> */
+                  #rangeToggle .range-toggle-all tbody,
+                  #rangeToggle .range-toggle-rgb tbody {
+                    pointer-events: none;
+                    touch-action  : none;
+                    user-select   : none
+                  }
+
+        /* Controls, Display, Footer */
+        #controls, #display, #footer { cursor: default }
+
+        /* Display */
+        #display {
+          font-family: "Google Sans", sans-serif;
+          font-size  : 20px;
+          height     : 100%;
+          width      : 100%
+        }
+          /* :hover */
+            /* Console */
+            #display:hover #console {
+              opacity   : 1.0;
+              transition: all 75ms ease-in 0ms, visibility 0ms linear 0ms;
+              visibility: visible
+            }
+
+          /* Console */
+          #console {
+            bottom      : 97.5px;
+            height      : 65px;
+            margin-left : 17.5%;
+            margin-right: 17.5%;
+            opacity     : 0.0;
+            position    : relative;
+            text-align  : center;
+            touch-action: none;
+            transition  : all 75ms ease-in 0ms, visibility 0ms linear 75ms;
+            user-select : none;
+            visibility  : hidden;
+            width       : 65%;
+            z-index     : 2
+          }
+
+          #console.active {
+            background-color: #FFFFFF;
+            background-color: rgba(127, 127, 127, 0.675);
+            border-radius   : 3px;
+            box-shadow      : 0 0 0 1px #AFAFAF;
+            box-shadow      : 0 0 0 1px rgba(255, 255, 255, 0.5);
+            touch-action    : initial;
+            user-select     : initial
+          }
+            /* Interface */
+              /* <td> */
+              #interface td {
+                padding-bottom: 5px;
+                padding-left  : 10px;
+                padding-right : 10px;
+                padding-top   : 5px
+              }
+                /* Input */
+                #input {
+                  border       : 1px solid #999999;
+                  border-radius: 3px;
+                  cursor       : pointer;
+                  opacity      : 0.0;
+                  transition   : inherit;
+                  visibility   : hidden;
+                  width        : 80%
+                }
+
+                #input[disabled] { cursor: inherit }
+
+                #console.active #input {
+                  opacity   : 1.0;
+                  visibility: inherit
+                }
+
+                /* Toggle */
+                #interface .toggle {
+                  border       : 1px solid #AFAFAF;
+                  border-radius: 50px;
+                  box-shadow   : 0 1px 3px 1px rgba(0, 0, 0, 0.25);
+                  bottom       : 0px;
+                  color        : #333333;
+                  float        : left;
+                  font-size    : inherit;
+                  height       : 50px;
+                  padding      : 0;
+                  position     : relative;
+                  transition   : all 65ms ease-in 0ms;
+                  width        : 50px
+                }
+                  /* :hover */
+                  #interface .toggle:hover {
+                    bottom    : 3px;
+                    color     : #0F0F0F;
+                    box-shadow: 0 3px 3px 3px rgba(0, 0, 0, 0.125)
+                  }
+
+            /* Progress */
+            #progress { visibility: hidden }
+            #progress.active { visibility: visible }
+              /* <td> */
+              #progress td {
+                background-color: #3F3F3F;
+                background-color: rgba(0, 0, 0, 0.3);
+                height          : 3px;
+                overflow        : hidden;
+                padding         : none
+              }
+                /* Progress Step */
+                #progressStep {
+                  background-color: #00CF00;
+                  border-radius   : 3px;
+                  box-shadow      : 0 0 5px 0 rgba(0, 0, 0, 0.125);
+                  height          : 100%;
+                  width           : 0px
+                }
+
+          /* Color Tip */
+          #colortip {
+            background-color: #CCCCCC;
+            border          : solid #999999;
+            border          : solid #999999;
+            border-radius   : 5px;
+            border-width    : 1.5px;
+            border-width    : 1px;
+            box-shadow      : 0 0 5px 0 #000000;
+            box-shadow      : 0 0 5px 0 rgba(0, 0, 0, 0.75);
+            color           : #333333;
+            display         : none;
+            font-size       : 85%;
+            opacity         : 0.0;
+            padding-bottom  : 1px;
+            padding-left    : 10px;
+            padding-right   : 10px;
+            padding-top     : 1px;
+            visibility      : hidden;
+            white-space     : pre;
+            z-index         : 2
+          }
+
+          #display.active #colortip.active {
+            display   : block;
+            opacity   : 0.975;
+            visibility: visible
+          }
+            /* Icon */
+            #colortip .icon {
+              border       : 1px solid #999999;
+              border-radius: 5px;
+              float        : left;
+              font-family  : monospace;
+              font-size    : 0px;
+              line-height  : 0.0;
+              padding      : 10px
+            }
+
+            /* <div> */
+            #colortip div { float: left }
+
+          /* Render */
+          #render {
+            background-color: #0F0F0F;
+            box-shadow      : inset 0 0 0 4096px rgba(0, 0, 0, 0.15), inset 0 0 1024px 0 rgba(0, 0, 0, 0.125);
+            color           : #F0F0F0;
+            height          : 100%;
+            text-align      : center;
+            width           : 100%;
+            z-index         : 1
+          }
+
+          #display.active #render { background-image: url(images/transparent.png) }
+            /* @media */
+            @media (max-height: 4320px) and (max-width: 7680px) { #display.active #render { background-image: url(images/transparent-4320p.png) } }
+            @media (max-height: 2160px) and (max-width: 3840px) { #display.active #render { background-image: url(images/transparent-2160p.png) } }
+            @media (max-height: 1440px) and (max-width: 2560px) { #display.active #render { background-image: url(images/transparent-1440p.png) } }
+            @media (max-height: 1080px) and (max-width: 1920px) { #display.active #render { background-image: url(images/transparent-1080p.png) } }
+            @media (max-height: 720px)  and (max-width: 1280px) { #display.active #render { background-image: url(images/transparent-720p.png)  } }
+
+            /* Data */
+            #render .data { position: absolute }
+              /* Output */
+              #output {
+                background     : none;
+                box-shadow     : 0 0 0 4096px rgba(0, 0, 0, 0.075);
+                display        : none;
+                image-rendering: crisp-edges;
+                image-rendering: smooth;
+                image-rendering: optimizeQuality;
+                image-rendering: high-quality;
+                opacity        : 0.0;
+                visibility     : hidden;
+                z-index        : 1
+              }
+
+              #display.active #output {
+                display   : block;
+                opacity   : 1.0;
+                visibility: visible
+              }
+
+            /* Status */
+            #render .status {
+              font-size     : 175%;
+              pointer-events: none;
+              text-shadow   : 0 0 4px #000000;
+              text-shadow   : 0 0 4px rgba(0, 0, 0, 0.5)
+            }
+
+        /* Display ..., Tooltip */
+        #display #colortip,
+        #tooltip {
+          pointer-events: none;
+          position      : absolute;
+          position      : fixed;
+          word-break    : keep-all
+        }
+
+        /* Footer */
+        #footer {
+          background-color: #F9F9F9;
+          box-shadow      : 0 -1px 5px 0 rgba(0, 0, 0, 0.125);
+          color           : #333333;
+          font-size       : 18px;
+          line-height     : 0.0;
+          padding-bottom  : 15px;
+          padding-top     : 10px;
+          text-align      : center
+        }
+          /* @media */
+          @media screen and (prefers-color-scheme: dark) {
+            #footer {
+              background-color: #303030;
+              box-shadow      : 0 -1px 5px 0 rgba(255, 255, 255, 0.25);
+              color           : #F0F0F0
+            }
+          }
+
+          /* * */
+          #footer * {
+            color       : inherit;
+            display     : inline;
+            font-size   : inherit;
+            line-height : inherit;
+            touch-action: inherit;
+            user-select : inherit
+          }
+            /* ::selection */
+            #footer ::selection {
+              background-color: inherit;
+              color           : inherit;
+              text-shadow     : inherit
+            }
+
+          /* Icon */
+          #footer .icon {
+            height         : 16px;
+            image-rendering: crisp-edges;
+            image-rendering: optimizeSpeed;
+            object-fit     : contain
+          }
+
+        /* Status */
+        #status {
+          bottom        : 100%;
+          font          : initial;
+          line-height   : initial;
+          opacity       : 0.0;
+          pointer-events: none;
+          position      : absolute;
+          position      : fixed;
+          right         : 100%;
+          touch-action  : none;
+          white-space   : pre;
+          z-index       : -1
+        }
+
+        /* Tooltip */
+        #tooltip {
+          background-color: #0F0F0F;
+          border          : 1px solid #CFCFCF;
+          border-radius   : 3px;
+          color           : #C0C0C0;
+          font-size       : 85%;
+          opacity         : 0.0;
+          padding-bottom  : 2.5px;
+          padding-left    : 6.5px;
+          padding-right   : 6.5px;
+          padding-top     : 2.5px;
+          transition      : opacity 150ms ease-in 0ms;
+          visibility      : hidden;
+          white-space     : pre;
+          z-index         : 2147483647
+        }
+
+        #tooltip.active {
+          opacity   : 1.0;
+          visibility: visible
+        }
+    </style>
+
+    <!-- Document Title -->
+    <title> Color Parser 🎨 </title>
+  </head>
+
+  <body>
+    <noscript> </noscript>
+
+    <div id=status> </div>
+    <div id=tooltip> </div>
+
+    <div id=display style="min-height: 320px; min-width: 480px">
+      <div id=colortip> &hellip; </div>
+
+      <table id=render>
+        <tbody>
+          <tr>
+            <td class=data> <canvas id=output style="height: 0px; margin-left: 0px; margin-top: 0px; position: absolute; width: 0px"> </canvas> </td>
+            <td class=status> No picture displayed </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class=active id=console style="min-width: 320px">
+        <tbody>
+          <tr id=interface>
+            <td> <input accept=image/* disabled id=input readonly tabindex=0 title="Send a picture" type="file"/> </td>
+            <td> <button class=toggle disabled tabindex=-1 title="Toggle display"> &#128065; </button> </td>
+          </tr>
+
+          <tr id=progress> <td colspan=2> <div id=progressStep> </div> </td> </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <table id=controls>
+      <tbody>
+        <tr class=colors>
+          <th> <label for=download> Color </label> </th>
+          <td>
+            <a disabled download id=download name=download style="float: right" tabindex=0 target=_self title="Download picture color data"> &#11123; </a>
+
+            <table>
+              <tbody>
+                <tr class=color-units>
+                  <td>
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td>
+                            <div id=units>
+                              <span class=color-unit style="animation-delay: 0ms;   background-color: #000000" title=#000000>&nbsp;</span>
+                              <span class=color-unit style="animation-delay: 30ms;  background-color: #0000FF" title=#0000FF>&nbsp;</span>
+                              <span class=color-unit style="animation-delay: 59ms;  background-color: #00FF00" title=#00FF00>&nbsp;</span>
+                              <span class=color-unit style="animation-delay: 87ms;  background-color: #FF0000" title=#FF0000>&nbsp;</span>
+                              <span class=color-unit style="animation-delay: 114ms; background-color: #00FFFF" title=#00FFFF>&nbsp;</span>
+                              <span class=color-unit style="animation-delay: 140ms; background-color: #FF00FF" title=#FF00FF>&nbsp;</span>
+                              <span class=color-unit style="animation-delay: 165ms; background-color: #FFFF00" title=#FFFF00>&nbsp;</span>
+                              <span class=color-unit style="animation-delay: 189ms; background-color: #FFFFFF" title=#FFFFFF>&nbsp;</span>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr class=color-ratios>
+                  <td>
+                    <table>
+                      <tbody>
+                        <tr id=ratios>
+                          <td class=color-ratio style="width: 12.500000%" title=#000000> <div style="animation-delay: 0ms;   background-color: #000000"> </div> </td>
+                          <td class=color-ratio style="width: 10.937500%" title=#0000FF> <div style="animation-delay: 30ms;  background-color: #0000FF"> </div> </td>
+                          <td class=color-ratio style="width: 8.522958%"  title=#00FF00> <div style="animation-delay: 59ms;  background-color: #00FF00"> </div> </td>
+                          <td class=color-ratio style="width: 8.378833%"  title=#FF0000> <div style="animation-delay: 87ms;  background-color: #FF0000"> </div> </td>
+                          <td class=color-ratio style="width: 6.657631%"  title=#00FFFF> <div style="animation-delay: 114ms; background-color: #00FFFF"> </div> </td>
+                          <td class=color-ratio style="width: 6.399658%"  title=#FF00FF> <div style="animation-delay: 140ms; background-color: #FF00FF"> </div> </td>
+                          <td class=color-ratio style="width: 5.825427%"  title=#FFFF00> <div style="animation-delay: 165ms; background-color: #FFFF00"> </div> </td>
+                          <td class=color-ratio style="width: 5.097249%"  title=#FFFFFF> <div style="animation-delay: 189ms; background-color: #FFFFFF"> </div> </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+        <tr class=counts>
+          <th> <label for=count> Count </label> </th>
+          <td> <input disabled id=count min=0 name=count step=1 tabindex=0 type=number value="64"/> </td>
+        </tr>
+
+        <tr class=ranges>
+          <th> <label for=range> Range </label> </th>
+          <td>
+            <table id=range name=range tabindex=0>
+              <tbody>
+                <tr>
+                  <td class=range-all id=rangeToggle rowspan=2 title="Color channels">
+                    <div class=range-toggle-all> <table title="How unique each pixel is: [0] Always distinct [255] Everything same"> <tbody> <tr> <td> All </td> </tr> </tbody> </table> </div>
+                    <div class=range-toggle disabled> </div>
+                    <div class=range-toggle-rgb> <table title="How unique each color channel is: [0] Always different [255] All the same"> <tbody> <tr> <td> RGB </td> </tr> </tbody> </table> </div>
+                  </td>
+
+                  <td id=rangeAllStep>
+                    <input class=range-all-step disabled max=255 min=0 step=1 type=number value="0"/>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td id=rangeRGBStep>
+                    <table class=range-rgb-step> <tbody> <tr> <td class=icon style="background-color: #F00"> </td> <td> <input disabled max=255 min=0 step=1 type=number value="0"/> </td> </tr> </tbody> </table>
+                    <table class=range-rgb-step> <tbody> <tr> <td class=icon style="background-color: #0F0"> </td> <td> <input disabled max=255 min=0 step=1 type=number value="0"/> </td> </tr> </tbody> </table>
+                    <table class=range-rgb-step> <tbody> <tr> <td class=icon style="background-color: #00F"> </td> <td> <input disabled max=255 min=0 step=1 type=number value="0"/> </td> </tr> </tbody> </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+        <tr class=formats>
+          <th> <label for=format> Format </label> </th>
+          <td>
+            <select disabled id=format name=format value=Hexadecimal>
+              <option value=cmyk> CMYK </option>
+              <option selected value=hexadecimal> Hexadecimal </option>
+              <option value=hsl> HSL </option>
+              <option value=rgb> RGB </option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div id=footer>
+      Made with <img class=icon src="images/pixel-heart.png" style="height: 16px"/> by Lapys &copy; <span class=current-year title="Tuesday 5th April, 2022">2022</span>
+    </div>
+
+    <!-- Document Script -->
+    <script language=javascript type=text/javascript>
+      /* ... */
+      var clear = console.clear;
+      var print = console.log;
+
+      ;(function(colortip, count, display, download, format, input, output, rangeAllStep, rangeRGBStep, rangeToggle, ratios, render, tooltip, units) {
+        var console                 = getElementById(document, "console");
+        var documentBody            = document.body;
+        var documentDocumentElement = document.documentElement || documentBody;
+        var displayStatus           = getElementByClass(render, "status");
+        var displayToggle           = null !== console ? getElementByClass(console, "toggle") : /* ->> Use a dummy element */ document.createElement("div");
+        var picture                 = document.createElement("img");
+        var rangeAllSteps           = getElementsByClass(rangeAllStep, "range-all-step");
+        var rangeRGBSteps           = getElementsByClass(rangeRGBStep, "range-rgb-step");
+        var rangeToggleButton       = getElementByClass(rangeToggle, "range-toggle") || document.createElement("div");
+        var renderDataStyle         = (function(data) { return null !== data ? data.style : null })(getElementByClass(render, "data"));
+        var textStatus              = getElementById(documentBody, "status");
+          var colortipStyle     = colortip.style;
+          var outputStyle       = output.style;
+          var progressStepStyle = progressStep.style;
+          var renderer          = "function" === typeof output.getContext ? output.getContext("2d") : null;
+          var tooltipStyle      = tooltip.style;
+
+        var pictureAsynchronousOperations  = true;         // ->> Allow the `picture` to be processed asynchronously
+        var pictureExtrapolationOutputData = null;         // ->> Data of the `picture`
+        var pictureExtrapolationRate       = 1875000;      // ->> Number of iterations per asynchronous frame used to extract color data from the `picture`
+        var pictureFiltrationRate          = 781250;       // ->> Number of iterations per asynchronous frame used to filter down color data from the `picture`
+        var pictureName                    = "";           // ->> File name of the `picture`
+        var pictureReuploaded              = false;        // ->> Signals asynchronous operations on the `picture`
+        var pictureUploaded                = false;        // ->> Confirms the `picture` is rendered
+        var rangeToggleElement             = rangeAllStep; // --> rangeAllStep | rangeRGBStep
+        var tooltipContent                 = "";           // ->> Text content of the `tooltip`
+        var tooltipElement                 = null;         // ->> Current element tipped by the `tooltip`
+
+        /* Function */
+        // : [Add Event Listener]
+        function addEventListener(target, type, callback) {
+          if ("function" === typeof target.addEventListener) target.addEventListener(type, callback);
+          else if ("function" === typeof target.attachEvent) target.attachEvent("on" + type, callback);
+          else target["on" + type] = callback
+        }
+
+        // : [Correct Number Input]
+        function correctNumberInput(input) {
+          var minimum = +input.min;
+          var value   = +input.value;
+
+          input.value = minimum > value ? minimum : value
+        }
+
+        // : [Disable Element]
+        function disableElement(element) {
+          switch (element.nodeName) {
+            case "BUTTON": case "COMMAND": case "FIELDSET": case "INPUT": case "KEYGEN": case "OPTGROUP": case "OPTION": case "SELECT": case "TEXTAREA": element.disabled = true; break;
+            default: if ("function" === typeof element.setAttribute) element.setAttribute("disabled", "")
+          }
+        }
+
+        // : [Download Picture]
+        function downloadPicture() {
+          var canDownload = "function" === typeof File && "function" === typeof URL && "function" === typeof URL.createObjectURL;
+
+          // ...
+          if (false === canDownload) alert("Unable to download picture information");
+          else {
+            if ("" !== download.href && "function" === typeof URL.revokeObjectURL) URL.revokeObjectURL(download.href);
+            download.href = URL.createObjectURL(new File([textStatus.innerText], "colors.txt", {"type": "text/plain"}))
+          }
+        }
+
+        // : [Enable Element]
+        function enableElement(element) {
+          switch (element.nodeName) {
+            case "BUTTON": case "COMMAND": case "FIELDSET": case "INPUT": case "KEYGEN": case "OPTGROUP": case "OPTION": case "SELECT": case "TEXTAREA": element.disabled = false; break;
+            default: if ("function" === typeof element.removeAttribute) element.removeAttribute("disabled")
+          }
+        }
+
+        // : [Get Elements ...]
+        function getElements(functor, node, value, subvalue) {
+          var elements = [];
+          var subvalue = subvalue;
+
+          // ...
+          for (var tree = [node.childNodes]; +0 !== tree.length; ) {
+            var nodes = tree[+0];
+
+            // ...
+            search:
+            for (var index = +0; index !== nodes.length; ++index) {
+              var node = nodes[index];
+
+              // ...
+              if (0x1 /* --> Node.ELEMENT_NODE */ === node.nodeType) {
+                tree.push(node.childNodes);
+
+                // ...
+                if (functor === getElementsByClass) {
+                  var classList;
+                  var metavalue = trim(value);
+                  var subvalue  = subvalue;
+
+                  // ...
+                  function is_space(character) {
+                    return character === ' ' || character === '\f' || character === '\t' || character === '\u00A0' || character === '\u1680' || character === '\u2000' || character === '\u2001' || character === '\u2002' || character === '\u2003' || character === '\u2004' || character === '\u2005' || character === '\u2006' || character === '\u2007' || character === '\u2008' || character === '\u2009' || character === '\u200A' || character === '\u202F' || character === '\u205F' || character === '\u3000' || character === '\uFEFF' || character === '\v'
+                  }
+
+                  function split(className) {
+                    var index   = +0;
+                    var length  = className.length;
+                    var list      = [""];
+                    var listIndex = +0;
+
+                    // ...
+                    while (index !== length) {
+                      var character = className.charAt(index++);
+
+                      if (is_space(character)) { listIndex = list.push("") - 1; continue }
+                      list[listIndex] += character
+                    }
+
+                    if ("" === list[listIndex]) list.pop();
+                    return list
+                  }
+
+                  function trim(className) {
+                    var index      = +0;
+                    var length     = className.length;
+                    var trimmed    = "";
+                    var whitespace = "";
+
+                    // ...
+                    while (index !== length && is_space(className.charAt(index))) ++index;
+                    while (index !== length) {
+                      var character = className.charAt(index++);
+
+                      if (is_space(character)) whitespace += character;
+                      else { trimmed += whitespace + character; whitespace = "" }
+                    }
+
+                    // ...
+                    return trimmed
+                  }
+
+                  // ...
+                  if ("" === metavalue || "" === trim(node.className)) continue search;
+                  if (value === node.className) { elements.push(node); continue search }
+                  if (metavalue === trim(node.className)) { elements.push(node); continue search }
+
+                  classList = split(node.className);
+                  for (var subindex = classList.length; subindex; )
+                  switch (classList[--subindex]) { case value: case metavalue: elements.push(node); continue search }
+
+                  subvalue = split(value);
+                  for (var subindex = subvalue.length, match = true; subindex--; ) {
+                    for (var subsubindex = classList.length; subsubindex; ) {
+                      if (subvalue[subindex] === classList[--subsubindex]) break;
+                      if (+0 === subsubindex) { match = false; break }
+                    }
+
+                    if (false === match) break;
+                    if (+0 === subindex) { elements.push(node); continue search }
+                  }
+
+                  continue search
+                }
+
+                if (functor === getElementsById) { if (value === node.id) { elements.push(node) } continue search }
+                if (functor === getElementsByTagName) { if (value.toLowerCase() === node.tagName.toLowerCase()) { elements.push(node) } continue search }
+              }
+            }
+
+            for (var index = +0; index !== tree.length - 1; ++index)
+            tree[index] = tree[index + 1];
+
+            tree.pop()
+          }
+
+          // ...
+          return elements
+        }
+
+        function getElementByClass(node, className) { var elements = getElementsByClass(node, className, null); return +0 === elements.length ? null : elements[0] }
+        function getElementsByClass(node, className) { return getElements(getElementsByClass, node, className, null) }
+
+        function getElementById(node, id) { var elements = getElementsById(node, id, null); return +0 === elements.length ? null : elements[0] }
+        function getElementsById(node, id) { return getElements(getElementsById, node, id, null) }
+
+        function getElementByTagName(node, tagName) { var elements = getElementsByTagName(node, tagName, null); return +0 === elements.length ? null : elements[0] }
+        function getElementsByTagName(node, tagName) { return getElements(getElementsByTagName, node, tagName, null) }
+
+        // : [Get Formatted Color]
+        function getFormattedColor(format, color) {
+          var blue  = (color >>> 0x00) & 0xFF;
+          var green = (color >>> 0x08) & 0xFF;
+          var red   = (color >>> 0x10) & 0xFF;
+
+          // ...
+          switch (format) {
+            case "cmyk": {
+              var yellow  = 1 - (blue  / 255);
+              var magenta = 1 - (green / 255);
+              var cyan    = 1 - (red   / 255);
+              var black   = cyan < magenta ? cyan < yellow ? cyan : magenta < yellow ? magenta : yellow : cyan < yellow ? cyan < magenta ? cyan : magenta < yellow ? magenta : yellow : magenta < yellow ? magenta : yellow;
+
+              // ...
+              cyan    = (((cyan    - black) / (1 - black)) * 100) | +0;
+              magenta = (((magenta - black) / (1 - black)) * 100) | +0;
+              yellow  = (((yellow  - black) / (1 - black)) * 100) | +0;
+
+              return "cmyk(" + cyan + ", " + magenta + ", " + yellow + ", " + (black | +0) + ')'
+            } break;
+
+            case "hexadecimal":
+              return '#' + "0123456789ABCDEF"[(red >>> 4) % 16] + "0123456789ABCDEF"[(red >>> 0) % 16] + "0123456789ABCDEF"[(green >>> 4) % 16] + "0123456789ABCDEF"[(green >>> 0) % 16] + "0123456789ABCDEF"[(blue >>> 4) % 16] + "0123456789ABCDEF"[(blue >>> 0) % 16];
+
+            case "hsl": {
+              var blue  = blue  / 255;
+              var green = green / 255;
+              var red   = red   / 255;
+
+              var luminosity = blue > green ? blue > red ? blue : green > red ? green : red : blue > red ? blue > green ? blue : green > red ? green : red : green > red ? green : red;
+              var saturation = luminosity - (blue < green ? blue < red ? blue : green < red ? green : red : blue < red ? blue < green ? blue : green < red ? green : red : green < red ? green : red);
+              var hue        = 60 * (saturation ? luminosity === red ? (green - blue) / saturation : luminosity === green ? 2 + (blue - red) / saturation : 4 + (red - green) / saturation : +0);
+
+              // ...
+              return "hsl(" + ((hue < +0 ? hue + 360 : hue) | +0) + ", " + ((100 * (saturation ? saturation / ((luminosity <= 0.5 ? luminosity * 2 : 2 - (luminosity * 2)) - saturation) : +0)) | +0) + ", " + ((100 * ((luminosity * 2) - saturation)) >>> 1) + ')'
+            } break;
+
+            case "rgb": default:
+              return "rgb(" + red + ", " + green + ", " + blue + ')'
+          }
+
+          return ""
+        }
+
+        // : [Hide Colortip]
+        function hideColortip() {
+          colortip.className = "";
+          colortip.innerText = "";
+          colortipStyle.left = "";
+          colortipStyle.top  = ""
+        }
+
+        // : [Hide Tooltip]
+        function hideTooltip() {
+          if (null === tooltipElement) return;
+
+          tooltipStyle.top     = "";
+          tooltipStyle.left    = "";
+          tooltipElement.title = tooltipContent;
+          tooltipElement       = null;
+          tooltipContent       = "";
+          tooltip.innerText    = "";
+          tooltip.className    = ""
+        }
+
+        // : [Inform]
+        function inform(message) {
+          if (null !== displayStatus)
+          displayStatus.innerText = message
+        }
+
+        // : [Is Disabled Element]
+        function isDisabledElement(element) {
+          switch (element.nodeName) { case "BUTTON": case "COMMAND": case "FIELDSET": case "INPUT": case "KEYGEN": case "OPTGROUP": case "OPTION": case "SELECT": case "TEXTAREA": return element.disabled }
+          if ("function" === typeof element.getAttribute) { var disabled = element.getAttribute("disabled"); return null !== disabled }
+
+          return false
+        }
+
+        // : [Pend] ->> Run `functor` asynchronously
+        function pend(functor) {
+          var timeout = setTimeout;
+
+          // ...
+          if ("function" === typeof requestIdleCallback) { var requestIdleCallback = requestIdleCallback; timeout = function(callback) { requestIdleCallback(callback, {"pend": 100}) } }
+          else if ("function" === typeof requestAnimationFrame) timeout = requestAnimationFrame;
+
+          (pend = function pend(functor) { timeout(functor) })(functor)
+        }
+
+        // : [Process Picture]
+        function processPicture() {
+          if (rangeAllSteps.length > +0 && rangeRGBSteps.length > 2) {
+            var pictureColorCounts             = [];
+            var pictureColorLength             = +0;
+            var pictureColorMaximumLength      = +count.value;
+            var pictureColorUniqueLength       = +0;
+            var pictureColorValues             = [];
+            var pictureExtrapolationIndex      = +0;
+            var pictureExtrapolationInterval   = +0;
+            var pictureExtrapolationOutputSize = +0;
+            var pictureExtrapolationSubindex   = +0;
+            var pictureFiltrationCount         = +0;
+            var pictureFiltrationIndex         = +0;
+            var pictureFiltrationInterval      = +0;
+            var pictureFiltrationSubindex      = +0;
+            var pictureSortationInterval       = +0;
+            var pictureSortationIndex          = +0;
+            var pictureSortationRate           = pictureExtrapolationRate > pictureFiltrationRate ? pictureExtrapolationRate : pictureFiltrationRate;
+            var pictureSortationSubindex       = +0;
+            var rangeAllStepValue              = +rangeAllSteps[0].value * 0x010101;
+            var rangeBlueStepValue             = +rangeRGBSteps[2].value & 0x0000FF;
+            var rangeGreenStepValue            = +rangeRGBSteps[1].value & 0x0000FF;
+            var rangeRedStepValue              = +rangeRGBSteps[0].value & 0x0000FF;
+
+            // ...
+            function beginExtrapolation(terminable) {
+              if (pictureReuploaded && terminable)
+              return;
+
+              // ...
+              extrapolate:
+              for (; pictureExtrapolationIndex !== pictureExtrapolationOutputSize; pictureExtrapolationIndex += 4) {
+                // ... ->> Ignore fully transparent colors
+                if (pictureAsynchronousOperations && pictureExtrapolationInterval++ === pictureExtrapolationRate) break extrapolate;
+                if (+0 !== pictureExtrapolationOutputData[pictureExtrapolationIndex + 3]) {
+                  var pictureColorValue = (
+                    (pictureExtrapolationOutputData[pictureExtrapolationIndex + 0] << 0x10) |
+                    (pictureExtrapolationOutputData[pictureExtrapolationIndex + 1] << 0x08) |
+                    (pictureExtrapolationOutputData[pictureExtrapolationIndex + 2] << 0x00)
+                  );
+
+                  // ...
+                  if (+0 === pictureExtrapolationSubindex) pictureExtrapolationSubindex = ++pictureColorLength;
+                  while (pictureExtrapolationSubindex) {
+                    if (pictureAsynchronousOperations && pictureExtrapolationInterval++ === pictureExtrapolationRate) break extrapolate;
+
+                    if (pictureColorValue === pictureColorValues[--pictureExtrapolationSubindex]) { ++pictureColorCounts[pictureExtrapolationSubindex]; pictureExtrapolationSubindex = +0 }
+                    else if (+0 === pictureExtrapolationSubindex) pictureColorUniqueLength = pictureColorCounts.push(1), pictureColorValues.push(pictureColorValue)
+                  }
+                }
+              }
+
+              updateProgressStep(pictureExtrapolationIndex / pictureExtrapolationOutputSize / 3.0);
+              if (pictureAsynchronousOperations && --pictureExtrapolationInterval === pictureExtrapolationRate) {
+                pictureExtrapolationInterval = +0;
+                pend(continueExtrapolation);
+
+                return
+              }
+
+              endExtrapolation()
+            }
+
+            function beginFilter() {
+              if (pictureReuploaded)
+              return;
+
+              // ...
+              if (+0 !== pictureColorMaximumLength && +0 !== pictureColorUniqueLength) {
+                filter:
+                while (pictureColorMaximumLength < pictureColorUniqueLength) {
+                  if (+0 === pictureFiltrationIndex) pictureFiltrationIndex = pictureColorUniqueLength;
+                  while (--pictureFiltrationIndex) {
+                    var pictureColorCount = pictureColorCounts[pictureFiltrationIndex];
+                    var pictureColorValue = pictureColorValues[pictureFiltrationIndex];
+
+                    // ...
+                    if (pictureAsynchronousOperations && pictureFiltrationInterval++ === pictureFiltrationRate) break filter;
+                    if (+0 === pictureFiltrationSubindex) pictureFiltrationSubindex = pictureFiltrationIndex;
+
+                    while (pictureFiltrationSubindex) {
+                      var matched              = false;
+                      var pictureSubcolorCount = pictureColorCounts[pictureFiltrationSubindex - 1];
+                      var pictureSubcolorValue = pictureColorValues[pictureFiltrationSubindex - 1];
+
+                      // ...
+                      if (pictureAsynchronousOperations && pictureFiltrationInterval++ === pictureFiltrationRate) break filter;
+                      if (pictureFiltrationIndex === --pictureFiltrationSubindex) continue;
+
+                      switch (rangeToggleElement) {
+                        case rangeAllStep: matched = rangeAllStepValue > (pictureColorValue < pictureSubcolorValue ? (pictureSubcolorValue - pictureColorValue) : (pictureColorValue - pictureSubcolorValue)); break;
+                        case rangeRGBStep: matched = rangeBlueStepValue > ((pictureColorValue >>> 0x00) & 0xFF) || rangeGreenStepValue > ((pictureColorValue >>> 0x08) & 0xFF) || rangeRedStepValue > ((pictureColorValue >>> 0x10) & 0xFF); break
+                      }
+
+                      if (matched) {
+                        --pictureColorUniqueLength;
+                        pictureColorCounts[pictureFiltrationIndex]    = pictureColorCounts[pictureColorUniqueLength];
+                        pictureColorCounts[pictureFiltrationSubindex] = pictureColorCount + pictureSubcolorCount;
+                        pictureColorValues[pictureFiltrationIndex]    = pictureColorValues[pictureColorUniqueLength];
+                        pictureColorValues[pictureFiltrationSubindex] = (
+                          (((((pictureColorCount * ((pictureColorValue >>> 0x00) & 0xFF)) + (pictureSubcolorCount * ((pictureSubcolorValue >>> 0x00) & 0xFF))) / (pictureColorCount + pictureSubcolorCount)) & 0xFF) << 0x00) |
+                          (((((pictureColorCount * ((pictureColorValue >>> 0x08) & 0xFF)) + (pictureSubcolorCount * ((pictureSubcolorValue >>> 0x08) & 0xFF))) / (pictureColorCount + pictureSubcolorCount)) & 0xFF) << 0x08) |
+                          (((((pictureColorCount * ((pictureColorValue >>> 0x10) & 0xFF)) + (pictureSubcolorCount * ((pictureSubcolorValue >>> 0x10) & 0xFF))) / (pictureColorCount + pictureSubcolorCount)) & 0xFF) << 0x10)
+                        );
+
+                        pictureFiltrationIndex    = pictureColorUniqueLength;
+                        pictureFiltrationSubindex = pictureFiltrationIndex;
+                        continue filter
+                      }
+                    }
+                  }
+
+
+                  updateProgressStep(0.3 + ((pictureFiltrationCount - pictureColorUniqueLength) / pictureFiltrationCount / 3.0));
+                  if (+0 === pictureFiltrationIndex)
+                  switch (rangeToggleElement) {
+                    case rangeAllStep: if (0xFFFFFF === rangeAllStepValue) break filter; else rangeAllStepValue += 0x010101; break;
+                    case rangeRGBStep: if (0xFF === (rangeBlueStepValue | rangeGreenStepValue | rangeRedStepValue)) break filter; else { ++rangeBlueStepValue; ++rangeGreenStepValue; ++rangeRedStepValue } break
+                  }
+                }
+
+                if (pictureAsynchronousOperations && --pictureFiltrationInterval === pictureFiltrationRate) {
+                  pictureFiltrationInterval = +0;
+                  pend(continueFilter);
+
+                  return
+                }
+              }
+
+              updateProgressStep(2.0 / 3.0);
+              pend(endFilter)
+            }
+
+            function beginSetup() {
+              if (false === picture.complete) {
+                pend(beginSetup);
+                return
+              }
+
+              // ...
+              // if (false === pictureUploaded) {
+              //   pictureExtrapolationRate = testSynchronousSpeed(Infinity, 750);
+              //   pictureFiltrationRate    = testSynchronousSpeed(Infinity, 750)
+              // }
+
+              if ("" !== download.href && "function" === typeof URL.revokeObjectURL)
+              URL.revokeObjectURL(download.href);
+
+              // ...
+              display.className       = "active";
+              download.href           = "";
+              pictureReuploaded       = pictureUploaded;
+              pictureUploaded         = true;
+              progress.className      = "active";
+              progress.title          = "0%";
+              progressStepStyle.width = "0%";
+
+              // ...
+              enableElement(count);
+              enableElement(displayToggle);
+              disableElement(download);
+              enableElement(format);
+              enableElement(rangeToggleButton);
+              inform(pictureName);
+              pend(endSetup);
+
+              for (var index = rangeAllSteps.length; index; )
+              enableElement(rangeAllSteps[--index])
+            }
+
+            function beginSort() {
+              if (pictureReuploaded) return;
+
+              // ...
+              if (+0 === pictureSortationIndex) pictureSortationIndex = pictureColorUniqueLength;
+              sort: while (pictureSortationIndex) {
+                var pictureColorCount = pictureColorCounts[--pictureSortationIndex];
+
+                // ...
+                if (pictureAsynchronousOperations && pictureSortationInterval++ === pictureSortationRate) break sort;
+                if (+0 === pictureSortationSubindex) pictureSortationSubindex = pictureSortationIndex;
+                while (pictureSortationSubindex) {
+                  var pictureSubcolorCount = pictureColorCounts[--pictureSortationSubindex];
+
+                  // ...
+                  if (pictureAsynchronousOperations && pictureSortationInterval++ === pictureSortationRate)
+                  break sort;
+
+                  if (pictureColorCount === pictureSubcolorCount) {
+                    if (pictureColorValues[pictureSortationIndex] > pictureColorValues[pictureSortationSubindex]) {
+                      pictureColorValues[pictureSortationIndex]    ^= pictureColorValues[pictureSortationSubindex];
+                      pictureColorValues[pictureSortationSubindex] ^= pictureColorValues[pictureSortationIndex];
+                      pictureColorValues[pictureSortationIndex]    ^= pictureColorValues[pictureSortationSubindex]
+                    }
+                  }
+
+                  else if (pictureColorCount > pictureSubcolorCount) {
+                    pictureColorCounts[pictureSortationIndex]    ^= pictureColorCounts[pictureSortationSubindex];
+                    pictureColorCounts[pictureSortationSubindex] ^= pictureColorCounts[pictureSortationIndex];
+                    pictureColorCounts[pictureSortationIndex]    ^= pictureColorCounts[pictureSortationSubindex];
+                    pictureColorValues[pictureSortationIndex]    ^= pictureColorValues[pictureSortationSubindex];
+                    pictureColorValues[pictureSortationSubindex] ^= pictureColorValues[pictureSortationIndex];
+                    pictureColorValues[pictureSortationIndex]    ^= pictureColorValues[pictureSortationSubindex];
+                    pictureSortationIndex    = pictureColorUniqueLength;
+                    pictureSortationSubindex = pictureColorUniqueLength;
+
+                    break
+                  }
+                }
+              }
+
+              updateProgressStep(0.6 + ((pictureColorUniqueLength - pictureSortationIndex) / pictureColorUniqueLength / 3.0));
+              if (pictureAsynchronousOperations && --pictureSortationInterval === pictureSortationRate) {
+                pictureSortationInterval = +0;
+                pend(continueSort);
+
+                return
+              }
+
+              // ...
+              endSort(true)
+            }
+
+            function continueExtrapolation() {
+              return beginExtrapolation(true)
+            }
+
+            function continueFilter() {
+              return beginFilter()
+            }
+
+            function continueSort() {
+              return beginSort()
+            }
+
+            function endExtrapolation() {
+              if (false === renderPicture(false)) { pend(endExtrapolation); return }
+
+              pictureExtrapolationOutputData = renderer.getImageData(+0, +0, output.width, output.height).data;
+              pictureFiltrationCount         = pictureColorUniqueLength;
+              updateProgressStep(1.0 / 3.0);
+              beginFilter()
+            }
+
+            function endFilter() {
+              beginSort()
+            }
+
+            function endSetup() {
+              if (false === renderPicture(true)) { pend(endSetup); return }
+              pictureExtrapolationOutputData = renderer.getImageData(+0, +0, output.width, output.height).data;
+              pictureExtrapolationOutputSize = pictureExtrapolationOutputData.length;
+              pictureReuploaded              = false;
+              if (+0 !== pictureExtrapolationOutputSize) beginExtrapolation(false)
+            }
+
+            function endSort(processed) {
+              if (processed) {
+                var source = "";
+
+                // ...
+                for (var ratioList = ratios.childNodes; ratioList.length; ) ratios.removeChild(ratioList.item(+0));
+                for (var index = +0; index !== 255 && index !== pictureColorUniqueLength; ++index) {
+                  var ratio        = document.createElement("td");
+                  var ratioColor   = getFormattedColor(format.value, pictureColorValues[index]);
+                  var ratioContent = document.createElement("div");
+
+                  // ...
+                  ratio.className                    = "color-ratio";
+                  ratio.style.width                  = (100.0 * (pictureColorCounts[index] / pictureColorLength)) + '%';
+                  ratio.title                        = ratioColor;
+                  ratioContent.style.animationDelay  = (index * 30) + "ms";
+                  ratioContent.style.backgroundColor = ratioColor;
+                  ratioContent.title                 = ratioColor;
+
+                  ratio.appendChild(ratioContent);
+                  ratios.appendChild(ratio)
+                }
+
+                for (var unitList = units.childNodes; unitList.length; ) units.removeChild(unitList.item(+0));
+                for (var count = 48, delay = +0, index = +0, rate = 30; index !== 255 && index !== pictureColorUniqueLength; (delay += rate), ++index, (rate -= 0 !== rate)) {
+                  var unit      = document.createElement("span");
+                  var unitColor = getFormattedColor(format.value, pictureColorValues[index]);
+
+                  // ...
+                  unit.className             = "color-unit";
+                  unit.innerHTML             = "&nbsp;";
+                  unit.style.animationDelay  = delay + "ms";
+                  unit.style.backgroundColor = unitColor;
+                  unit.title                 = unitColor;
+
+                  units.appendChild(unit)
+                }
+
+                for (var index = +0; index !== pictureColorUniqueLength; ++index, source += '\n')
+                source += getFormattedColor(format.value, pictureColorValues[index]);
+
+                // ...
+                enableElement(download);
+                updateProgressStep(1.0);
+
+                progress.className   = "";
+                progress.title       = "";
+                textStatus.innerText = source
+              }
+            }
+
+            function updateProgressStep(ratio) {
+              var ratio = ratio;
+
+              // ...
+              if (ratio <= 3.0 / 3.0) progressStepStyle.opacity = 1.000;
+              if (ratio <= 2.0 / 3.0) progressStepStyle.opacity = 0.825;
+              if (ratio <= 1.0 / 3.0) progressStepStyle.opacity = 0.750;
+
+              ratio                   = (ratio * 100.0) + '%';
+              progress.title          = ratio;
+              progressStepStyle.width = ratio
+            }
+
+            // ...
+            beginSetup()
+          }
+        }
+
+        // : [Render Picture]
+        function renderPicture(constrained) {
+          if (pictureUploaded) {
+            var pictureHeight = picture.height, pictureWidth = picture.width;
+            var renderBounds  = render.getBoundingClientRect();
+            var renderHeight  = renderBounds.bottom - renderBounds.top, renderWidth = renderBounds.right - renderBounds.left;
+
+            // ... ->> Scale `picture` to process faster or `render` bounds
+            if (false === constrained || (pictureHeight > renderHeight || pictureWidth > renderWidth)) {
+              if (constrained) {
+                var pictureProcessingRate = pictureExtrapolationRate < pictureFiltrationRate ? pictureExtrapolationRate : pictureFiltrationRate;
+                var pictureRenderingRate;
+
+                // ...
+                while (true) {
+                  pictureRenderingRate = testSynchronousSpeed((renderHeight | +0) * (renderWidth | +0), Infinity);
+                  if (pictureProcessingRate > pictureRenderingRate) break;
+
+                  renderHeight *= pictureProcessingRate / pictureRenderingRate;
+                  renderWidth  *= pictureProcessingRate / pictureRenderingRate
+                }
+
+                renderHeight /= 2.0;
+                renderWidth  /= 2.0
+              }
+
+              // ...
+              if (renderHeight > renderWidth) {
+                var resized = pictureWidth * (renderHeight / pictureHeight);
+
+                if (renderWidth > resized) { pictureHeight = renderHeight; pictureWidth = resized }
+                else { pictureHeight *= renderWidth / pictureWidth; pictureWidth = renderWidth }
+              }
+
+              else {
+                var resized = pictureHeight * (renderWidth / pictureWidth);
+
+                if (renderHeight > resized) { pictureHeight = resized; pictureWidth = renderWidth }
+                else { pictureWidth *= renderHeight / pictureHeight; pictureHeight = renderHeight }
+              }
+            }
+
+            // ... ->> Maximum dimension of `Number.MAX_BITWISE_INTEGER`
+            if (pictureHeight > 2147483647) { pictureWidth *= 2147483647 / pictureHeight; pictureHeight = 2147483647 }
+            else if (pictureWidth > 2147483647) { pictureHeight *= 2147483647 / pictureWidth; pictureWidth = 2147483647 }
+
+            // ...
+            renderHeight = renderBounds.bottom - renderBounds.top;
+            renderWidth  = renderBounds.right - renderBounds.left;
+
+            outputStyle.height     = (output.height = (pictureHeight |= +0)) + "px";
+            outputStyle.marginLeft = ((renderWidth  - pictureWidth)  / 2)    + "px";
+            outputStyle.marginTop  = ((renderHeight - pictureHeight) / 2)    + "px";
+            outputStyle.width      = (output.width  = (pictureWidth  |= +0)) + "px";
+
+            if (picture.height > renderHeight && picture.width > renderWidth) renderer.imageSmoothingEnabled = true;
+            else { renderer.imageSmoothingEnabled = false; renderer.imageSmoothingQuality = "low" }
+
+            if (null !== renderDataStyle) {
+              renderDataStyle.height   = renderHeight + "px";
+              renderDataStyle.overflow = "hidden";
+              renderDataStyle.width    = renderWidth  + "px"
+            }
+
+            // ...
+            renderer.drawImage(picture, +0, +0, picture.width, picture.height, +0, +0, pictureWidth, pictureHeight);
+            return true
+          }
+
+          return false
+        }
+
+        // : [Show Colortip]
+        function showColortip(x, y) {
+          if (null !== pictureExtrapolationOutputData) {
+            var outputBounds = output.getBoundingClientRect();
+            var relativeX    = (x - outputBounds.left) - ("pageXOffset" in window ? pageXOffset : documentElement.scrollLeft);
+            var relativeY    = (y - outputBounds.top)  - ("pageYOffset" in window ? pageYOffset : documentElement.scrollTop);
+            var alpha, blue, green, red;
+
+            // ...
+            if (relativeX < +0.0) relativeX = -relativeX;
+            if (relativeY < +0.0) relativeY = -relativeY;
+
+            if (relativeX > 2147483647 || relativeY > 2147483647) hideColortip();
+            else {
+              var outputDataIndex = 4 * ((relativeX | +0) + (output.width * (relativeY | +0)));
+
+              // ...
+              red   = pictureExtrapolationOutputData[outputDataIndex + 0];
+              green = pictureExtrapolationOutputData[outputDataIndex + 1];
+              blue  = pictureExtrapolationOutputData[outputDataIndex + 2];
+              alpha = pictureExtrapolationOutputData[outputDataIndex + 3] / 255.0;
+
+              colortip.className = "active";
+              colortip.innerHTML = (
+                "<div class=icon style=\"" + (+0.0 !== alpha ? "background-color: rgb(" + red + ", " + green + ", " + blue + ")" : "background-color: rgba(0, 0, 0, 0.0); background-color: transparent") + "\"> </div>" +
+                "<div> " + (alpha !== 1.0
+                  ? (+0.0 !== alpha || +0 !== (blue | green | red) ? "rgba(" + red + ", " + green + ", "  + blue + ", " + alpha.toFixed(3) + ')' : "&hellip;")
+                  : getFormattedColor(format.value, (red << 0x10) | (green << 0x08) | (blue << 0x00))
+                ) + " </div>"
+              );
+              colortipStyle.left = (x + 20) + "px";
+              colortipStyle.top  = (y + 15) + "px"
+            }
+          }
+        }
+
+        // : [Show Tooltip]
+        function showTooltip(element, x, y) {
+          if (null === element || tooltip === element || 0x1 /* --> Node.ELEMENT_NODE */ !== element.nodeType)
+          return;
+
+          for (var node = element; null !== tooltipElement; node = node.parentNode) {
+            if (null === node || "" !== node.title) return hideTooltip();
+            if (node === tooltipElement) return
+          }
+
+          if ("" === element.title) {
+            var parent = element.parentNode;
+
+            // ...
+            if (null !== parent && "function" === typeof parent.getBoundingClientRect) {
+              var bounds = parent.getBoundingClientRect();
+              if (x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) showTooltip(parent, x, y)
+            }
+
+            return
+          }
+
+          // ...
+          if (false === isDisabledElement(element)) {
+            tooltipStyle.top  = y + "px";
+            tooltipStyle.left = x + "px";
+            tooltip.className = "active"
+          }
+
+          tooltipElement    = element;
+          tooltipContent    = element.title;
+          tooltip.innerText = tooltipContent;
+          element.title     = ""
+        }
+
+        // : [Test Synchronous Speed]
+        function testSynchronousSpeed(maximumCount, milliseconds) {
+          var iterationCount = +0;
+          var timestamp      = new Date().getTime();
+
+          // ...
+          while (iterationCount !== maximumCount && new Date().getTime() - timestamp < milliseconds)
+          ++iterationCount;
+
+          return iterationCount
+        }
+
+        // : [Toggle Range]
+        function toggleRange() {
+          switch (rangeToggleElement) {
+            case rangeAllStep: {
+              rangeToggle.className = "range-rgb";
+              rangeToggleElement = rangeRGBStep;
+
+              for (var steps = getElementsByTagName(rangeAllStep, "input"), index = null !== steps ? steps.length : +0; index; ) disableElement(steps[--index]);
+              for (var steps = getElementsByTagName(rangeRGBStep, "input"), index = null !== steps ? steps.length : +0; index; ) enableElement(steps[--index])
+            } break;
+
+            case rangeRGBStep: {
+              rangeToggle.className = "range-all";
+              rangeToggleElement = rangeAllStep;
+
+              for (var steps = getElementsByTagName(rangeAllStep, "input"), index = null !== steps ? steps.length : +0; index; ) enableElement(steps[--index]);
+              for (var steps = getElementsByTagName(rangeRGBStep, "input"), index = null !== steps ? steps.length : +0; index; ) disableElement(steps[--index])
+            } break
+          }
+        }
+
+        // : [Triage Picture]
+        function triagePicture() {
+          display.className = "";
+          inform("Could not display picture")
+        }
+
+        // : [Upload Picture] ->> Calls `triagePicture()` afterward
+        function uploadPicture() {
+          var uploadName = "";
+
+          // ...
+          if ("" !== input.value) {
+            if ("files" in input) {
+              var file = input.files.item(+0);
+
+              // ...
+              uploadName = file.name;
+              if (pictureName === uploadName) return;
+
+              if ("function" === typeof URL) {
+                if (picture.src) URL.revokeObjectURL(picture.src);
+                picture.src = URL.createObjectURL(file);
+                pictureName = uploadName;
+
+                return
+              }
+            }
+
+            // ...
+            if ("" === uploadName)
+            for (var index = input.value.length; index--; )
+            switch (input.value.charAt(index)) {
+              case '\\': case '/': index = +0; break;
+              default: uploadName = input.value.charAt(index) + uploadName
+            }
+
+            if (pictureName === uploadName) return;
+            picture.src = input.value;
+            pictureName = uploadName
+          }
+        }
+
+        /* Event > ... */
+        addEventListener(documentBody, "mousemove", function tip(event) { if (+0 !== arguments.length) showTooltip("object" === typeof event.target ? event.target : event.srcElement, event.clientX + ("pageXOffset" in window ? pageXOffset : documentElement.scrollLeft), event.clientY + ("pageYOffset" in window ? pageYOffset : documentElement.scrollTop)) });
+        addEventListener(window, "blur", function untip() { hideColortip(); hideTooltip() });
+
+        /* ... */
+        if (null === renderer) {
+          inform("Unable to display pictures");
+          throw new Error("Unable to pick color information from pictures")
+        }
+
+        documentBody.style.filter  = "blur(0.0px)";
+        documentBody.style.opacity = "1.0";
+
+        enableElement(input);
+
+        /* Event > ... */
+        addEventListener(count, "change", function correct() { correctNumberInput(count); processPicture() });
+        addEventListener(count, "copy",   function(event) { if (arguments.length) event.preventDefault() });
+        addEventListener(count, "input",  function correct() { correctNumberInput(count); processPicture() });
+
+        addEventListener(display, "click", function untip() { hideColortip() });
+        addEventListener(displayToggle, "click", function toggle() { console.className = console.className === "active" ? "" : "active" });
+        addEventListener(download, "click", function downloadPictureData() { if (false === isDisabledElement(download)) downloadPicture() });
+
+        addEventListener(format, "change", function correct() { processPicture() });
+        addEventListener(format, "copy",   function(event) { if (arguments.length) event.preventDefault() });
+        addEventListener(format, "input",  function correct() { processPicture() });
+
+        addEventListener(input, "change", function uploadPictureByPath() { uploadPicture() });
+        addEventListener(input, "copy",   function(event) { if (arguments.length) event.preventDefault() });
+        addEventListener(input, "input",  function uploadPictureByPath() { uploadPicture() });
+
+        addEventListener(output, "mouseleave", function untip() { hideColortip() });
+        addEventListener(output, "mousemove",  function tip(event) { if (+0 !== arguments.length) showColortip(event.clientX + ("pageXOffset" in window ? pageXOffset : documentElement.scrollLeft), event.clientY + ("pageYOffset" in window ? pageYOffset : documentElement.scrollTop)) });
+
+        addEventListener(picture, "error", function triagePictureUpload() { triagePicture() });
+        addEventListener(picture, "load",  function processPictureUpload() { processPicture() });
+
+        addEventListener(rangeToggleButton, "click", function toggle() { if (false === isDisabledElement(rangeToggleButton)) toggleRange() });
+
+        addEventListener(window, "resize", function resizePicture() { if (pictureUploaded) processPicture() });
+
+        for (var steps = getElementsByTagName(rangeAllStep, "input"), index = null !== steps ? steps.length : +0; index; )
+        (function(step) {
+          addEventListener(step, "change", function correct() { correctNumberInput(step); processPicture() });
+          addEventListener(step, "copy",   function(event) { if (arguments.length) event.preventDefault() });
+          addEventListener(step, "input",  function correct() { correctNumberInput(step); processPicture() })
+        })(steps[--index]);
+
+        for (var steps = getElementsByTagName(rangeRGBStep, "input"), index = null !== steps ? steps.length : +0; index; )
+        (function(step) {
+          addEventListener(step, "change", function correct() { correctNumberInput(step); processPicture() });
+          addEventListener(step, "copy",   function(event) { if (arguments.length) event.preventDefault() });
+          addEventListener(step, "input",  function correct() { correctNumberInput(step); processPicture() })
+        })(steps[--index])
+      })(colortip, count, display, download, format, input, output, rangeAllStep, rangeRGBStep, rangeToggle, ratios, render, tooltip, units);
+    </script>
+  </body>
+</html>

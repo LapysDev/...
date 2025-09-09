@@ -1,0 +1,466 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> Focus </title>
+
+    <style media=all type=text/css>
+      body {
+        animation : 48s breathe 0s ease-in-out infinite forwards running;
+        background: inherit;
+        background: linear-gradient(135deg, #0F0F0F, #000000, #000000);
+        color     : #CFCFCF;
+        margin    : 0
+      }
+        @keyframes breathe {
+          000.000000% { background: linear-gradient(0deg,  #0F0F0F, #0F0F0F, #000000) }
+          000.833333% { background: linear-gradient(3deg,  #0F0F0F, #0F0F0F, #000000) }
+          001.666667% { background: linear-gradient(6deg,  #0F0F0F, #0F0F0F, #000000) }
+          002.500000% { background: linear-gradient(9deg,  #0F0F0F, #0F0F0F, #000000) }
+          003.333333% { background: linear-gradient(12deg, #0F0F0F, #0F0F0F, #000000) }
+          004.166667% { background: linear-gradient(15deg, #0F0F0F, #0F0F0F, #000000) }
+          005.000000% { background: linear-gradient(18deg, #0F0F0F, #0F0F0F, #000000) }
+          005.833333% { background: linear-gradient(21deg, #0F0F0F, #0F0F0F, #000000) }
+          006.666667% { background: linear-gradient(24deg, #0F0F0F, #0F0F0F, #000000) }
+          007.500000% { background: linear-gradient(27deg, #0F0F0F, #0F0F0F, #000000) }
+          008.333333% { background: linear-gradient(30deg, #0F0F0F, #0F0F0F, #000000) }
+          009.166667% { background: linear-gradient(33deg, #0F0F0F, #0F0F0F, #000000) }
+          010.000000% { background: linear-gradient(36deg, #0F0F0F, #0F0F0F, #000000) }
+          010.833333% { background: linear-gradient(39deg, #0F0F0F, #0F0F0F, #000000) }
+          011.666667% { background: linear-gradient(42deg, #0F0F0F, #0F0F0F, #000000) }
+          012.500000% { background: linear-gradient(45deg, #0F0F0F, #0F0F0F, #000000) }
+          013.333333% { background: linear-gradient(48deg, #0F0F0F, #0F0F0F, #000000) }
+          014.166667% { background: linear-gradient(51deg, #0F0F0F, #0F0F0F, #000000) }
+          015.000000% { background: linear-gradient(54deg, #0F0F0F, #0F0F0F, #000000) }
+          015.833333% { background: linear-gradient(57deg, #0F0F0F, #0F0F0F, #000000) }
+          016.666667% { background: linear-gradient(60deg, #0F0F0F, #0F0F0F, #000000) }
+          017.500000% { background: linear-gradient(63deg, #0F0F0F, #0F0F0F, #000000) }
+          018.333333% { background: linear-gradient(66deg, #0F0F0F, #0F0F0F, #000000) }
+          019.166667% { background: linear-gradient(69deg, #0F0F0F, #0F0F0F, #000000) }
+          020.000000% { background: linear-gradient(72deg, #0F0F0F, #0F0F0F, #000000) }
+          020.833333% { background: linear-gradient(75deg, #0F0F0F, #0F0F0F, #000000) }
+          021.666667% { background: linear-gradient(78deg, #0F0F0F, #0F0F0F, #000000) }
+          022.500000% { background: linear-gradient(81deg, #0F0F0F, #0F0F0F, #000000) }
+          023.333333% { background: linear-gradient(84deg, #0F0F0F, #0F0F0F, #000000) }
+          024.166667% { background: linear-gradient(87deg, #0F0F0F, #0F0F0F, #000000) }
+          025.000000% { background: linear-gradient(90deg, #0F0F0F, #0F0F0F, #000000) }
+          025.833333% { background: linear-gradient(93deg, #0F0F0F, #000000, #000000) }
+          026.666667% { background: linear-gradient(96deg, #0F0F0F, #000000, #000000) }
+          027.500000% { background: linear-gradient(99deg, #0F0F0F, #000000, #000000) }
+          028.333333% { background: linear-gradient(102deg, #0F0F0F, #000000, #000000) }
+          029.166667% { background: linear-gradient(105deg, #0F0F0F, #000000, #000000) }
+          030.000000% { background: linear-gradient(108deg, #0F0F0F, #000000, #000000) }
+          030.833333% { background: linear-gradient(111deg, #0F0F0F, #000000, #000000) }
+          031.666667% { background: linear-gradient(114deg, #0F0F0F, #000000, #000000) }
+          032.500000% { background: linear-gradient(117deg, #0F0F0F, #000000, #000000) }
+          033.333333% { background: linear-gradient(120deg, #0F0F0F, #000000, #000000) }
+          034.166667% { background: linear-gradient(123deg, #0F0F0F, #000000, #000000) }
+          035.000000% { background: linear-gradient(126deg, #0F0F0F, #000000, #000000) }
+          035.833333% { background: linear-gradient(129deg, #0F0F0F, #000000, #000000) }
+          036.666667% { background: linear-gradient(132deg, #0F0F0F, #000000, #000000) }
+          037.500000% { background: linear-gradient(135deg, #0F0F0F, #000000, #000000) }
+          038.333333% { background: linear-gradient(138deg, #0F0F0F, #000000, #000000) }
+          039.166667% { background: linear-gradient(141deg, #0F0F0F, #000000, #000000) }
+          040.000000% { background: linear-gradient(144deg, #0F0F0F, #000000, #000000) }
+          040.833333% { background: linear-gradient(147deg, #0F0F0F, #000000, #000000) }
+          041.666667% { background: linear-gradient(150deg, #0F0F0F, #000000, #000000) }
+          042.500000% { background: linear-gradient(153deg, #0F0F0F, #000000, #000000) }
+          043.333333% { background: linear-gradient(156deg, #0F0F0F, #000000, #000000) }
+          044.166667% { background: linear-gradient(159deg, #0F0F0F, #000000, #000000) }
+          045.000000% { background: linear-gradient(162deg, #0F0F0F, #000000, #000000) }
+          045.833333% { background: linear-gradient(165deg, #0F0F0F, #000000, #000000) }
+          046.666667% { background: linear-gradient(168deg, #0F0F0F, #000000, #000000) }
+          047.500000% { background: linear-gradient(171deg, #0F0F0F, #000000, #000000) }
+          048.333333% { background: linear-gradient(174deg, #0F0F0F, #000000, #000000) }
+          049.166667% { background: linear-gradient(177deg, #0F0F0F, #000000, #000000) }
+          050.000000% { background: linear-gradient(180deg, #0F0F0F, #0F0F0F, #000000) }
+          050.833333% { background: linear-gradient(183deg, #0F0F0F, #0F0F0F, #000000) }
+          051.666667% { background: linear-gradient(186deg, #0F0F0F, #0F0F0F, #000000) }
+          052.500000% { background: linear-gradient(189deg, #0F0F0F, #0F0F0F, #000000) }
+          053.333333% { background: linear-gradient(192deg, #0F0F0F, #0F0F0F, #000000) }
+          054.166667% { background: linear-gradient(195deg, #0F0F0F, #0F0F0F, #000000) }
+          055.000000% { background: linear-gradient(198deg, #0F0F0F, #0F0F0F, #000000) }
+          055.833333% { background: linear-gradient(201deg, #0F0F0F, #0F0F0F, #000000) }
+          056.666667% { background: linear-gradient(204deg, #0F0F0F, #0F0F0F, #000000) }
+          057.500000% { background: linear-gradient(207deg, #0F0F0F, #0F0F0F, #000000) }
+          058.333333% { background: linear-gradient(210deg, #0F0F0F, #0F0F0F, #000000) }
+          059.166667% { background: linear-gradient(213deg, #0F0F0F, #0F0F0F, #000000) }
+          060.000000% { background: linear-gradient(216deg, #0F0F0F, #0F0F0F, #000000) }
+          060.833333% { background: linear-gradient(219deg, #0F0F0F, #0F0F0F, #000000) }
+          061.666667% { background: linear-gradient(222deg, #0F0F0F, #0F0F0F, #000000) }
+          062.500000% { background: linear-gradient(225deg, #0F0F0F, #0F0F0F, #000000) }
+          063.333333% { background: linear-gradient(228deg, #0F0F0F, #0F0F0F, #000000) }
+          064.166667% { background: linear-gradient(231deg, #0F0F0F, #0F0F0F, #000000) }
+          065.000000% { background: linear-gradient(234deg, #0F0F0F, #0F0F0F, #000000) }
+          065.833333% { background: linear-gradient(237deg, #0F0F0F, #0F0F0F, #000000) }
+          066.666667% { background: linear-gradient(240deg, #0F0F0F, #0F0F0F, #000000) }
+          067.500000% { background: linear-gradient(243deg, #0F0F0F, #0F0F0F, #000000) }
+          068.333333% { background: linear-gradient(246deg, #0F0F0F, #0F0F0F, #000000) }
+          069.166667% { background: linear-gradient(249deg, #0F0F0F, #0F0F0F, #000000) }
+          070.000000% { background: linear-gradient(252deg, #0F0F0F, #0F0F0F, #000000) }
+          070.833333% { background: linear-gradient(255deg, #0F0F0F, #0F0F0F, #000000) }
+          071.666667% { background: linear-gradient(258deg, #0F0F0F, #0F0F0F, #000000) }
+          072.500000% { background: linear-gradient(261deg, #0F0F0F, #0F0F0F, #000000) }
+          073.333333% { background: linear-gradient(264deg, #0F0F0F, #0F0F0F, #000000) }
+          074.166667% { background: linear-gradient(267deg, #0F0F0F, #0F0F0F, #000000) }
+          075.000000% { background: linear-gradient(270deg, #0F0F0F, #000000, #000000) }
+          075.833333% { background: linear-gradient(273deg, #0F0F0F, #000000, #000000) }
+          076.666667% { background: linear-gradient(276deg, #0F0F0F, #000000, #000000) }
+          077.500000% { background: linear-gradient(279deg, #0F0F0F, #000000, #000000) }
+          078.333333% { background: linear-gradient(282deg, #0F0F0F, #000000, #000000) }
+          079.166667% { background: linear-gradient(285deg, #0F0F0F, #000000, #000000) }
+          080.000000% { background: linear-gradient(288deg, #0F0F0F, #000000, #000000) }
+          080.833333% { background: linear-gradient(291deg, #0F0F0F, #000000, #000000) }
+          081.666667% { background: linear-gradient(294deg, #0F0F0F, #000000, #000000) }
+          082.500000% { background: linear-gradient(297deg, #0F0F0F, #000000, #000000) }
+          083.333333% { background: linear-gradient(300deg, #0F0F0F, #000000, #000000) }
+          084.166667% { background: linear-gradient(303deg, #0F0F0F, #000000, #000000) }
+          085.000000% { background: linear-gradient(306deg, #0F0F0F, #000000, #000000) }
+          085.833333% { background: linear-gradient(309deg, #0F0F0F, #000000, #000000) }
+          086.666667% { background: linear-gradient(312deg, #0F0F0F, #000000, #000000) }
+          087.500000% { background: linear-gradient(315deg, #0F0F0F, #000000, #000000) }
+          088.333333% { background: linear-gradient(318deg, #0F0F0F, #000000, #000000) }
+          089.166667% { background: linear-gradient(321deg, #0F0F0F, #000000, #000000) }
+          090.000000% { background: linear-gradient(324deg, #0F0F0F, #000000, #000000) }
+          090.833333% { background: linear-gradient(327deg, #0F0F0F, #000000, #000000) }
+          091.666667% { background: linear-gradient(330deg, #0F0F0F, #000000, #000000) }
+          092.500000% { background: linear-gradient(333deg, #0F0F0F, #000000, #000000) }
+          093.333333% { background: linear-gradient(336deg, #0F0F0F, #000000, #000000) }
+          094.166667% { background: linear-gradient(339deg, #0F0F0F, #000000, #000000) }
+          095.000000% { background: linear-gradient(342deg, #0F0F0F, #000000, #000000) }
+          095.833333% { background: linear-gradient(345deg, #0F0F0F, #000000, #000000) }
+          096.666667% { background: linear-gradient(348deg, #0F0F0F, #000000, #000000) }
+          097.500000% { background: linear-gradient(351deg, #0F0F0F, #000000, #000000) }
+          098.333333% { background: linear-gradient(354deg, #0F0F0F, #000000, #000000) }
+          099.166667% { background: linear-gradient(357deg, #0F0F0F, #000000, #000000) }
+          100.000000% { background: linear-gradient(360deg, #0F0F0F, #000000, #000000) }
+        }
+
+      body, html, table { height: 100% }
+      html { background-color: #000000 }
+
+      table {
+        border-spacing: 0;
+        font-family   : sans-serif;
+        font-size     : 26px;
+        font-weight   : lighter;
+        margin-left   : 10%;
+        margin-right  : 10%;
+        overflow      : hidden;
+        text-align    : center;
+        vertical-align: middle;
+        width         : 80%
+      }
+
+      th {
+        padding     : 0;
+        touch-action: none;
+        transition  : linear 225ms all 0ms;
+        user-select : none
+      }
+
+      th.focused {
+        opacity    : 1;
+        padding-top: 0px
+      }
+
+      th.unfocused {
+        color      : #000000;
+        opacity    : 0;
+        padding-top: 15%;
+        transition-duration: 0ms
+      }
+        th::selection { background-color: transparent }
+    </style>
+  </head>
+
+  <body>
+    <table> <tbody> <tr> <th class=unfocused> Focus on the task at hand, <em>dummy</em>! </th> </tr> </tbody> </table>
+
+    <script language=javascript type=text/javascript>
+      ;(function() {
+        var QUOTES = [
+          "&rsquo;Established idiom&rsquo; is a nice euphemism for &rsquo;blind dogmatism&rsquo;",
+          "<em>Pastafarianism</em> is the true religion of peace. There have been 0 violent incidences among its followers since its conception",
+          "A child who is not embraced by the village, will burn it down to feel its warmth",
+          "A children&rsquo;s story that can only be enjoyed by children is not a good children&rsquo;s story in the slightest",
+          "All problems in computer science can be solved by another level of indirection, except for the problem of too many layers of indirection",
+          "And when everyone&rsquo;s super... No one will be",
+          "As kids we loved heroes, as we grew older we understood the villains",
+          "Be fearful when others are greedy, and greedy when others are fearful",
+          "Becoming an expert is often a consequence of tinkering, not the cause. <br/> Developing an intuition or what exists and what should exist has more impact than technical smarts",
+          "Being a kid is a lot like being a dog. If an owner beats their dog, it&rsquo;s still gonna come back at the end of the day",
+          "Being happy doesn&rsquo;t mean you don&rsquo;t have any problems, being happy is when the problems stops affecting you",
+          "Can you imagine nothing?",
+          "Certain men learn a flame is hot only after it burns them. <br/> Wisdom comes at a cost, and the price is often pain",
+          "Did I live? Did I love? Did I matter?",
+          "Do not kill, if you can wound </br> Do not wound, if you can subdue </br> Do not subdue, if you can pacify </br> And do not raise your hand at all, if you have not first extended it",
+          "Don&rsquo;t watch the clock; do what it does. Keep going",
+          "Every child deserves love, but not every adult deserves to love",
+          "Everyone loves you till you speak the truth that doesn&rsquo;t massage their ego",
+          "Focus on the task at hand, <em>dummy</em>!",
+          "For one to feel love, they must also feel the risk of feeling hate",
+          "Freedom isn&rsquo;t something gained without sacrifices&hellip;",
+          "Hate is not the opposite of love, rather the twin. Apathy is the lack of love",
+          "I clean bio-hazard scenes as a job, recently I cleaned a suicide <br/> The condo association said they had no family, we cleaned him off the walls and removed all his things <br/> <br/> The thing that really hit me though was finding his YouTube channel with a few dozen views at most, of the man sad, alone, playing his guitar months before I took it with my own hands, smashed it, and threw it into a dumpster",
+          "I think that I shall never envision <br/> An op unlovely as division <br/> <br/> An op whose answer must be guessed <br/> And then, through multiply, assessed; <br/> <br/> An op for which we dearly pay, <br/> In cycles wasted every day <br/> <br/> Division code is often hairy; <br/> Long division&rsquo;s downright scary <br/> <br/> The proofs can overtax your brain, <br/> The ceiling and floor may drive you insane <br/> <br/> Good code to divide takes a Knuthian hero, <br/> But even God can&rsquo;t divide by zero!",
+          "If I look to the left, there&rsquo;s nothing right. If I look to the right, there&rsquo;s nothing left",
+          "If you are going through hell&hellip; keep going",
+          "If you ever start taking things too seriously, just remember that we are talking monkeys on an organic spaceship flying through the universe",
+          "If you focus on studying one religion, you&rsquo;ll be hooked in for life <br/> If you study two, you&rsquo;ll be done in an hour",
+          "If you think that your life is like hell then one day just take a look at the goats being tied alive at the slaughterhouse waiting to die",
+          "If you&rsquo;re only a good person because God has a gun to your head, are you really good?",
+          "It is tragic how few people ever &lsquo;possess their souls&rsquo; before they die... <br/> Most people are other people. Their thoughts are someone else&rsquo;s opinions, their lives a mimicry, their passions a quotation",
+          "It never ceases to amaze me: <br/> we all love ourselves more than other people, <br/> but care more about their opinions than our own",
+          "Life isn&rsquo;t about finding yourself&hellip; it&rsquo;s about creating yourself",
+          "Make choices you will later regret, instead of choosing to regret choices you never made",
+          "Man alone suffers so excruciatingly in the world that he was compelled to invent laughter",
+          "Mathematics, rightly viewed, possesses not only truth but supreme beauty, a beauty cold and austere like that of sculpture",
+          "Most people want security in this world, not liberty",
+          "Never underestimate the power of stupid people in large numbers",
+          "No valid plans for the future can be made by those who have no capacity for living now",
+          "None are more hopelessly enslaved than those who believe they are free",
+          "One day the whole life of you will flash before your eyes. Make it worth watching",
+          "Only women, children and dogs are loved unconditionally. A man is only loved under the condition that he provide something",
+          "People say life is short, but it is the longest thing you will ever experience",
+          "People should fall in love as if with their eyes closed",
+          "Plan; Means; Timeframe",
+          "Racism isn&rsquo;t getting worse, it&rsquo;s getting filmed",
+          "Rarely is anyone thanked for the work they did to prevent the disaster that didn&rsquo;t happen",
+          "Religion is for people who fear hell, spirituality is for people who have been there",
+          "Remember the most loyal &lsquo;friend&rsquo; of all: Death. <br/> It will never judge you and its memory will make you live better",
+          "Sanity? I don&rsquo;t remember having something so <em>useless</em>",
+          "Sometimes it is the people no one can imagine anything of who do the things no one can imagine",
+          "Tell me and I forget, teach me and I may remember, involve me and I learn",
+          "The further society drifts from the truth, the more it will hate those who speak it",
+          "The meaning of life is just to be alive. It is so plain and so obvious and so simple. <br/> And yet, everybody rushes around in a great panic as if it were necessary to achieve something beyond themselves",
+          "The only thing the perfect soldier should feel when he pulls the trigger, is the recoil",
+          "The purpose of science is to determine how the heavens go. <br/> The purpose of religion is to determine how to go to the heavens",
+          "The two most important days in your life are the day you are born and the day you find out why",
+          "The worse thing than murdering is averting your eyes from it",
+          "The worst thing in life is not being alone, it is being with people that make you feel alone",
+          "Then you work the 8 hour job with almost a feeling of goodness, like you&rsquo;re doing something, and you get married, like marriage is a victory and you have children like having children is a victory, but most things people do are a total grind, marriage, birth, children, it&rsquo;s something they have to do because they have nothing else to do. There is no glory in it, no esteem, no fire, their lives are flat and the earth is full of them",
+          "There are decades where nothing happens; and there are weeks where decades happen",
+          "Thinking is hard, that&rsquo;s why most people judge",
+          "To find yourself, think for yourself",
+          "Truth lies in the search for truth itself",
+          "We didn&rsquo;t know we were making memories, we were just having fun",
+          "We have two lives, the second one begins when we realize we only have one",
+          "We need to have more empathy for people who lack certain emotional skills, or came from broken experiences, and just wants to be loved, whole, and embraced as part of the human race",
+          "What is a friend? A single soul dwelling in two bodies",
+          "Who can gaze into the mirror without becoming evil? The mirror does not reflect evil, but creates it",
+          "Who is wrong, the world or me?",
+          "You aspire to be human? Oh, darling, there are so many other variants on mediocrity!",
+          "You grew up in freedom and you can spit on freedom because you don&rsquo;t know what it is not to have freedom"
+        ];
+
+        /* Function > ... */
+        function getChildElementByNames(node, names) {
+          var childNodes = node.childNodes; // ->> Assume is `Node.prototype.childNodes`
+
+          for (var index = childNodes.length; index; ) {
+            var node = childNodes.item(--index); // ->> Assume `item(…)` is `NodeList.prototype.item(…)` and `node` is `Node`
+
+            // ->> Assume is `Node.prototype.nodeType`
+            if (node.nodeType === /* Node.ELEMENT_NODE */ 0x1) {
+              var nodeName = node.nodeName; // ->> Assume is `Node.prototype.nodeName`
+
+              for (var subindex = arguments.length; --subindex; )
+              if (nodeName === arguments[subindex]) return node
+            }
+          }
+
+          return null
+        }
+
+        function getDocumentBody(document) {
+          var evaluation;
+
+          if ("body" in document) {
+            evaluation = document.body; // ->> Assume is `HTMLBodyElement`
+            if (null !== evaluation) return evaluation
+          }
+
+          if ("documentElement" in document) {
+            evaluation = document.documentElement; // ->> Assume is `HTMLHtmlElement`
+            if (null !== evaluation) evaluation = getChildElementByNames(evaluation, "BODY", "FRAMESET");
+            if (null !== evaluation) return evaluation
+          }
+
+          if ("all" in document) {
+            evaluation = document.all; // ->> Assume is `HTMLAllCollection`
+            for (var frameset = null, index = evaluation.length; index; ) {
+              var element        = evaluation[--index];
+              var elementTagName = element.tagName;
+
+              // ->> Assume is `Element.prototype.tagName`
+              if ("BODY"     === elementTagName) return element;
+              if ("FRAMESET" === elementTagName) frameset = element;
+
+              if (0 === index && null !== frameset) return frameset
+            }
+          }
+
+          return getChildElementByNames(document, "BODY", "FRAMESET")
+        }
+
+        function getDocumentHead(document) {
+          var evaluation;
+
+          if ("head" in document) {
+            evaluation = document.head; // ->> Assume is `HTMLHeadElement`
+            if (null !== evaluation) return evaluation
+          }
+
+          if ("documentElement" in document) {
+            evaluation = document.documentElement; // ->> Assume is `HTMLHtmlElement`
+            if (null !== evaluation) evaluation = getChildElementByNames(evaluation, "HEAD");
+            if (null !== evaluation) return evaluation
+          }
+
+          if ("all" in document) {
+            evaluation = document.all; // ->> Assume is `HTMLAllCollection`
+            for (var index = evaluation.length; index; ) {
+              var element = evaluation[--index];
+
+              // ->> Assume is `Element.prototype.tagName`
+              if ("HEAD" === element.tagName) return element
+            }
+          }
+
+          return getChildElementByNames(document, "HEAD")
+        }
+
+        function randint(range) {
+          var seeds   = randseed();
+          var control = seeds[1] << 17;
+          var random  = seeds[0] + seeds[3];
+
+          seeds[2] ^= seeds[0];
+          seeds[3] ^= seeds[1];
+          seeds[1] ^= seeds[2];
+          seeds[0] ^= seeds[3];
+
+          seeds[2] ^= control;
+          seeds[3]  = (seeds[3] << 45) | (seeds[3] >> 19);
+
+          return (random < 0 ? -random : random) % range
+        }
+
+        function randseed(reseed) {
+          var seeds = randseed.prototype;
+
+          if (arguments.length)
+          for (var index = 4, state; index; ) {
+            state  = reseed + (0x9E3779B9 * (index >> 1));
+            state ^= state >> 15; state *= 0x85EBCA6B;
+            state ^= state >> 13; state *= 0xC2B2AE35;
+            state ^= state >> 16;
+
+            seeds[--index] = state;
+            seeds[--index] = state >> 4
+          }
+
+          return seeds
+        } randseed.prototype = {0: 0, 1: 0x2A430C43, 2: 0, 3: 0xDE83A17}; // ->> pre-seeded to `0`
+
+        function setDocumentTitle(document, title) {
+          if ("string" === typeof document.title) { document.title = title; return }
+
+          var documentHead = getDocumentHead(document);
+          if (null === documentHead) return;
+
+          var documentTitle = getChildElementByNames(documentHead, "TITLE");
+          if ("string" === typeof documentTitle.innerText) documentTitle.innerText = title
+        }
+
+        /* Event > ... */ {
+          var document                  = "document" in window && "object" === typeof window.document ? window.document : null; // ->> Assume is `HTMLDocument`
+          var currentQuoteIndex         = 0;
+          var mode                      = 0;
+          var recentQuoteIndex          = 0;
+          var supportsHTMLDOMFocusAPI   = false;
+          var supportsPageVisibilityAPI = false;
+
+          /* ... */
+          if (null !== document) {
+            function getQuoteElement() {
+              var element = getDocumentBody(document);
+
+              if (null === element) return null; element = getChildElementByNames(element, "TABLE");
+              if (null === element) return null; element = getChildElementByNames(element, "TBODY");
+              if (null === element) return null; element = getChildElementByNames(element, "TR");
+              if (null === element) return null; element = getChildElementByNames(element, "TH");
+
+              return element
+            }
+
+            function focusQuoteElement() {
+              var quoteElement = getQuoteElement(document);
+
+              // ...
+              if ("string" === typeof quoteElement.className)
+              quoteElement.className = "focused";
+
+              if ("string" === typeof quoteElement.innerHTML) {
+                while (currentQuoteIndex === recentQuoteIndex)
+                currentQuoteIndex = randint(QUOTES.length);
+
+                quoteElement.innerHTML = ' ' + QUOTES[currentQuoteIndex] + ' ';
+                recentQuoteIndex       = currentQuoteIndex
+              }
+            }
+
+            /* ... */
+            if ("onblur" in window && ("function" === typeof window.onblur || null === window.onblur))
+            window.onblur = function() {
+              if (mode++ || false === supportsPageVisibilityAPI) {
+                var quoteElement = getQuoteElement();
+
+                if (null !== quoteElement) {
+                  if ("string" === typeof quoteElement.className)
+                  quoteElement.className = "unfocused"
+                }
+              }
+
+              mode = 0;
+              setDocumentTitle(document, "⚠ Focus")
+            };
+
+            if ("onfocus" in window && ("function" === typeof window.onfocus || null === window.onfocus)) {
+              if ("function" === typeof Date) {
+                supportsHTMLDOMFocusAPI = true;
+                randseed(+new Date());
+
+                if      ("function" === typeof window.requestIdleCallback)   window.requestIdleCallback(focusQuoteElement);
+                else if ("function" === typeof window.requestAnimationFrame) window.requestAnimationFrame(focusQuoteElement);
+                else if ("function" === typeof window.setTimeout)            window.setTimeout(focusQuoteElement);
+                else if ("function" === typeof window.setInterval && ("function" === typeof window.clearInterval || "function" === typeof window.clearTimeout)) {
+                  var clearInterval = "function" === typeof window.clearInterval ? window.clearInterval : window.clearTimeout;
+                  var intervalID    = window.setInterval(function() { focusQuoteElement(); clearInterval(intervalID) })
+                } else supportsHTMLDOMFocusAPI = false
+              }
+
+              window.onfocus = function() {
+                if (mode++ || false === supportsPageVisibilityAPI)
+                focusQuoteElement();
+
+                mode = 0;
+                setDocumentTitle(document, "⏱ Focusing…")
+              }
+            }
+
+            if ("onvisibilitychange" in window.document && ("function" === typeof window.document.onvisibilitychange || null === window.document.onvisibilitychange)) {
+              supportsPageVisibilityAPI = true;
+              window.document.onvisibilitychange = function() { mode += 0 === mode }
+            }
+
+            /* ... */
+            if (false === supportsHTMLDOMFocusAPI)
+            focusQuoteElement()
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>
