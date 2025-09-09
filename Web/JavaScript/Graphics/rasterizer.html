@@ -13,7 +13,7 @@
     <style media=all type=text/css>@charset "us-ascii";
       /* <body> */
       body {
-        background-color: #0F0F0F;
+        background-color: #0F0F1F;
         display         : table-row-group;
         margin          : 0;
         overflow        : hidden
@@ -28,7 +28,6 @@
       /* <canvas> */
       canvas {
         background-color      : #000000;
-        border                : 1px solid #F0F0F0;
         box-sizing            : border-box;
         display               : table-row;
         image-rendering       : -moz-crisp-edges;
@@ -36,6 +35,7 @@
         image-rendering       : crisp-edges;
         image-rendering       : pixelated;
         margin                : auto;
+        outline               : 1px solid #F0F0F0;
         -ms-interpolation-mode: nearest-neighbor
       }
 
@@ -326,9 +326,9 @@
       function drawImage(...draw) /* TODO (Lapys) -> APNG, AVIF, BMP, GIF, HEIF, ICO, JFIF/ JPEG, JPEG 2000, JPEG XL, JPEG XR, PBM, PGM, PNG, PPM, RGBE, SVG, TIFF, TinyVG, WebP, XBM, XPM */ {}
 
       function drawLine(origin, target, ...draw) {
-        var slope     = xy  (0, 0);
-        var distance  = xy  (iabs(origin.x - target.x), iabs(origin.y - target.y));
-        var direction = xy  (sign(origin.x - target.x), sign(origin.y - target.y));
+        var slope     = xy(0, 0);
+        var distance  = xy(iabs(origin.x - target.x), iabs(origin.y - target.y));
+        var direction = xy(sign(origin.x - target.x), sign(origin.y - target.y));
         var axis      = imax(distance.x, distance.y);
 
         // ...
@@ -342,6 +342,7 @@
           slope.x += distance.x;
           slope.y += distance.y;
 
+          // TODO (Lapys) -> Anti-aliasing... somehow
           drawPoint(xy(x, y), ...draw)
         }
       }
@@ -747,6 +748,7 @@
 
       // ...
       function render() {
+        var zoom   = resolution();
         var height = canvas.height;
         var width  = canvas.width;
 
@@ -762,37 +764,30 @@
         // drawGlyph(xy(100, 100), xy(width - 100, height - 100), 'A', "font.ttf"); // 🚫
 
         // ... ->> Display current render
-        if (null !== buffer)
-          offscreen.context.putImageData(buffer, 0, 0);
-
+        if (null !== buffer) { offscreen.context.putImageData(buffer, 0, 0) }
         context.drawImage(offscreen.canvas, 0, 0)
       }
 
       function resize() {
         var size  = innerHeight < innerWidth ? innerHeight : innerWidth; // --> window . …
         var style = canvas.style;
-        var zoom  = devicePixelRatio;
+        var zoom  = resolution();
 
         // ...
-        for (var node = canvas; 0x1 /* --> Node.ELEMENT_NODE */ === node.nodeType; node = node.parentNode)
-        zoom *= getComputedStyle(node).getPropertyValue("zoom");
+        context.setTransform(zoom, 0.0, 0.0, zoom, 0.0, 0.0);
 
-        canvas .height                = (uint) (size * zoom);
-        canvas .width                 = (uint) (size * zoom);
+        canvas .height                = size;
+        canvas .width                 = size;
         context.imageSmoothingEnabled = false;
         context.imageSmoothingQuality = "low";
         style  .height                = size + "px";
         style  .width                 = size + "px";
 
-        context.setTransform(zoom, 0.0, 0.0, zoom, 0.0, 0.0);
-
         if (canvas === offscreen.canvas && typeof HTMLCanvasElement.prototype.transferControlToOffscreen === "function") {
           offscreen.canvas                        = canvas.ownerDocument.createElement("canvas").transferControlToOffscreen();
           offscreen.context                       = offscreen.canvas.getContext("2d", {"alpha": false, "willReadFrequently": false});
           offscreen.context.imageSmoothingEnabled = false;
-          offscreen.context.imageSmoothingQuality = "low";
-
-          offscreen.context.setTransform(zoom, 0.0, 0.0, zoom, 0.0, 0.0)
+          offscreen.context.imageSmoothingQuality = "low"
         }
 
         offscreen.canvas.height = canvas.height;
@@ -831,6 +826,17 @@
         }), /* "colorSpace", ‥, "height", ‥, "", "width", ‥, "", … */);
 
         render()
+      }
+
+      function resolution() {
+        var zoom = devicePixelRatio;
+
+        // ...
+        for (var node = canvas; 0x1 /* --> Node.ELEMENT_NODE */ === node.nodeType; node = node.parentNode)
+          zoom *= getComputedStyle(node).getPropertyValue("zoom");
+
+        return 1
+        return zoom
       }
 
       /* ... */
