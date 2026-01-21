@@ -1846,7 +1846,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 // int __cdecl _tmain(int argc, TCHAR* argv[])
 // {
 //     const SERVICE_TABLE_ENTRY dispatchTable[] = {
-//         {serviceName, static_cast<LPSERVICE_MAIN_FUNCTION>(ServiceMainCallback)},
+//         {serviceName, static_cast<LPSERVICE_MAIN_FUNCTION>([](DWORD argc, LPTSTR* argv) -> void WINAPI { CommonEntry(argc, argv); })},
 //         {NULL, NULL}
 //     };
 
@@ -1860,11 +1860,4 @@ int main(int count, char* arguments[]) /* noexcept */ {
 //     }
 
 //     return 0;
-// }
-// this is what my entry point looks like
-// for reference
-// // callback registered with and called by the Service Control Manager
-// VOID WINAPI ServiceMainCallback(DWORD argc, LPTSTR* argv)
-// {
-//     CommonEntry(argc, argv);
 // }

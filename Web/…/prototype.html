@@ -1,0 +1,7 @@
+<script>
+  (function() {
+    console.dir({"__proto__": null}); // --> IE11?
+    console.dir({"__proto__": null, constructor: undefined, hasOwnProperty: undefined, isPrototypeOf: undefined, propertyIsEnumerable: undefined, toLocaleString: undefined, toString: undefined, valueOf: undefined});
+    console.dir(Object.create(null)); // --> IE9+
+  })()
+</script>

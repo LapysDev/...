@@ -62,7 +62,7 @@
     <script defer language=javascript type=text/javascript>
       /* RENDER FAKE HTML AT THE END */
       var buffer    = null;
-      var context   = canvas.getContext("2d", {"alpha": false, "colorSpace": "srgb", "desynchronized": true, "willReadFrequently": false});
+      var context   = canvas.getContext("2d", {alpha: false, colorSpace: "srgb", desynchronized: true, willReadFrequently: false});
       var offscreen = (struct) ("canvas", canvas, "context", context); // ->> Access named element
 
       /* Constant */
@@ -794,7 +794,7 @@
         offscreen.canvas.width  = canvas.width;
 
         if (typeof CanvasRenderingContext2D.prototype.getImageData === "function" && typeof CanvasRenderingContext2D.prototype.putImageData === "function") {
-          try { buffer = offscreen.context.getImageData(0, 0, canvas.width, canvas.height, {"colorSpace": "srgb"}) }
+          try { buffer = offscreen.context.getImageData(0, 0, canvas.width, canvas.height, {colorSpace: "srgb"}) }
           catch (error) {}
         }
 
@@ -823,7 +823,7 @@
               offscreen.context.fillRect(coordinates.x, coordinates.y, 1, 1)
             }
           }
-        }), /* "colorSpace", ‥, "height", ‥, "", "width", ‥, "", … */);
+        }), /* colorSpace, ‥, height, ‥, width, ‥, … */);
 
         render()
       }
@@ -835,7 +835,6 @@
         for (var node = canvas; 0x1 /* --> Node.ELEMENT_NODE */ === node.nodeType; node = node.parentNode)
           zoom *= getComputedStyle(node).getPropertyValue("zoom");
 
-        return 1
         return zoom
       }
 

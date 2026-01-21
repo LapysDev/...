@@ -41,7 +41,7 @@
   HANDLE  const currentProcess       = ::GetCurrentProcess();
   HMODULE const kernelbase           = ::LoadLibraryExW(L"kernelbase.dll", static_cast<HANDLE>(NULL), 0x00u); // --> mincore.lib
   SIZE_T  const minimumLargePageSize = ::GetLargePageMinimum();
-      PVOID (*const VirtualAlloc2)(HANDLE, PVOID, SIZE_T, ULONG, ULONG, MEM_EXTENDED_PARAMETER, ULONG) = reinterpret_cast<PVOID (*)(HANDLE, PVOID, SIZE_T, ULONG, ULONG, MEM_EXTENDED_PARAMETER, ULONG)>(reinterpret_cast<void*>(NULL != kernelbase ? ::GetProcAddress(kernelbase, "VirtualAlloc2") : NULL));
+    PVOID (*const VirtualAlloc2)(HANDLE, PVOID, SIZE_T, ULONG, ULONG, MEM_EXTENDED_PARAMETER, ULONG) = reinterpret_cast<PVOID (*)(HANDLE, PVOID, SIZE_T, ULONG, ULONG, MEM_EXTENDED_PARAMETER, ULONG)>(reinterpret_cast<void*>(NULL != kernelbase ? ::GetProcAddress(kernelbase, "VirtualAlloc2") : NULL));
 
   // ...
   (void) ::SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -86,3 +86,19 @@
   std::realloc(void* address, std::size_t size);                                // ->> Overrides      `std::malloc(...)`
   std::free   (void* address);                                                  //
 #endif
+
+// void* next(std::size_t const alignment = sizeof(allocation_t)) const /* noexcept */ throw() {
+//   #if defined UINTPTR_MAX
+//     uintptr_t const base = reinterpret_cast<uintptr_t>(this -> buffer);
+//     return &this -> buffer[((base + (alignment - 1u)) & ~static_cast<uintptr_t>(alignment - 1u)) - base];
+//   #else
+//     static std::size_t const base = offsetof(allocator, allocator::buffer);
+//     return &this -> buffer[((base + (alignment - 1u)) & ~static_cast<std::size_t>(alignment - 1u)) - base];
+//   #endif
+
+//   if (0u == base % alignment) return buffer;
+//   if (alignment > base)       return &buffer[alignment - (base * (alignment / base))];
+//   if (alignment < base)       return &buffer[(alignment * ((base / alignment) + 1u)) - base];
+
+//   return NULL;
+// }
