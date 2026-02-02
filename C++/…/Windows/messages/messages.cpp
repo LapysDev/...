@@ -1,4 +1,3 @@
-// --> del messages-2.exe && cls && g++ -pedantic-errors -std=c++98 -Wall -Werror -Wextra messages-2.cpp -lcomctl32 -o messages-2.exe && messages-2.exe & del messages-2.exe
 #undef _CRT_NON_CONFORMING_SWPRINTFS     // ->> `std::swprintf(…)` is weird in Microsoft Windows environments/ runtimes
 #undef _CRT_STDIO_LEGACY_WIDE_SPECIFIERS //     ^^^
 #if defined _MSC_BUILD || defined _MSC_FULL_VER || defined _MSC_VER
@@ -10,14 +9,16 @@
 #define _CRT_SECURE_NO_WARNINGS // ->> C Run-Time security                    --> `https://learn.microsoft.com/en-us/cpp/c-runtime-library/security-features-in-the-crt`
 #define CINTERFACE              // ->> C Interface for Component Object Model --> `https://learn.microsoft.com/en-us/windows/win32/com/the-component-object-model`
 #define STRICT                  // ->> Strict type checking                   --> `https://learn.microsoft.com/en-us/windows/win32/winprog/enabling-strict`
-#define UNICODE                 // ->> Unicode preference                     --> `https://learn.microsoft.com/en-us/windows/win32/learnwin32/working-with-strings`
-#ifndef _WIN32_WINNT            //
+#ifndef UNICODE
+# define UNICODE // ->> Unicode preference --> `https://learn.microsoft.com/en-us/windows/win32/learnwin32/working-with-strings`
+#endif
+#ifndef _WIN32_WINNT
 # define _WIN32_WINNT 0x0600 // --> _WIN32_WINNT_WINXP+
 #endif
 #include <fcntl.h>   // --> _O_WTEXT
 #include <io.h>      // --> _setmode(…)
 #include <stdio.h>   // --> _fileno(…)
-#include <windows.h> // --> CS_HREDRAW, CS_VREDRAW, CW_USEDEFAULT, FALSE, GW_CHILD, GW_ENABLEDPOPUP, GW_HWNDNEXT, HWND_TOPMOST, IDC_ARROW, GWL_STYLE, LOWORD(…), MAKELONG(…), MAKELPARAM(…), MAX_PATH, SW_SHOW, WS_CHILD, WS_OVERLAPPEDWINDOW, WS_VISIBLE, ZeroMemory(…), …; HANDLE, HBRUSH, HICON, HINSTANCE, HMODULE, HWND, INT_PTR, LPARAM, LPCWSTR, LPNMHDR, LPNMTTDISPINFOW, LPPOINT, LPSTR, LPWSTR, MSG, POINT, RECT, UINT, UINT_PTR, WCHAR, WINAPI, WNDCLASSEXW, WORD, WPARAM; ::CreateWindowExW(…), ::DefWindowProcW(…), ::DestroyWindow(…), ::DispatchMessageW(…), ::ExtractIconW(…), ::FreeLibrary(…), ::GetClientRect(…), ::GetCurrentProcess(…), ::GetMessageW(…), ::GetModuleFileNameW(…), ::GetSysColorBrush(…), ::GetWindow(…), ::GetWindowLongPtrW(…), ::LoadCursor(…), ::LoadLibraryExW(…), ::MapWindowPoints(…), ::PostQuitMessage(…), ::RegisterClassExW(…), ::SendMessageW(…), ::ScreenToClient(…), ::ShowWindow(…), ::TranslateMessage(…), ::UpdateWindow(…), ::UnregisterClassW(…)
+#include <windows.h> // --> CS_HREDRAW, CS_VREDRAW, CW_USEDEFAULT, FALSE, GW_CHILD, GW_ENABLEDPOPUP, GW_HWNDNEXT, HWND_TOPMOST, IDC_ARROW, GWL_STYLE, LOWORD(…), MAKELONG(…), MAKELPARAM(…), MAX_PATH, SW_SHOW, WS_CHILD, WS_OVERLAPPEDWINDOW, WS_VISIBLE, ZeroMemory(…), …; HANDLE, HBRUSH, HICON, HINSTANCE, HMODULE, HWND, INT_PTR, LPARAM, LPCWSTR, LPNMHDR, LPNMTTDISPINFOW, LPPOINT, LPWSTR, MSG, POINT, PWSTR, RECT, UINT, UINT_PTR, WCHAR, WINAPI, WNDCLASSEXW, WORD, WPARAM; ::CreateWindowExW(…), ::DefWindowProcW(…), ::DestroyWindow(…), ::DispatchMessageW(…), ::ExtractIconW(…), ::FreeLibrary(…), ::GetClientRect(…), ::GetCurrentProcess(…), ::GetMessageW(…), ::GetModuleFileNameW(…), ::GetSysColorBrush(…), ::GetWindow(…), ::GetWindowLongPtrW(…), ::LoadCursor(…), ::LoadLibraryExW(…), ::MapWindowPoints(…), ::PostQuitMessage(…), ::RegisterClassExW(…), ::SendMessageW(…), ::ScreenToClient(…), ::ShowWindow(…), ::TranslateMessage(…), ::UpdateWindow(…), ::UnregisterClassW(…)
 # include <commctrl.h> // --> BTNS_BUTTON, CCM_GETVERSION, CCS_NOPARENTALIGN, CCS_NORESIZE, HINST_COMMCTRL, I_IMAGENONE, ICC_BAR_CLASSES, ICC_DATE_CLASSES, ICC_USEREX_CLASSES, ICC_WIN95_CLASSES, IDB_STD_SMALL_COLOR, SB_SETPARTS, SB_SETTEXT, SBT_NOBORDERS, SBT_NOTABPARSING, STATUSCLASSNAME, STD_HELP, TB_BUTTONSTRUCTSIZE, TB_ADDBITMAP, TBSTATE_ENABLED, TBSTYLE_WRAPABLE, TOOLBARCLASSNAME, TOOLINFOW, TTM_ADDTOOLW; INITCOMMONCONTROLSEX, TBADDBITMAP, TBBUTTON, TTF_ABSOLUTE, TTF_CENTERTIP, TTF_DI_SETITEM, TTF_IDISHWND, TTF_PARSELINKS, TTF_RTLREADING, TTF_SUBCLASS, TTF_TRACK, TTF_TRANSPARENT, TTN_GETDISPINFOW, TTN_LINKCLICK, TTN_NEEDTEXTW, TTN_POP, TTN_SHOW; ::InitCommonControlsEx(…)
 # include <shlwapi.h>  // --> DLLGETVERSIONPROC, DLLVERSIONINFO
 # include <winerror.h> // --> SUCCEEDED(…)
@@ -29,186 +30,124 @@
 #include <cwchar>   // --> std::fwprintf(…), std::swprintf(…)
 #include <iso646.h> // --> and, not, or
 #include <new>      // --> new
-#include <stdint.h> // --> PRIuPTR, UINTPTR_MAX; intmax_t, uintmax_t, uintptr_t
+#include <stdint.h> // --> UINTPTR_MAX; intmax_t, uintptr_t
 
-/* Main */
-int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int const windowAppearance) {
-  typedef struct allocator rate; // --> ::allocate(…, ::rate::exact, …)
+/* Main --> del messages.exe messages.res && cls && windres messages.rc -O coff -o messages.res && g++ -DNDEBUG -municode -mwindows -pedantic-errors -std=c++98 -Wall -Werror -Wextra messages.cpp messages.res -lcomctl32 -o messages.exe && messages.exe */
+int WINAPI wWinMain(HINSTANCE const instanceHandle, HINSTANCE const, PWSTR const, int const windowAppearance) {
+  typedef struct allocator align, rate;
   static  struct allocator /* final */ {
-    struct allocate /* final */ {
+    union allocate {
       struct header /* final */ {
-        unsigned char *buffer;
-        unsigned short amount; // --> uint_least16_t ->> `short` has a minimum 16 bit-width — enough to represent `allocator::maximum - sizeof(struct allocate::header)`
+        unsigned char *buffer; //                    ->> Reallocation purposes; See `allocated` parameter in `::allocate(…)`
+        unsigned short amount; // --> uint_least16_t ->> `short` has a minimum 16 bit-width — enough to represent `::maximum`
       };
     };
 
-    enum /* : std::size_t */ { maximum = 65535u }; // ->> Arbitrary 64KiB based on (C++11) minimum 17 bit-wide width of `std::ptrdiff_t`, otherwise `SIZE_MAX`
-    union { struct allocate::header const alignment; union { char (allocator:: *const alignmentA)(), allocator:: *const alignmentB, (*const alignmentC)(), *const alignmentD; uintmax_t const alignmentE; long double const alignmentF; }; };
-    mutable unsigned char buffer[maximum];              // --> alignas(struct allocate::header | std::max_align_t)
-    std::div_t const aggressive, basic, exact, passive; // --> ::allocate(…, ::rate::exact, …)
+    enum /* : bool */        { previous, next };   // --> ::align(…, ::align::next)
+    enum /* : std::size_t */ { maximum = 65535u }; // ->> Arbitrary 64KiB based on (C++11) minimum 17 bit-wide width of `std::ptrdiff_t`
+    union { struct allocate::header const _; union { char (allocator:: *const a)(), allocator:: *const b, (*const c)(), *const d; intmax_t const e; long double const f; }; } alignment;
+    mutable unsigned char buffer[maximum];                   // --> alignas(struct allocate::header | std::max_align_t) ->> Non-extensible
+    std::div_t const      aggressive, basic, exact, passive; // --> ::allocate(…, ::rate::exact, …)
 
     /* ... */
-    void* align(void* const address, std::size_t const alignment, std::size_t const size) const /* noexcept */ throw() /* ->> Assumed `address` within `::buffer` */ {
-      #if defined UINTPTR_MAX // ->> Pointer arithmetic
-        uintptr_t const index = reinterpret_cast<uintptr_t>(address);
+    void* align(void* const address, std::size_t const alignment, std::size_t const size, signed char const direction) const /* noexcept */ /* --> [[assume(address >= ::buffer and address <= &::buffer[maximum] and alignment and 0u == (alignment & (alignment - 1u)) and maximum >= size)]] */ {
+      #if defined UINTPTR_MAX // ->> Total
+        uintptr_t const offset  = reinterpret_cast<uintptr_t>(address);
+        uintptr_t const aligned = (offset + (direction ? alignment - 1u : 0u)) & ~(alignment - 1u);
 
-        if (UINTPTR_MAX - index >= alignment - 1u and maximum >= size) {
-          uintptr_t const aligned = (index + (alignment - 1u)) & ~(alignment - 1u); // --> assert(alignment and 0u == (alignment & (alignment - 1u)))
-          return aligned <= reinterpret_cast<uintptr_t>(&this -> buffer[maximum]) - size ? &static_cast<unsigned char*>(address)[aligned - index] : NULL;
-        }
+        if (aligned <= reinterpret_cast<uintptr_t>(&this -> buffer[maximum]) - size and (direction ? UINTPTR_MAX - offset >= alignment - 1u : aligned >= reinterpret_cast<uintptr_t>(this -> buffer)))
+        return &static_cast<unsigned char*>(address)[direction ? aligned - offset : offset - aligned]; // ->> `address` was offset not `::buffer`
       #endif
-      // if (alignment >= sizeof(std::max_align_t)) return NULL;
-      // std::size_t const offset = static_cast<unsigned char*>(address) - this -> buffer;
-      // unsigned char *aligned = &this -> buffer[(offset + (alignment - 1u)) & ~(alignment - 1u)];
-      // return static_cast<unsigned char*>(address) + (aligned - static_cast<unsigned char*>(address));
+
+      if (alignment < /* --> alignof(::buffer) */ sizeof this -> alignment) /* ->> Relative */ {
+        std::size_t const offset  = static_cast<unsigned char*>(address) - this -> buffer;
+        std::size_t const aligned = (offset + (direction ? alignment - 1u : 0u)) & ~(alignment - 1u);
+
+        if (aligned <= maximum - size)
+        return &static_cast<unsigned char*>(address)[direction ? &this -> buffer[aligned] - static_cast<unsigned char*>(address) : static_cast<unsigned char*>(address) - &this -> buffer[aligned]]; // ->> `address` has more provenance than `::buffer`
+      }
 
       return NULL;
     }
 
-    void* allocate(void* const allocated, std::size_t count, std::size_t size, std::div_t const rate, std::size_t* const capacity = NULL) const /* noexcept */ throw() {
-      struct allocate::header const          AVAILABLE_HEADER = {0u, NULL};
-      static struct allocate::header        *headers          = NULL; // ->> Destructively auto-initialize this first (and only) `struct allocator::buffer`
-      std::size_t /* --> std::align_val_t */ alignment        = 1u;   // ->> Estimate alignment presuming lack of `alignof(…)`
-      struct header /* final */ {
-        static struct allocate::header* next(struct allocator const *const allocator, unsigned short const offset) /* noexcept */ throw() {
-          if (void *const next = allocator -> next(sizeof(struct allocate::header), sizeof(struct allocate::header), offset)) {
-            std::size_t index = static_cast<unsigned char*>(next) - allocator -> buffer;
+    void* allocate(void* const allocated, std::size_t count, std::size_t size, std::div_t const rate, std::size_t* const capacity = NULL) const /* noexcept */ {
+      std::size_t const END              = maximum;
+      std::size_t const HEADER_ALIGNMENT = sizeof(struct allocate::header); // --> alignof(…)
+      std::size_t const HEADER_SIZE      = sizeof(struct allocate::header);
 
-            index = (index / sizeof(struct allocate::header)) + (0u != index % sizeof(struct allocate::header));
-            return index < reinterpret_cast<struct allocate::header*>(&allocator -> buffer[maximum]) - headers ? &headers[index] : NULL;
-          }
-
-          return NULL;
-        }
-      };
+      std::size_t /* --> std::align_val_t */ alignment  = 1u;
+      struct allocate::header               *allocation = NULL;
+      unsigned char                         *available  = this -> buffer;
+      static struct allocate::header        *headers    = NULL; // ->> Stored toward the end of `::buffer`
 
       // ...
-      if (NULL == headers)
-      if (void *const header = this -> next(sizeof(struct allocate::header), sizeof(struct allocate::header), 0u)) {
-        // struct A { static void* operator new[](std::size_t const, void* const) throw() { return NULL; } };
-        // (void) new (NULL) A[2048];
-
-        headers    = ::new (header) struct allocate::header[reinterpret_cast<struct allocate::header*>(&this -> buffer[maximum]) - static_cast<struct allocate::header*>(header) - /* ->> Attempt to avoid array placement-new overhead */ 1u];
-        headers[0] = AVAILABLE_HEADER;
-      } else return NULL; // ->> Unable to auto-initialize required `allocation` headers
-
-      while (alignment < size) {
-        if (0u == alignment) { return NULL; } // ->> Unsigned overflow i.e. no valid alignment
-        alignment *= 2u;                      // ->> Ensure squared alignment a la C++ constraints
-      }
-
       capacity = NULL == capacity ? &count : capacity; // ->> Reuse unneeded `count` as fallback storage for `capacity`
 
+      while (alignment < size) /* ->> Estimate alignment presuming lack of `alignof(…)` */ {
+        if (0u == alignment) { return NULL; } // ->> Unsigned overflow i.e. no valid alignment
+        alignment *= 2u;                      // ->> Ensure squared alignment à la C++ constraints
+      }
+
       if (count <= maximum / size and rate.quot > 0 and rate.rem > 0)
-      for (std::size_t
-        preamount = 0u,
-        offset    = reinterpret_cast<unsigned char*>(headers) - this -> buffer,
-        extent    = count * size,
-        amount    = rate.quot <= rate.rem ? extent : rate.rem;
-      amount != preamount; ) {
+      for (std::size_t preamount = 0u, extent = count * size, amount = rate.quot <= rate.rem ? extent : rate.rem; amount != preamount; ) {
         preamount = amount;      // ->> Avoid non-growing `rate`s
-        amount   += amount % 2u; // ->> Ensure `amount` (’s parity) is even
+        amount   += amount % 2u; // ->> Ensure `amount` (’s parity) is arbitrarily even
 
-        // ... --> amount >= count * size
-        if (amount >= extent) {
-          struct allocate::header *allocation = header::next(this, offset);
-          bool           const     extra      = amount != extent; // ->> Unable to constrain `amount` to `extent` (by `1 ÷ rate`) for allocation
-          unsigned short const     preoffset  = offset;           // ->> To conditionally reset `offset`
-
-          // ...
-          for (
-            ;
-            NULL != allocation;
-            allocation = static_cast<struct allocate::header*>(
-              this -> next(
-                sizeof(struct allocate::header),
-                sizeof(struct allocate::header),
-                (reinterpret_cast<unsigned char*>(allocation + 1) - this -> buffer) + allocation -> amount
-              )
-            )
-          )
-          if (AVAILABLE_HEADER.amount == allocation -> amount or (not allocated ? amount <= allocation -> amount and NULL == allocation -> buffer : allocated == allocation -> buffer)) {
-            offset               = reinterpret_cast<unsigned char*>(allocation) - this -> buffer;
-            allocation -> buffer = static_cast<unsigned char*>(not allocated ? this -> next(alignment, extent, offset + sizeof(struct allocate::header)) : allocated);
-
-            break;
+        if (amount < extent) /* ... --> amount ·= rate */ {
+          if      (amount < (maximum / rate.quot))            amount = (amount * rate.quot) / rate.rem;
+          else if (amount < (maximum / rate.quot) * rate.rem) amount = (amount / rate.rem) * rate.quot;
+          else if (amount <= maximum - rate.quot) {
+            if (std::size_t const _ = (extent - amount) / rate.quot) amount += rate.quot * _;
+            else                                                     amount += rate.quot;
           }
-
-          if (NULL == allocation)
-          return NULL; // ->> Unavailable allocation storage
-
-          if (AVAILABLE_HEADER.amount == allocation -> amount) {
-            if (allocated)                    return NULL; // ->> Invalid `allocated` address specified
-            if (NULL == allocation -> buffer) return NULL; // ->> Unavailable allocation storage
-
-            if (void *const next = this -> next(sizeof(struct allocate::header), sizeof(struct allocate::header), &allocation -> buffer[amount] - this -> buffer)) {
-              *::new (next) struct allocate::header = AVAILABLE_HEADER;
-              *capacity                       = static_cast<unsigned char*>(next) - allocation -> buffer; // --> std::max(amount, …)
-              allocation -> amount            = static_cast<unsigned char*>(next) - reinterpret_cast<unsigned char*>(allocation + 1);
-              allocation -> reserved          = true;
-            }
-
-            else if (not extra) {
-              *capacity              = &this -> buffer[maximum] - allocation -> buffer; // --> std::max(extent, …)
-              allocation -> amount   = &this -> buffer[maximum] - reinterpret_cast<unsigned char*>(allocation + 1);
-              allocation -> reserved = true;
-            }
-
-            else // ->> Constrain the `extra` `amount` to fit the specified `extent`
-              allocation -> buffer = NULL;
-          } else {
-            offset += sizeof(struct allocate::header) + allocation -> amount; // ->> Find next suitable allocation storage —
-            if (NULL == allocation -> buffer) continue;                 //     “next suitable” is not the same as “most suitable”, but this is a simple allocator
-
-            if (allocated and amount > allocation -> amount) {
-              for (struct allocate::header *suballocation = static_cast<struct allocate::header*>(this -> next(sizeof(struct allocate::header), sizeof(struct allocate::header), 0u)); allocation != suballocation; ) {
-                void *const next = this -> next(sizeof(struct allocate::header), sizeof(struct allocate::header), (reinterpret_cast<unsigned char*>(suballocation + 1) - this -> buffer) + suballocation -> amount);
-
-                // ...
-                if (allocation == next and NULL == suballocation -> buffer) {
-                  suballocation -> amount += allocation -> amount + sizeof(struct allocate::header);
-                  allocation = suballocation;
-                  break;
-                }
-
-                suballocation = static_cast<struct allocate::header*>(next);
+        } else {
+          do {
+            if (NULL != headers) // ->> Acquire appropriate `allocation`
+            for (struct allocate::header *header = headers; HEADER_SIZE <= &this -> buffer[END] - reinterpret_cast<unsigned char*>(header); available += header++ -> amount) {
+              if (not allocated ? NULL == header -> buffer and  : allocated == header -> buffer) {
+                allocation = header;
+                // ???
               }
-
-              allocation -> buffer = NULL;
-              offset               = 0u;
-              break; // return NULL
             }
 
-            *capacity = static_cast<unsigned char*>(this -> next(sizeof(struct allocate::header), sizeof(struct allocate::header), offset)) - allocation -> buffer;
-          }
+            if (NULL == allocation or NULL == headers) /* ->> Add required `allocation` */ {
+              struct allocate::header *const offset     = static_cast<struct allocate::header*>(this -> align(&this -> buffer[END - HEADER_SIZE], HEADER_ALIGNMENT, HEADER_SIZE, this -> align::previous)); if (NULL == offset)                                                                        return NULL; // ->> No alignment for `headers`
+              std::size_t              const length     = NULL != headers ? &offset[1] - headers : 0u;                                                                                                      if (&available[0] > offset - (length * 2u) or &available[amount] > offset - (length * 1u)) break;       // ->> Unable to lengthen `headers`
+              struct allocate::header *const preheaders = ::new (offset - (length * 2u)) struct allocate::header[length + 0u];
 
-          if (NULL != allocation -> buffer)
-          return allocation -> buffer; // --> not allocated ? std::aligned_alloc(alignment, amount) : std::realloc(allocated, amount)
+              // ...
+              for (std::size_t index = length; index--; ) { preheaders[index] = headers[index]; }
+              headers = ::new (offset - (length * 1u)) struct allocate::header[length + 1u];
 
-          if (not extra)
-          return NULL; // ->> Unable to allocate storage; See preceding code
+              for (std::size_t index = length; index--; ) { headers[index] = preheaders[index]; }
+              headers[length].amount = amount;
+              headers[length].buffer = available;
 
-          offset = preoffset;                                             // ->> Attempt allocation again —
-          amount = extent + (((amount - extent) / rate.quot) * rate.rem); //     but with a better-fitted `amount`
+              allocation = &headers[length];
+            }
+
+            // ...
+            DO WHAT WITH allocation NOW?
+            // header -> amount = amount;
+            // header -> buffer = this -> align(this -> buffer, alignment, size, this -> align::next);
+
+            return;
+          } while (false);
+
+          amount -= ((amount - extent) / rate.quot) * rate.quot; // ->> Constrain `amount >= extent`
         }
-
-        // ... --> amount *= rate
-        if (amount > maximum / rate.quot) /* --> [[unlikely]] */ {
-          if (rate.quot == 1 or amount > maximum / (rate.quot - 1)) { return NULL; } // ->> Unable to reduce `rate` increment (by `1 ÷ rate`) for `amount`
-          amount += ((amount * (rate.quot - 1u)) / rate.quot) * rate.rem;
-        } else amount = (amount * rate.quot) / rate.rem;
       }
 
       return NULL;
     }
-  }                   arena                    = {{}, {}, {2, 1}, {3, 2}, {1, 1}, {6, 5}};
+  }                   allocator                = {{}, {}, {2, 1}, {3, 2}, {1, 1}, {6, 5}};
   WCHAR               moduleFileName[MAX_PATH] = L"";      // ->> See use of `::ExtractIconW(…)` (or `window -> classInformation.hIcon`)
   POINT               position                 = {0L, 0L}; // ->> For positioning controls
   MSG                 threadMessage            = {};
   static struct main *window                   = NULL;
   static struct main /* final */ {
     struct app /* final */ {
-      static wchar_t const* alias(HINSTANCE const instanceHandle) /* noexcept */ throw() {
+      static wchar_t const* alias(HINSTANCE const instanceHandle) /* noexcept */ {
         std::size_t const    aliasCapacity              = /* --> L"@" */ 1u + /* --> … */ (sizeof(HINSTANCE) * 2u) + /* --> " “" */ 2u + /* --> instanceHandle */ MAX_PATH + /* --> "”" */ 1u;
         static wchar_t       alias[aliasCapacity]       = L"";
         std::size_t          capacity                   = aliasCapacity;
@@ -244,7 +183,7 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
         return alias;
       }
 
-      static wchar_t const* alias(/* [[nonnull]] */ HWND const windowHandle) /* noexcept */ throw() {
+      static wchar_t const* alias(/* [[nonnull]] */ HWND const windowHandle) /* noexcept */ {
         static LPWSTR        alias         = NULL;    //
         static std::size_t   aliasCapacity = 0u;      //
         unsigned             capacity;                // --> … < INT_MAX
@@ -271,7 +210,7 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
 
         // ... ->> Allocation
         if (aliasCapacity < capacity) {
-          void *const allocation = arena.allocate(alias, capacity * sizeof(WCHAR), arena.rate::basic, &aliasCapacity);
+          void *const allocation = allocator.allocate(alias, capacity * sizeof(WCHAR), allocator.rate::basic, &aliasCapacity);
 
           // ...
           if (NULL == allocation) {
@@ -317,22 +256,23 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
         return alias;
       }
 
-      static wchar_t const* alias(UINT const message) /* noexcept */ throw() {
+      static wchar_t const* alias(UINT const message) /* noexcept */ {
         std::size_t const    aliasCapacity        = /* --> L"WM" ":" */ 3u + /* --> message */ (sizeof(UINT) * 2u) + /* --> … */ 1u;
         static wchar_t       alias[aliasCapacity] = L"";
         wchar_t const *const fallback             = L"WM" ":" "...";
 
         // ...
         switch (message) {
-          case WM_COMMAND: return L"WM" ":" "COMMAND"; break;
-          case WM_NOTIFY:  return L"WM" ":" "NOTIFY";  break;
+          case WM_COMMAND:    return L"WM" ":" "COMMAND"; break;
+          case WM_DPICHANGED: return L"WM" ":" "DPICHANGED"; break;
+          case WM_NOTIFY:     return L"WM" ":" "NOTIFY";  break;
         }
 
         std::wprintf(L"\r\n" "FUCK: %i" "\r\n", std::swprintf(alias, 5 + 1, L"Hello"));
         return std::swprintf(alias, aliasCapacity, L"%.3s" "%0*X", "WM" ":", static_cast<unsigned>(sizeof(UINT) * 2u), message) < 0 ? fallback : alias;
       }
 
-      static bool contains(HWND const windowHandle, UINT const relationship, HWND const subwindowHandle) /* noexcept */ throw() {
+      static bool contains(HWND const windowHandle, UINT const relationship, HWND const subwindowHandle) /* noexcept */ {
         for (HWND windowChildHandle = ::GetWindow(windowHandle, relationship); NULL != windowChildHandle; windowChildHandle = ::GetWindow(windowChildHandle, GW_HWNDNEXT)) {
           if (subwindowHandle == windowChildHandle)
           return true; // ->> Prefer `::EnumChildWindows(…)` for robust handling instead
@@ -341,11 +281,11 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
         return false;
       }
 
-      static std::size_t count(char    const value[])                          /* noexcept */ throw() { if (NULL == value) return 0u; for (std::size_t length = 0u; ; ++length, value += 1)     { if ('\0'  == *value) return length; } }
-      static std::size_t count(wchar_t const value[])                          /* noexcept */ throw() { if (NULL == value) return 0u; for (std::size_t length = 0u; ; ++length, value += 1)     { if (L'\0' == *value) return length; } } // --> std::wcslen([[nonnull]] value)
-      static std::size_t count(long          value, unsigned char radix = 10u) /* noexcept */ throw() { if (0    == value) return 1u; for (std::size_t length = 0u; ; ++length, value /= radix) { if (0     ==  value) return length; } } // ->> Counts digits only, not signedness
+      static std::size_t count(char    const value[])                          /* noexcept */ { if (NULL == value) return 0u; for (std::size_t length = 0u; ; ++length, value += 1)     { if ('\0'  == *value) return length; } }
+      static std::size_t count(wchar_t const value[])                          /* noexcept */ { if (NULL == value) return 0u; for (std::size_t length = 0u; ; ++length, value += 1)     { if (L'\0' == *value) return length; } } // --> std::wcslen([[nonnull]] value)
+      static std::size_t count(long          value, unsigned char radix = 10u) /* noexcept */ { if (0    == value) return 1u; for (std::size_t length = 0u; ; ++length, value /= radix) { if (0     ==  value) return length; } } // ->> Counts digits only, not signedness
 
-      static char const* enumerate(intmax_t value, char const* names, intmax_t enumerator1 = 0x00L, intmax_t enumerator2 = 0x00L, intmax_t enumerator3 = 0x00L, intmax_t enumerator4 = 0x00L, intmax_t enumerator5 = 0x00L, intmax_t enumerator6 = 0x00L, intmax_t enumerator7 = 0x00L, intmax_t enumerator8 = 0x00L, intmax_t enumerator9 = 0x00L, intmax_t enumerator10 = 0x00L, intmax_t enumerator11 = 0x00L, intmax_t enumerator12 = 0x00L, intmax_t enumerator13 = 0x00L, intmax_t enumerator14 = 0x00L, intmax_t enumerator15 = 0x00L, intmax_t enumerator16 = 0x00L, intmax_t enumerator17 = 0x00L, intmax_t enumerator18 = 0x00L, intmax_t enumerator19 = 0x00L, intmax_t enumerator20 = 0x00L, intmax_t enumerator21 = 0x00L, intmax_t enumerator22 = 0x00L, intmax_t enumerator23 = 0x00L, intmax_t enumerator24 = 0x00L, intmax_t enumerator25 = 0x00L, intmax_t enumerator26 = 0x00L, intmax_t enumerator27 = 0x00L, intmax_t enumerator28 = 0x00L, intmax_t enumerator29 = 0x00L, intmax_t enumerator30 = 0x00L, intmax_t enumerator31 = 0x00L, intmax_t enumerator32 = 0x00L, intmax_t enumerator33 = 0x00L, intmax_t enumerator34 = 0x00L, intmax_t enumerator35 = 0x00L, intmax_t enumerator36 = 0x00L, intmax_t enumerator37 = 0x00L, intmax_t enumerator38 = 0x00L, intmax_t enumerator39 = 0x00L, intmax_t enumerator40 = 0x00L, intmax_t enumerator41 = 0x00L, intmax_t enumerator42 = 0x00L, intmax_t enumerator43 = 0x00L, intmax_t enumerator44 = 0x00L, intmax_t enumerator45 = 0x00L, intmax_t enumerator46 = 0x00L, intmax_t enumerator47 = 0x00L, intmax_t enumerator48 = 0x00L, intmax_t enumerator49 = 0x00L, intmax_t enumerator50 = 0x00L, intmax_t enumerator51 = 0x00L, intmax_t enumerator52 = 0x00L, intmax_t enumerator53 = 0x00L, intmax_t enumerator54 = 0x00L, intmax_t enumerator55 = 0x00L, intmax_t enumerator56 = 0x00L, intmax_t enumerator57 = 0x00L, intmax_t enumerator58 = 0x00L, intmax_t enumerator59 = 0x00L, intmax_t enumerator60 = 0x00L, intmax_t enumerator61 = 0x00L, intmax_t enumerator62 = 0x00L, intmax_t enumerator63 = 0x00L, intmax_t enumerator64 = 0x00L, intmax_t enumerator65 = 0x00L, intmax_t enumerator66 = 0x00L, intmax_t enumerator67 = 0x00L, intmax_t enumerator68 = 0x00L, intmax_t enumerator69 = 0x00L, intmax_t enumerator70 = 0x00L, intmax_t enumerator71 = 0x00L, intmax_t enumerator72 = 0x00L, intmax_t enumerator73 = 0x00L, intmax_t enumerator74 = 0x00L, intmax_t enumerator75 = 0x00L, intmax_t enumerator76 = 0x00L, intmax_t enumerator77 = 0x00L, intmax_t enumerator78 = 0x00L, intmax_t enumerator79 = 0x00L, intmax_t enumerator80 = 0x00L, intmax_t enumerator81 = 0x00L, intmax_t enumerator82 = 0x00L, intmax_t enumerator83 = 0x00L, intmax_t enumerator84 = 0x00L, intmax_t enumerator85 = 0x00L, intmax_t enumerator86 = 0x00L, intmax_t enumerator87 = 0x00L, intmax_t enumerator88 = 0x00L, intmax_t enumerator89 = 0x00L, intmax_t enumerator90 = 0x00L, intmax_t enumerator91 = 0x00L, intmax_t enumerator92 = 0x00L, intmax_t enumerator93 = 0x00L, intmax_t enumerator94 = 0x00L, intmax_t enumerator95 = 0x00L, intmax_t enumerator96 = 0x00L, intmax_t enumerator97 = 0x00L, intmax_t enumerator98 = 0x00L, intmax_t enumerator99 = 0x00L, intmax_t enumerator100 = 0x00L, intmax_t enumerator101 = 0x00L, intmax_t enumerator102 = 0x00L, intmax_t enumerator103 = 0x00L, intmax_t enumerator104 = 0x00L, intmax_t enumerator105 = 0x00L, intmax_t enumerator106 = 0x00L, intmax_t enumerator107 = 0x00L, intmax_t enumerator108 = 0x00L, intmax_t enumerator109 = 0x00L, intmax_t enumerator110 = 0x00L, intmax_t enumerator111 = 0x00L, intmax_t enumerator112 = 0x00L, intmax_t enumerator113 = 0x00L, intmax_t enumerator114 = 0x00L, intmax_t enumerator115 = 0x00L, intmax_t enumerator116 = 0x00L, intmax_t enumerator117 = 0x00L, intmax_t enumerator118 = 0x00L, intmax_t enumerator119 = 0x00L, intmax_t enumerator120 = 0x00L, intmax_t enumerator121 = 0x00L, intmax_t enumerator122 = 0x00L, intmax_t enumerator123 = 0x00L, intmax_t enumerator124 = 0x00L, ...) /* noexcept */ throw() {
+      static char const* enumerate(intmax_t value, char const* names, intmax_t enumerator1 = 0x00L, intmax_t enumerator2 = 0x00L, intmax_t enumerator3 = 0x00L, intmax_t enumerator4 = 0x00L, intmax_t enumerator5 = 0x00L, intmax_t enumerator6 = 0x00L, intmax_t enumerator7 = 0x00L, intmax_t enumerator8 = 0x00L, intmax_t enumerator9 = 0x00L, intmax_t enumerator10 = 0x00L, intmax_t enumerator11 = 0x00L, intmax_t enumerator12 = 0x00L, intmax_t enumerator13 = 0x00L, intmax_t enumerator14 = 0x00L, intmax_t enumerator15 = 0x00L, intmax_t enumerator16 = 0x00L, intmax_t enumerator17 = 0x00L, intmax_t enumerator18 = 0x00L, intmax_t enumerator19 = 0x00L, intmax_t enumerator20 = 0x00L, intmax_t enumerator21 = 0x00L, intmax_t enumerator22 = 0x00L, intmax_t enumerator23 = 0x00L, intmax_t enumerator24 = 0x00L, intmax_t enumerator25 = 0x00L, intmax_t enumerator26 = 0x00L, intmax_t enumerator27 = 0x00L, intmax_t enumerator28 = 0x00L, intmax_t enumerator29 = 0x00L, intmax_t enumerator30 = 0x00L, intmax_t enumerator31 = 0x00L, intmax_t enumerator32 = 0x00L, intmax_t enumerator33 = 0x00L, intmax_t enumerator34 = 0x00L, intmax_t enumerator35 = 0x00L, intmax_t enumerator36 = 0x00L, intmax_t enumerator37 = 0x00L, intmax_t enumerator38 = 0x00L, intmax_t enumerator39 = 0x00L, intmax_t enumerator40 = 0x00L, intmax_t enumerator41 = 0x00L, intmax_t enumerator42 = 0x00L, intmax_t enumerator43 = 0x00L, intmax_t enumerator44 = 0x00L, intmax_t enumerator45 = 0x00L, intmax_t enumerator46 = 0x00L, intmax_t enumerator47 = 0x00L, intmax_t enumerator48 = 0x00L, intmax_t enumerator49 = 0x00L, intmax_t enumerator50 = 0x00L, intmax_t enumerator51 = 0x00L, intmax_t enumerator52 = 0x00L, intmax_t enumerator53 = 0x00L, intmax_t enumerator54 = 0x00L, intmax_t enumerator55 = 0x00L, intmax_t enumerator56 = 0x00L, intmax_t enumerator57 = 0x00L, intmax_t enumerator58 = 0x00L, intmax_t enumerator59 = 0x00L, intmax_t enumerator60 = 0x00L, intmax_t enumerator61 = 0x00L, intmax_t enumerator62 = 0x00L, intmax_t enumerator63 = 0x00L, intmax_t enumerator64 = 0x00L, intmax_t enumerator65 = 0x00L, intmax_t enumerator66 = 0x00L, intmax_t enumerator67 = 0x00L, intmax_t enumerator68 = 0x00L, intmax_t enumerator69 = 0x00L, intmax_t enumerator70 = 0x00L, intmax_t enumerator71 = 0x00L, intmax_t enumerator72 = 0x00L, intmax_t enumerator73 = 0x00L, intmax_t enumerator74 = 0x00L, intmax_t enumerator75 = 0x00L, intmax_t enumerator76 = 0x00L, intmax_t enumerator77 = 0x00L, intmax_t enumerator78 = 0x00L, intmax_t enumerator79 = 0x00L, intmax_t enumerator80 = 0x00L, intmax_t enumerator81 = 0x00L, intmax_t enumerator82 = 0x00L, intmax_t enumerator83 = 0x00L, intmax_t enumerator84 = 0x00L, intmax_t enumerator85 = 0x00L, intmax_t enumerator86 = 0x00L, intmax_t enumerator87 = 0x00L, intmax_t enumerator88 = 0x00L, intmax_t enumerator89 = 0x00L, intmax_t enumerator90 = 0x00L, intmax_t enumerator91 = 0x00L, intmax_t enumerator92 = 0x00L, intmax_t enumerator93 = 0x00L, intmax_t enumerator94 = 0x00L, intmax_t enumerator95 = 0x00L, intmax_t enumerator96 = 0x00L, intmax_t enumerator97 = 0x00L, intmax_t enumerator98 = 0x00L, intmax_t enumerator99 = 0x00L, intmax_t enumerator100 = 0x00L, intmax_t enumerator101 = 0x00L, intmax_t enumerator102 = 0x00L, intmax_t enumerator103 = 0x00L, intmax_t enumerator104 = 0x00L, intmax_t enumerator105 = 0x00L, intmax_t enumerator106 = 0x00L, intmax_t enumerator107 = 0x00L, intmax_t enumerator108 = 0x00L, intmax_t enumerator109 = 0x00L, intmax_t enumerator110 = 0x00L, intmax_t enumerator111 = 0x00L, intmax_t enumerator112 = 0x00L, intmax_t enumerator113 = 0x00L, intmax_t enumerator114 = 0x00L, intmax_t enumerator115 = 0x00L, intmax_t enumerator116 = 0x00L, intmax_t enumerator117 = 0x00L, intmax_t enumerator118 = 0x00L, intmax_t enumerator119 = 0x00L, intmax_t enumerator120 = 0x00L, intmax_t enumerator121 = 0x00L, intmax_t enumerator122 = 0x00L, intmax_t enumerator123 = 0x00L, intmax_t enumerator124 = 0x00L, ...) /* noexcept */ {
         struct enumerator /* final */ {
           char const          *name;
           std::size_t          nameLength;
@@ -401,7 +341,7 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
 
         // ... ->> Allocation
         if (capacity > enumerationCapacity) {
-          void *const allocation = arena.allocate(enumeration, capacity * sizeof(char), arena.rate::passive, &enumerationCapacity);
+          void *const allocation = allocator.allocate(enumeration, capacity * sizeof(char), allocator.rate::passive, &enumerationCapacity);
 
           if (NULL == allocation) return fallback;
           enumeration = static_cast<char*>(allocation);
@@ -462,12 +402,12 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
     static LRESULT CALLBACK procedure(HWND windowHandle, UINT message, WPARAM parameter, LPARAM subparameter) {
       struct /* final */ {
         LRESULT value; bool processable, processed;
-        void operator =(LRESULT const value) /* noexcept */ throw() { this -> processed = true; this -> value = value; }
+        void operator =(LRESULT const value) /* noexcept */ { this -> processed = true; this -> value = value; }
       } result = {0x00L, true, false};
 
       // ... ->> Allocation
       if (window -> messages.capacity == window -> messages.length) {
-        void *const allocation = arena.allocate(window -> messages.processed, window -> messages.length + 1u, arena.rate::aggressive, &window -> messages.capacity);
+        void *const allocation = allocator.allocate(window -> messages.processed, window -> messages.length + 1u, allocator.rate::aggressive, &window -> messages.capacity);
 
         if (NULL == allocation) result.processable = false;
         else          window -> messages.processed = static_cast<UINT*>(allocation);
@@ -485,12 +425,12 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
 
         if (wchar_t const *const messageName = app::alias(message))
         switch (message) {
-          case WM_COMMAND: {
+          case WM_COMMAND: /* ->> `user32` Controls */ {
             if (app::contains(windowHandle, GW_CHILD, reinterpret_cast<HWND>(subparameter))) // ->> `subparameter` otherwise null when originated from accelerators or menus
             (void) std::fwprintf(stdout, L"[%ls]: Command recieved: %i" "\r\n", messageName, static_cast<int>(LOWORD(parameter)));
           } break;
 
-          case WM_NOTIFY: {
+          case WM_NOTIFY: /* ->> `commctrl` Common Controls */ {
             LPNMHDR const notificationMessageHeader = reinterpret_cast<LPNMHDR>(subparameter); // --> NMHDR*
 
             // ...
@@ -558,6 +498,25 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
               case TTN_SHOW:      (void) std::fwprintf(stdout, L"  " "Showing tooltip"     "\r\n"); result = FALSE; break; // ->> `TRUE` if manually re-positioned via `::SetWindowPos(…, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER)` (and `::SendMessage(…, TTM_ADJUSTRECT, TRUE, (LPARAM) …)`)
             }
           } break;
+
+          // case WM_DPICHANGED: {
+          //   // 1. The new DPI is in the low word of wParam
+          //   UINT newDpi = LOWORD(wParam);
+
+          //   // 2. Windows provides a suggested new size/position in lParam
+          //   // This RECT is calculated by Windows to keep the window
+          //   // visually the same size relative to the new monitor.
+          //   RECT* const prcNewWindow = (RECT*)lParam;
+
+          //   // 3. Resize and reposition the window based on Windows' suggestion
+          //   SetWindowPos(hwnd,
+          //       NULL,
+          //       prcNewWindow->left,
+          //       prcNewWindow->top,
+          //       prcNewWindow->right - prcNewWindow->left,
+          //       prcNewWindow->bottom - prcNewWindow->top,
+          //       SWP_NOZORDER | SWP_NOACTIVATE);
+          // } break;
         }
 
         window -> messages.length--;
@@ -582,29 +541,46 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
   (void) std::setlocale(LC_ALL, ".UTF8");                                                                                   // ->> Presumed successful
   (void) _setmode(_fileno(stdout) /* ->> POSIX’s `STDOUT_FILENO` */, _O_WTEXT /* ->> `_O_U16TEXT` with Byte-Order Mark */); // --> std::fwide(stdout, 0x1)
 
-  threadMessage.hwnd                         = static_cast<HWND>(NULL); // --> window -> handle
-  threadMessage.lParam                       = 0x00L;
-  threadMessage.message                      = 0x00u;
-  threadMessage.pt.x                         = 0L;
-  threadMessage.pt.y                         = 0L;
-  threadMessage.time                         = 0u;
-  threadMessage.wParam                       = EXIT_SUCCESS;
-  window                                     = &w;
-  window -> classInformation.cbClsExtra      = 0;
-  window -> classInformation.cbSize          = sizeof(WNDCLASSEX);
-  window -> classInformation.cbWndExtra      = 0;
-  window -> classInformation.hbrBackground   = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1); // --> ::GetSysColorBrush(COLOR_WINDOW);
-  window -> classInformation.hCursor         = ::LoadCursor(static_cast<HINSTANCE>(NULL), IDC_ARROW); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED));
-  window -> classInformation.hIcon           = 0x00u != ::GetModuleFileNameW(static_cast<HMODULE>(NULL), moduleFileName, MAX_PATH) ? ::ExtractIconW(static_cast<HINSTANCE>(::GetCurrentProcess()), moduleFileName, 0u) : static_cast<HICON>(NULL);
-  window -> classInformation.hIconSm         = static_cast<HICON>(NULL);
-  window -> classInformation.hInstance       = instanceHandle;
-  window -> classInformation.lpfnWndProc     = &window -> procedure;
-  window -> classInformation.lpszClassName   = L"window";
-  window -> classInformation.lpszMenuName    = static_cast<LPCWSTR>(NULL);
-  window -> classInformation.style           = CS_HREDRAW | CS_VREDRAW;
-  window -> clientBounds.left                = 0L;
-  window -> clientBounds.top                 = 0L;
-  window -> commonControlsInitializer.dwICC  = ICC_BAR_CLASSES | ICC_DATE_CLASSES | ICC_USEREX_CLASSES | ICC_WIN95_CLASSES;
+  threadMessage.hwnd                        = static_cast<HWND>(NULL); // --> window -> handle
+  threadMessage.lParam                      = 0x00L;
+  threadMessage.message                     = 0x00u;
+  threadMessage.pt.x                        = 0L;
+  threadMessage.pt.y                        = 0L;
+  threadMessage.time                        = 0u;
+  threadMessage.wParam                      = EXIT_SUCCESS;
+  window                                    = &w;
+  window -> classInformation.cbClsExtra     = 0;
+  window -> classInformation.cbSize         = sizeof(WNDCLASSEX);
+  window -> classInformation.cbWndExtra     = 0;
+  window -> classInformation.hbrBackground  = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1); // --> ::GetSysColorBrush(COLOR_WINDOW);
+  window -> classInformation.hCursor        = ::LoadCursor(static_cast<HINSTANCE>(NULL), IDC_ARROW); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED));
+  window -> classInformation.hIcon          = 0x00u != ::GetModuleFileNameW(static_cast<HMODULE>(NULL), moduleFileName, MAX_PATH) ? ::ExtractIconW(static_cast<HINSTANCE>(::GetCurrentProcess()), moduleFileName, 0u) : static_cast<HICON>(NULL);
+  window -> classInformation.hIconSm        = static_cast<HICON>(NULL);
+  window -> classInformation.hInstance      = instanceHandle;
+  window -> classInformation.lpfnWndProc    = &window -> procedure;
+  window -> classInformation.lpszClassName  = L"window";
+  window -> classInformation.lpszMenuName   = static_cast<LPCWSTR>(NULL);
+  window -> classInformation.style          = CS_HREDRAW | CS_VREDRAW;
+  window -> clientBounds.left               = 0L;
+  window -> clientBounds.top                = 0L;
+  window -> commonControlsInitializer.dwICC =
+    ICC_ANIMATE_CLASS      | // ->> Animation controls
+    ICC_BAR_CLASSES        | // ->> Toolbars, Status Bars, and Track Bars
+    ICC_COOL_CLASSES       | // ->> Rebars
+    ICC_DATE_CLASSES       | // ->> Calendars and Date Pickers
+    ICC_HOTKEY_CLASS       | // ->> Hotkey Inputs
+    ICC_INTERNET_CLASSES   | // ->> IP Address controls
+    ICC_LINK_CLASS         | // ->> Hyperlink Texts
+    ICC_LISTVIEW_CLASSES   | // ->> List View and Headers
+    ICC_NATIVEFNTCTL_CLASS | // ->> Native Font Managers
+    ICC_PAGESCROLLER_CLASS | // ->> Pager controls
+    ICC_PROGRESS_CLASS     | // ->> Progress Bars
+    ICC_STANDARD_CLASSES   | // ->> Buttons, Combo Boxes, Edits, List Boxes, Scrollbars, Statics, …
+    ICC_TAB_CLASSES        | // ->> Tab Controls and Tooltips
+    ICC_TREEVIEW_CLASSES   | // ->> Tree View and Tooltips
+    ICC_UPDOWN_CLASS       | // ->> Up-Down Spinners
+    ICC_USEREX_CLASSES     | // ->> Extended Combo Boxes
+    ICC_WIN95_CLASSES;
   window -> commonControlsInitializer.dwSize = sizeof(INITCOMMONCONTROLSEX);
   window -> messages.capacity                = 0u;
   window -> messages.length                  = 0u;
@@ -624,21 +600,43 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
 
         for (enum /* : unsigned char */ {
           BUTTON,
-          CHECKBOX, CONTENT,
+          CHECKBOX, COMBOBOX, CONTENT,
           DATETIME, DROPDOWN,
           EDIT,
           HEADER,
+          LISTBOX, LISTVIEW,
+          MDICLIENT,
           PROGRESS,
           RICHEDIT,
-          SCROLLBAR, SPINNER, STATUSBAR,
-          TABCONTROL, TOOLBAR, TOOLTIP
+          SCROLLBAR, SPINNER, STATIC, STATUSBAR,
+          TABCONTROL, TOOLBAR, TOOLTIP, TREEVIEW
+          // #32768
+          // The system class designated for menus.
+
+          // #32769
+          // The system class for the desktop window itself.
+
+          // #32770
+          // The predefined class for dialog boxes.
+
+          // #32771
+          // The class for the task-switch (Alt+Tab) window.
+
+          // #32772
+          // The class for icon titles.
+
+          // ComboLBox
+          // The internal list box utilized within a combo box.
+
+          // Message
+          // A class for message-only windows, which are invisible and used for inter-process communication.
         } const controlKinds[] = {STATUSBAR, TOOLBAR, TOOLTIP}, *controlKind = controlKinds + (sizeof controlKinds / sizeof *controlKinds); controlKind-- != controlKinds; ) {
           struct control /* final */ {
             HWND handle;
             union { RECT bounds; POINT position; };
 
             /* ... */
-            static bool measure(void* const window, struct control* const control) /* noexcept */ throw() {
+            static bool measure(void* const window, struct control* const control) /* noexcept */ {
               if (FALSE != ::GetWindowRect(control -> handle, &control -> bounds)) {
                 POINT      clientBoundsMaximum = {control -> bounds.right, control -> bounds.bottom};
                 HWND const windowHandle        = *static_cast<HWND*>(window);
@@ -842,6 +840,7 @@ int WINAPI WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const,
         //     140 + (int)i * 120, y + dy * 3, 17, 23, hwnd, (HMENU)(IDC_BASE + 700 + i), hInst, NULL);
         // CreateWindowEx(0, WC_STATIC, L"Text", WS_CHILD | WS_VISIBLE,
         //     180 + (int)i * 120, y + dy * 3, 80, 23, hwnd, (HMENU)(IDC_BASE + 800 + i), hInst, NULL);
+        // (GetDpiForWindow(…) * width) / 96 // where `96` is the base logical DPI Windows uses since 1980 for 100% scaling
       }
     #endif
 

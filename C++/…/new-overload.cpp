@@ -97,4 +97,7 @@ int main() {
   static_cast<void>(fixed);
   static_cast<void>(unit);
   static_cast<void>(variable);
+
+  // struct A { static void* operator new[](std::size_t const, void* const) { return NULL; } };
+  // (void) new (NULL) A[2048];
 }

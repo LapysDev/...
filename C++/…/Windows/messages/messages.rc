@@ -1,0 +1,32 @@
+1 24 "messages.manifest" // RT_MANIFEST
+MAINICON ICON "messages.ico"
+
+1 VERSIONINFO // https://learn.microsoft.com/en-us/windows/win32/menurc/versioninfo-resource
+  FILEFLAGS      0x0L
+  FILEFLAGSMASK  0x3FL
+  FILEOS         0x40004L // VOS_NT_WINDOWS32
+  FILESUBTYPE    0x0L
+  FILETYPE       0x1L // VFT_APP
+  FILEVERSION    1,0,0,0
+  PRODUCTVERSION 1,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904b0" // English (U.S.), Unicode
+    BEGIN
+      VALUE "CompanyName",      "LapysDev"
+      VALUE "FileDescription",  "Robust example of message event handling for Microsoft Windows applications"
+      VALUE "FileVersion",      "1.0.0.0"
+      VALUE "InternalName",     "messages"
+      VALUE "LegalCopyright",   "© 2025 LapysDev"
+      VALUE "OriginalFilename", "messages.exe"
+      VALUE "ProductName",      "Windows Event Messages"
+      VALUE "ProductVersion",   "1.0.0.0"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

@@ -10,8 +10,8 @@ static struct allocator {
   enum : std::size_t { maximum = 131072u };
   std::max_align_t _;
   mutable unsigned char buffer[maximum];
-  void* align(void* address, std::size_t alignment, std::size_t const size) const /* noexcept */ throw() /* --> [[assume(address >= ::buffer and address <= &::buffer[maximum])]] */ {
-    #if false and defined PRIuPTR and defined UINTPTR_MAX // ->> Pointer arithmetic
+  void* align(void* address, std::size_t alignment, std::size_t const size) const /* noexcept */ /* --> [[assume(address >= ::buffer and address <= &::buffer[maximum])]] */ {
+    #if defined UINTPTR_MAX // ->> Pointer arithmetic
       uintptr_t const offset = reinterpret_cast<uintptr_t>(address);
 
       if (UINTPTR_MAX - offset >= alignment - 1u and maximum >= size) /* --> [[assume(alignment and not (alignment & (alignment - 1u)))]] */ {
@@ -96,7 +96,7 @@ static struct allocator {
 } arena = {};
 
 /* Main */
-int main(int, char*[]) /* noexcept */ throw() {
+int main(int, char*[]) /* noexcept */ {
   std::size_t const alignments[] = {1u, 2u, 4u, 8u, 16u, 32u, 64u, 128u, 256u, 512u, 1024u};
   for (std::size_t const alignment : alignments) {
     void       *address  = arena.buffer + 69;
