@@ -11,30 +11,26 @@
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::srand(std::time(NULL));
-  std::size_t const TARGET = 30000u;
-  std::div_t        rate   = {0, static_cast<int>(std::rand() % TARGET)}; rate.quot = rate.rem + (std::rand() % TARGET);
-  // std::div_t  const rate   = {7, 3};
-  std::size_t       value  = rate.rem;
+  std::size_t const extent  = 69u;
+  std::size_t const maximum = SIZE_MAX;
+  std::div_t  const rate    = {3, 2};
 
-  std::printf("%zu -> %zu (%i/%i)" "\r\n", value, TARGET, rate.quot, rate.rem);
-  for (std::size_t prevalue = 0u; TARGET > value /*and prevalue != value*/; ) {
-    prevalue = value;
+  /* ... */
+  for (std::size_t amount = rate.quot <= rate.rem ? extent : rate.rem, preamount = 0u; amount != preamount; ) {
+    (void) std::printf("%zu, pre: %zu" "\r\n", amount, preamount);
 
-    if (false) (void) prevalue;
-    else if (value < static_cast<std::size_t>(USHRT_MAX / rate.quot))            { std::printf("[A]: "); value = (value * rate.quot) / rate.rem; }
-    else if (value < static_cast<std::size_t>(USHRT_MAX / rate.quot) * rate.rem) { std::printf("[B]: "); value = (value / rate.rem) * rate.quot; }
-    else if (value <= static_cast<std::size_t>(USHRT_MAX - rate.quot)) {
-      std::printf("[C]: ");
-      if (std::size_t const _ = ((TARGET - value) / rate.quot) * rate.quot) value += _;
-      else                                                                  value += rate.quot;
-    }
-    else continue;
-    std::printf("%zu -> %zu" "\r\n", value, TARGET);
-  }
+    preamount = amount;      // ->> Avoid non-growing `rate`s
+    amount   += amount % 2u; // ->> Ensure `amount` (’s parity) is arbitrarily even
 
-  if (value > TARGET) {
-    std::printf("[…]: %zu" "\r\n", value -= (((value - TARGET) / rate.quot) * rate.quot));
-    std::printf("[…]: %zu" "\r\n", value -= (((value - TARGET) / rate.quot) * rate.quot));
+    if (amount < extent) /* ... --> amount ·= rate */ {
+      (void) std::printf("[+]" "\r\n");
+
+      if      (amount < (maximum / rate.quot))            amount = (amount * rate.quot) / rate.rem;
+      else if (amount < (maximum / rate.quot) * rate.rem) amount = (amount / rate.rem) * rate.quot;
+      else if (amount <= maximum - rate.quot) {
+        if (std::size_t const _ = (extent - amount) / rate.quot) amount += rate.quot * _;
+        else                                                     amount += rate.quot;
+      }
+    } else { (void) std::printf("[-]" "\r\n"); amount -= ((amount - extent) / rate.quot) * rate.quot; } // ->> Constrain `amount >= extent`
   }
 }

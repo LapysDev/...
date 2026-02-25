@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.unity.inputsystem": "1.17.0",
+    "com.unity.inputsystem": "1.18.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.vectorgraphics": "1.0.0"
   }

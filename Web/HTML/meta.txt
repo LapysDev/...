@@ -103,6 +103,8 @@ Vendor Meta Tags
     • <meta content="LapysDev Application"           name="application-name"/>
     • <meta content=#0000FF                          name="msapplication-navbutton-color"/>
     • <meta content=#                                name="msapplication-starturl"/>
+    • <meta content=#0000FF                          name="msapplication-TileColor"/>
+    • <meta content=thumbnail.jpg                    name="msapplication-TileImage"/>
     • <meta content="LapysDev Application Tooltip"   name="msapplication-tooltip"/>
     • <meta content=height=600;width=800             name="msapplication-window"/>
     • <meta content=true                             name="mssmarttagspreventparsing"/>

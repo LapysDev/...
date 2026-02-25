@@ -71,9 +71,11 @@ int WINAPI wWinMain(HINSTANCE const instanceHandle, HINSTANCE const, PWSTR const
     }
 
     void* allocate(void* const allocated, std::size_t count, std::size_t size, std::div_t const rate, std::size_t* const capacity = NULL) const /* noexcept */ {
-      std::size_t const END              = maximum;
-      std::size_t const HEADER_ALIGNMENT = sizeof(struct allocate::header); // --> alignof(…)
-      std::size_t const HEADER_SIZE      = sizeof(struct allocate::header);
+      std::size_t const HEADER_SIZE       = sizeof(struct allocate::header);
+      std::size_t const HEADER_ALIGNMENT  = HEADER_SIZE; // --> alignof(…)
+      std::div_t  const EXPANSION_MINIMUM = {1, 2};      // ->> Threshold for reallocations to expand rather than reuse existing storage
+      std::div_t  const EXPANSION_MAXIMUM = {1, 1};
+      std::size_t const END               = maximum;
 
       std::size_t /* --> std::align_val_t */ alignment  = 1u;
       struct allocate::header               *allocation = NULL;
@@ -102,36 +104,52 @@ int WINAPI wWinMain(HINSTANCE const instanceHandle, HINSTANCE const, PWSTR const
           }
         } else {
           do {
-            if (NULL != headers) // ->> Acquire appropriate `allocation`
+            // ->> Acquire appropriate `allocation`
+            if (NULL != headers) // --> available = …
             for (struct allocate::header *header = headers; HEADER_SIZE <= &this -> buffer[END] - reinterpret_cast<unsigned char*>(header); available += header++ -> amount) {
-              if (not allocated ? NULL == header -> buffer and  : allocated == header -> buffer) {
-                allocation = header;
-                // ???
+              if (not allocated ? NULL == header -> buffer and (NULL == allocation or allocation -> amount > header -> amount) : allocated == header -> buffer)
+              allocation = header;
+            }
+
+            // ... ->> Provide new `allocation`; Assumed `allocation` would otherwise be a valid `struct ::header`
+            if (not allocated or (
+              amount >= (allocation -> amount * EXPANSION_MINIMUM.quot) / EXPANSION_MINIMUM.rem or
+              amount <  (allocation -> amount * EXPANSION_MAXIMUM.quot) / EXPANSION_MAXIMUM.rem
+            )) {
+              if (NULL == allocation or NULL == headers) {
+                struct allocate::header *const offset = static_cast<struct allocate::header*>(this -> align(&this -> buffer[END - HEADER_SIZE], HEADER_ALIGNMENT, HEADER_SIZE, this -> align::previous));
+                if (NULL == offset) return NULL; // ->> No alignment for `headers`
+
+                std::size_t const length = NULL != headers ? &offset[1] - headers : 0u;
+                if (&available[0] > offset - (length * 2u) or &available[amount] > offset - (length * 1u)) {
+                  if (allocated and EXPANSION_MINIMUM)
+                  INLINE: FIND SMALLER SPACE INSTEAD
+
+                  break; // ->> Unable to lengthen `headers`
+                }
+
+                struct allocate::header *const preheaders = ::new (offset - (length * 2u)) struct allocate::header[length + 0u];
+
+                // ...
+                for (std::size_t index = length; index--; ) { preheaders[index] = headers[index]; }
+                headers = ::new (offset - (length * 1u)) struct allocate::header[length + 1u];
+
+                for (std::size_t index = length; index--; ) { headers[index] = preheaders[index]; }
+                headers[length].amount = amount;
+                headers[length].buffer = available;
+
+                if (allocated) {
+                  COPY OVER OLD DATA?
+                }
+
+                allocation = &headers[length];
               }
+
+              return allocation -> buffer;
             }
 
-            if (NULL == allocation or NULL == headers) /* ->> Add required `allocation` */ {
-              struct allocate::header *const offset     = static_cast<struct allocate::header*>(this -> align(&this -> buffer[END - HEADER_SIZE], HEADER_ALIGNMENT, HEADER_SIZE, this -> align::previous)); if (NULL == offset)                                                                        return NULL; // ->> No alignment for `headers`
-              std::size_t              const length     = NULL != headers ? &offset[1] - headers : 0u;                                                                                                      if (&available[0] > offset - (length * 2u) or &available[amount] > offset - (length * 1u)) break;       // ->> Unable to lengthen `headers`
-              struct allocate::header *const preheaders = ::new (offset - (length * 2u)) struct allocate::header[length + 0u];
-
-              // ...
-              for (std::size_t index = length; index--; ) { preheaders[index] = headers[index]; }
-              headers = ::new (offset - (length * 1u)) struct allocate::header[length + 1u];
-
-              for (std::size_t index = length; index--; ) { headers[index] = preheaders[index]; }
-              headers[length].amount = amount;
-              headers[length].buffer = available;
-
-              allocation = &headers[length];
-            }
-
-            // ...
-            DO WHAT WITH allocation NOW?
-            // header -> amount = amount;
-            // header -> buffer = this -> align(this -> buffer, alignment, size, this -> align::next);
-
-            return;
+            // ... ->> Reapportion existing `allocation`
+            TODO
           } while (false);
 
           amount -= ((amount - extent) / rate.quot) * rate.quot; // ->> Constrain `amount >= extent`
