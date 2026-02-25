@@ -1,25 +1,81 @@
 <!DOCTYPE html>
 <html>
 <body>
-  <div id=a>
-    <div id=b> <div id=c> </div> </div>
-    <div id=d> </div>
+  <div id=root>
+    BEGIN
+    <div id=a> <div id=b> </div> </div>
+    <div id=c> MIDDLE </div>
+    END
   </div>
 
   <!-- Document Script -->
   <script language=javascript type=text/javascript>
-    // DOMAttrModified (Not supported by Safari)
-    // DOMAttributeNameChanged (Not supported by Firefox)
-    // DOMCharacterDataModified
-    // DOMElementNameChanged (Not supported by Firefox)
-    // DOMNodeInserted
-    // DOMNodeInsertedIntoDocument
-    // DOMNodeRemoved
-    // DOMNodeRemovedFromDocument
-    // DOMSubtreeModified
+    /* ...
+      --- WARN (Lapys) -> Does not work with `EventTarget::attachEvent(…)`; Disconnect with `EventTarget::removeEventListener(…)` but degrades performance regardless
+      --- NOTE (Lapys) ---
+        • "DOMAttrModified"             → Addition/ modification/ removal/ replacement of `Attr` descendant nodes
+        • "DOMAttributeNameChanged"     → `::namespaceURI`/ `::nodeName` modification of `Attr` descendant nodes
+        • "DOMCharacterDataModified"    → `::nodeValue` (`::textContent`) modification of `CharacterData` descendant nodes
+        • "DOMNodeInserted"             → Addition of `Node` descendant nodes
+        • "DOMNodeInsertedIntoDocument" → …
+        • "DOMNodeRemoved"              → Removal of `Node` descendant nodes
+        • "DOMNodeRemovedFromDocument"  → …
+        • "DOMSubtreeModified"          → Combination of all except `"DOMNodeInsertedIntoDocument"` and `"DOMNodeRemovedFromDocument"`
 
-    // MutationObserver
-    // WebKitMutationObserver
+      --- CODE (Lapys) ---
+        MutationEvent event {
+          attrChange : if not "DOMAttrModified": 0x0; else: MutationEvent.ADDITION {0x2} | MutationEvent.MODIFICATION {0x1} | MutationEvent.REMOVAL {0x3},
+          attrName   : if not "DOMAttrModified": "";  else: String {Attr::name},
+          newValue   : if "DOMAttrModified": String {Attr::value}; else if "DOMCharacterDataModified": String {CharacterData::data}; else: "",
+          prevValue  : if "DOMAttrModified": String {Attr::value}; else if "DOMCharacterDataModified": String {CharacterData::data}; else: "",
+          relatedNode: if "DOMAttrModified": Attr; else if "DOMCharacterDataModified" or "DOMSubtreeModified": null; else if "DOMNodeInserted" or "DOMNodeRemoved": this; else: Node
+        }
+    */
+    if (typeof root.addEventListener === "function") {
+      root.addEventListener("DOMAttrModified",             function(event) { /* --> event.target === Element {…} ->> Not supported by Safari */ });
+      root.addEventListener("DOMAttributeNameChanged",     function(event) { /* --> event.target === Element {…} ->> Not supported by Firefox; triggered via `Document::renameNode(Attr node, String namespaceURI, String qualifiedName)` which was meant for XML documents, not HTML */ });
+      root.addEventListener("DOMCharacterDataModified",    function(event) { /* --> event.target === CharacterData {…} | ProcessingInstruction {…} */});
+      root.addEventListener("DOMElementNameChanged",       function(event) { /* --> event.target === Element {…} ->> Not supported by Firefox; triggered via `Document::renameNode(Element node, String namespaceURI, String qualifiedName)` which was meant for XML documents, not HTML */ });
+      root.addEventListener("DOMNodeInserted",             function(event) { /* --> event.target === Node {<inserted-node>} */ });
+      root.addEventListener("DOMNodeInsertedIntoDocument", function(event) { /* --> event.target === Node {<inserted-node>} */ });
+      root.addEventListener("DOMNodeRemoved",              function(event) { /* --> event.target === Node {<removed-node>} */ });
+      root.addEventListener("DOMNodeRemovedFromDocument",  function(event) { /* --> event.target === Node {<removed-node>} */ });
+      root.addEventListener("DOMSubtreeModified",          function(event) { /* --> event.target === Node {<descendant-node>} | this */ })
+    }
+
+    void function(MutationObserver) {
+      if (null !== MutationObserver)
+      try /* ->> Disconnect with `MutationObserver::disconnect()`, collect pending `MutationRecord[] records` beforehand with `MutationObserver::takeRecords()` */ {
+        (new MutationObserver(function(records, observer) {
+          for (var index = 0; index !== records.length; ++index) {
+            var record = records[index];
+
+            /* ...
+              --- CODE (Lapys) ---
+                MutationRecord records {
+                  addedNodes        : NodeList [],
+                  attributeName     : String   {Attr::name}         | null,
+                  attributeNamespace: String   {Attr::namespaceURI} | null,
+                  nextSibling       : Node     {…}                  | null,
+                  oldValue          : switch case "attributes": String {Attr::value}; case "characterData": String {CharacterData::data}; case "childList": null,
+                  previousSibling   : Node     {…}                  | null,
+                  removedNodes      : NodeList [],
+                  target            : switch case "attributes": Element {Attr::parentNode}; case "characterData": CharacterData {…}; case "childList": Element {<descendant-node>}::parentNode,
+                  type              : "attributes" | "characterData" | "childList"
+                }
+            */
+          }
+        })).observe(root, {
+          attributes           : true,   // ->> Observes `Attr::value` modification
+          attributeFilter      : ["id"], //
+          attributeOldValue    : true,   // ->> Records previous value of `Attr::value` modification
+          characterData        : true,   // ->> Observes `CharacterData::data` modification
+          characterDataOldValue: true,   // ->> Records previous value of `CharacterData::data` modification
+          childList            : true,   // ->> Addition/ removal of `Node` child nodes
+          subtree              : true    // ->> Extends observation to descendants
+        })
+      } catch (error) { /* --> SyntaxError | TypeError */ }
+    }(typeof MutationObserver !== "function" ? typeof WebKitMutationObserver !== "function" ? WebKitMutationObserver : null : MutationObserver)
   </script>
 </body>
 </html>
