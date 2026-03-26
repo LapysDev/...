@@ -51,7 +51,7 @@ int WINAPI wWinMain(HINSTANCE const instanceHandle, HINSTANCE const, PWSTR const
 
     /* ... */
     void* align(void* const address, std::size_t const alignment, std::size_t const size, signed char const direction) const /* noexcept */ /* --> [[assume(address >= ::buffer and address <= &::buffer[maximum] and alignment and 0u == (alignment & (alignment - 1u)) and maximum >= size)]] */ {
-      #if defined UINTPTR_MAX // ->> Total
+      #if defined UINTPTR_MAX // ->> Total ordering
         uintptr_t const offset  = reinterpret_cast<uintptr_t>(address);
         uintptr_t const aligned = (offset + (direction ? alignment - 1u : 0u)) & ~(alignment - 1u);
 

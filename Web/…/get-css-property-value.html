@@ -1,0 +1,1538 @@
+<style>
+  html { border-width: 1px 1px 1px 1px }
+  body, html { display: table; height: 100.0%; width: 100.0% }
+  body {
+    animation     : animateA 10.0s linear 0.0s 1 running forwards, animateB 10.0s linear 0.0s 1 running forwards;
+    border-width  : inherit;
+    border-style  : solid solid solid solid;
+    border-color  : yellow yellow yellow yellow;
+    display       : table-cell;
+    font          : 90.0vmin monospace;
+    overflow      : hidden;
+    text-align    : center;
+    transition    : border-color 1.0s linear 0.0s;
+    vertical-align: middle
+  }
+    body:hover { border-color: red }
+  @keyframes animateA {
+    0.0%   { background: rebeccapurple }
+    90.0%  { background: aliceblue }
+    100.0% { background: #999 }
+  }
+
+  @keyframes animateB {
+    0.0%   { background-size: 100.0%; opacity: 0 }
+    100.0% { background-size: 200.0%; opacity: 1 }
+  }
+</style>
+&hellip;
+<script>
+  var time = 10, interval = setInterval(function() { document.body.innerText = !time ? clearInterval(interval) >>> 0 : time-- }, 1.0e3);
+
+  function getCSSPropertyValue(element, propertyName, styleRules = null, strict = false) {
+    var ANIMATED     = 0x1, TRANSITIONED = 0x2;
+    var HEIGHT_AXIS  = 0x1, WIDTH_AXIS   = 0x2;
+    var MEASUREMENTS = {
+      // ->> Missing some font and length formats e.g. `cqmax`
+      '%'         : /^(-?[e+-.\d]+)(%)$/,
+      "angle"     : /^(-?[e+-.\d]+)(deg|grad|rad|turn)$/i,
+      "color"     : /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[.\d]+\s*)?\)$/i,
+      "duration"  : /^([e+-.\d]+)(ms|s)$/i,
+      "frequency" : /^([e+-.\d]+)(Hz|kHz)$/i,
+      "length"    : /^(-?[e+-.\d]+)(%|cm|em|in|mm|pc|pt|px|Q|rem|vh|vw)$/i,
+      "resolution": /^([e+-.\d]+)(dpcm|dpi|dppx|x)$/i,
+      "transform" : /^matrix(3d)?\(\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*(,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*,\s*-?[e+-.\d]+\s*)?\)$/i
+    }, SHORTHANDS = [
+      // ->> Complete longhand expansions only, use NUL terminators to delimit special cases e.g. `border`
+      {name: "animation",              composition: ["animation-name",                ' ', "animation-duration", ' ', "animation-timing-function", ' ', "animation-delay", ' ', "animation-iteration-count", ' ', "animation-direction", ' ', "animation-fill-mode", ' ', "animation-play-state", ' ', "animation-timeline"]},
+      {name: "animation-range",        composition: ["animation-range-start",         ' ', "animation-range-end"]},
+      {name: "background",             composition: ["background-image",              ' ', "background-position-x", ' ', "background-position-y", '/', "background-size",     ' ', "background-repeat", ' ',  "background-origin", ' ', "background-clip",    ' ', "background-attachment", ' ', "background-color"]},
+      {name: "background-position",    composition: ["background-position-x",         ' ', "background-position-y"]},
+      {name: "background-repeat",      composition: ["background-repeat-x",           ' ', "background-repeat-y"]},
+      {name: "border",                 composition: ["border-top-width",              ' ', "border-right-width",  ' ', "border-bottom-width", ' ', "border-left-width", '\0', "border-top-style",  ' ', "border-right-style", ' ', "border-bottom-style",   ' ', "border-left-style", '\0', "border-top-color", ' ', "border-right-color", ' ', "border-bottom-color", ' ', "border-left-color"]},
+      {name: "border-block",           composition: ["border-block-width",            ' ', "border-block-style",  ' ', "border-block-color"]},
+      {name: "border-block-color",     composition: ["border-block-start-color",      ' ', "border-block-end-color"]},
+      {name: "border-block-end",       composition: ["border-block-end-width",        ' ', "border-block-end-style",   ' ', "border-block-end-color"]},
+      {name: "border-block-start",     composition: ["border-block-start-width",      ' ', "border-block-start-style", ' ', "border-block-start-color"]},
+      {name: "border-block-style",     composition: ["border-block-start-style",      ' ', "border-block-end-style"]},
+      {name: "border-block-width",     composition: ["border-block-start-width",      ' ', "border-block-end-width"]},
+      {name: "border-bottom",          composition: ["border-bottom-width",           ' ', "border-bottom-style", ' ', "border-bottom-color"]},
+      {name: "border-color",           composition: ["border-top-color",              ' ', "border-right-color",  ' ', "border-bottom-color", ' ', "border-left-color"]},
+      {name: "border-image",           composition: ["border-image-source",           ' ', "border-image-slice",  '/', "border-image-width",  '/', "border-image-outset", ' ', "border-image-repeat"]},
+      {name: "border-inline",          composition: ["border-inline-width",           ' ', "border-inline-style", ' ', "border-inline-color"]},
+      {name: "border-inline-color",    composition: ["border-inline-start-color",     ' ', "border-inline-end-color"]},
+      {name: "border-inline-end",      composition: ["border-inline-end-width",       ' ', "border-inline-end-style",   ' ', "border-inline-end-color"]},
+      {name: "border-inline-start",    composition: ["border-inline-start-width",     ' ', "border-inline-start-style", ' ', "border-inline-start-color"]},
+      {name: "border-inline-style",    composition: ["border-inline-start-style",     ' ', "border-inline-end-style"]},
+      {name: "border-inline-width",    composition: ["border-inline-start-width",     ' ', "border-inline-end-width"]},
+      {name: "border-left",            composition: ["border-left-width",             ' ', "border-left-style",       ' ', "border-left-color"]},
+      {name: "border-radius",          composition: ["border-top-left-radius",        ' ', "border-top-right-radius", ' ', "border-bottom-right-radius", ' ', "border-bottom-left-radius"]},
+      {name: "border-right",           composition: ["border-right-width",            ' ', "border-right-style",      ' ', "border-right-color"]},
+      {name: "border-style",           composition: ["border-top-style",              ' ', "border-right-style",      ' ', "border-bottom-style", ' ', "border-left-style"]},
+      {name: "border-top",             composition: ["border-top-width",              ' ', "border-top-style",        ' ', "border-top-color"]},
+      {name: "border-width",           composition: ["border-top-width",              ' ', "border-right-width",      ' ', "border-bottom-width", ' ', "border-left-width"]},
+      {name: "caret",                  composition: ["caret-color",                   ' ', "caret-shape"]},
+      {name: "column-rule",            composition: ["column-rule-width",             ' ', "column-rule-style", ' ', "column-rule-color"]},
+      {name: "columns",                composition: ["column-width",                  ' ', "column-count"]},
+      {name: "contain-intrinsic-size", composition: ["contain-intrinsic-width",       ' ', "contain-intrinsic-height"]},
+      {name: "container",              composition: ["container-name",                '/', "container-type"]},
+      {name: "flex",                   composition: ["flex-grow",                     ' ', "flex-shrink",  ' ', "flex-basis"]},
+      {name: "flex-flow",              composition: ["flex-direction",                ' ', "flex-wrap"]},
+      {name: "font",                   composition: ["font-style",                    ' ', "font-variant",            ' ', "font-weight",       ' ', "font-stretch",         ' ', "font-size",                '/', "line-height",           ' ', "font-family"]},
+      {name: "font-variant",           composition: ["font-variant-ligatures",        ' ', "font-variant-alternates", ' ', "font-variant-caps", ' ', "font-variant-numeric", ' ', "font-variant-east-asian",  ' ', "font-variant-position", ' ', "font-variant-emoji"]},
+      {name: "gap",                    composition: ["row-gap",                       ' ', "column-gap"]},
+      {name: "grid",                   composition: ["grid-template-rows",            ' ', "grid-template-columns",  ' ', "grid-template-areas",  ' ', "grid-auto-rows",  ' ', "grid-auto-columns",  ' ', "grid-auto-flow"]},
+      {name: "grid-area",              composition: ["grid-row-start",                '/', "grid-column-start",      '/', "grid-row-end",         '/', "grid-column-end"]},
+      {name: "grid-column",            composition: ["grid-column-start",             '/', "grid-column-end"]},
+      {name: "grid-row",               composition: ["grid-row-start",                '/', "grid-row-end"]},
+      {name: "grid-template",          composition: ["grid-template-rows",            '/', "grid-template-columns",  ' ', "grid-template-areas"]},
+      {name: "inset",                  composition: ["top",                           ' ', "right",                  ' ', "bottom",  ' ', "left"]},
+      {name: "inset-block",            composition: ["inset-block-start",             ' ', "inset-block-end"]},
+      {name: "inset-inline",           composition: ["inset-inline-start",            ' ', "inset-inline-end"]},
+      {name: "list-style",             composition: ["list-style-position",           ' ', "list-style-image",  ' ', "list-style-type"]},
+      {name: "margin",                 composition: ["margin-top",                    ' ', "margin-right",      ' ', "margin-bottom",  ' ', "margin-left"]},
+      {name: "margin-block",           composition: ["margin-block-start",            ' ', "margin-block-end"]},
+      {name: "margin-inline",          composition: ["margin-inline-start",           ' ', "margin-inline-end"]},
+      {name: "marker",                 composition: ["marker-start",                  ' ', "marker-mid",        ' ', "marker-end"]},
+      {name: "mask",                   composition: ["mask-image",                    ' ', "mask-position",     '/', "mask-size",         ' ', "mask-repeat",        ' ', "mask-origin",        ' ', "mask-clip", ' ', "mask-composite", ' ', "mask-mode"]},
+      {name: "mask-border",            composition: ["mask-border-source",            ' ', "mask-border-slice", '/', "mask-border-width", '/', "mask-border-outset", ' ', "mask-border-repeat", ' ', "mask-border-mode"]},
+      {name: "offset",                 composition: ["offset-position",               ' ', "offset-path",       ' ', "offset-distance",   ' ', "offset-rotate",      '/', "offset-anchor"]},
+      {name: "outline",                composition: ["outline-width",                 ' ', "outline-style",     ' ', "outline-color"]},
+      {name: "overflow",               composition: ["overflow-x",                    ' ', "overflow-y"]},
+      {name: "overscroll-behavior",    composition: ["overscroll-behavior-x",         ' ', "overscroll-behavior-y"]},
+      {name: "padding",                composition: ["padding-top",                   ' ', "padding-right", ' ', "padding-bottom", ' ', "padding-left"]},
+      {name: "padding-block",          composition: ["padding-block-start",           ' ', "padding-block-end"]},
+      {name: "padding-inline",         composition: ["padding-inline-start",          ' ', "padding-inline-end"]},
+      {name: "place-content",          composition: ["align-content",                 ' ', "justify-content"]},
+      {name: "place-items",            composition: ["align-items",                   ' ', "justify-items"]},
+      {name: "place-self",             composition: ["align-self",                    ' ', "justify-self"]},
+      {name: "scroll-margin",          composition: ["scroll-margin-top",             ' ', "scroll-margin-right", ' ', "scroll-margin-bottom", ' ', "scroll-margin-left"]},
+      {name: "scroll-margin-block",    composition: ["scroll-margin-block-start",     ' ', "scroll-margin-block-end"]},
+      {name: "scroll-margin-inline",   composition: ["scroll-margin-inline-start",    ' ', "scroll-margin-inline-end"]},
+      {name: "scroll-padding",         composition: ["scroll-padding-top",            ' ', "scroll-padding-right", ' ', "scroll-padding-bottom", ' ', "scroll-padding-left"]},
+      {name: "scroll-padding-block",   composition: ["scroll-padding-block-start",    ' ', "scroll-padding-block-end"]},
+      {name: "scroll-padding-inline",  composition: ["scroll-padding-inline-start",   ' ', "scroll-padding-inline-end"]},
+      {name: "scroll-timeline",        composition: ["scroll-timeline-name",          ' ', "scroll-timeline-axis"]},
+      {name: "text-box",               composition: ["text-box-trim",                 ' ', "text-box-edge"]},
+      {name: "text-decoration",        composition: ["text-decoration-line",          ' ', "text-decoration-style", ' ', "text-decoration-color", ' ', "text-decoration-thickness"]},
+      {name: "text-emphasis",          composition: ["text-emphasis-style",           ' ', "text-emphasis-color"]},
+      {name: "text-wrap",              composition: ["text-wrap-mode",                ' ', "text-wrap-style"]},
+      {name: "transition",             composition: ["transition-property",           ' ', "transition-duration", ' ', "transition-timing-function", ' ', "transition-delay", ' ', "transition-behavior"]},
+      {name: "view-timeline",          composition: ["view-timeline-name",            ' ', "view-timeline-axis",  ' ', "view-timeline-inset"]},
+      {name: "white-space",            composition: ["white-space-collapse",          ' ', "text-wrap-mode"]},
+      {name: "-webkit-border-before",  composition: ["-webkit-border-before-width",   ' ', "-webkit-border-before-style",  ' ', "-webkit-border-before-color"]},
+      {name: "-webkit-mask-box-image", composition: ["-webkit-mask-box-image-source", ' ', "-webkit-mask-box-image-slice", '/', "-webkit-mask-box-image-width", '/', "-webkit-mask-box-image-outset", ' ', "-webkit-mask-box-image-repeat"]},
+      {name: "-webkit-text-stroke",    composition: ["-webkit-text-stroke-width",     ' ', "-webkit-text-stroke-color"]}
+    ];
+
+    var containers  = {name: [], query: []};                 // --> {name&query: {applicable: Boolean, container: {name: String, query: String}, element: HTMLElement}[]}
+    var layers      = [""];                                  // --> String[]
+    var styleSheets = [];                                    // --> {container|scope: {name: String, query: String}*|{end: String, start: String}*, layer: String,                        rules: CSSRuleList | DOMCSSRuleList}[]
+    var styleRules  = null === styleRules ? [] : styleRules; // --> {container|scope: {name: String, query: String}*|{end: String, start: String}*, layer: String, order: Number(Uint32), value: CSSStyleRule}[]
+
+    /* ... */
+    function alt(name) {
+      return name.replace(/^-+[a-z]/, function(match) { return match.replace(/-/g, '+') }).replace(/-([a-z])/g, function(match, $1) { return $1.toUpperCase() }).replace(/^\++/, function(match) { return match.replace(/\+/g, '-') })
+    }
+
+    function bézier(pointAX, pointAY, pointBX, pointBY, progress) {
+      var value = progress;
+
+      // ...
+      for (var estimation, precision = 0; precision !== 8; ++precision) /* ->> Newton’s method */ {
+        estimation = ((pointAX * (1.00 - value) * (1.00 - value) * value * 3) + (pointBX * (1.00 - value) * value * value * 3) + (value * value * value)) - progress;
+        if (Math.abs(estimation) < 1.00e-4) break;
+
+        value -= estimation / (((pointAX * (1.00 - (value * 3.00)) * (1.00 - (value * 1.00)) * 3) + (pointBX * (2.00 - (value * 3.00)) * value * 3) + (value * value * 3)) || 1.00)
+      }
+
+      return (pointAY * (1.00 - value) * (1.00 - value) * value * 3) + (pointBY * (1.00 - value) * value * value * 3) + (value * value * value)
+    }
+
+    function bounds(element) {
+      if (typeof element.getBoundingClientRect === "function") return element.getBoundingClientRect();
+      var left = 0.00;
+      var top  = 0.00;
+
+      // ...
+      for (var node = element; null !== node; node = node.offsetParent) {
+        left += node.offsetLeft;
+        top  += node.offsetTop
+      }
+
+      for (var node = element.parentNode; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x1; node = node.parentNode) {
+        left -= node.scrollLeft || 0.00;
+        top  -= node.scrollTop  || 0.00
+      }
+
+      return {
+        bottom: top + element.offsetHeight,
+        left  : left,
+        right : left + element.offsetWidth,
+        top   : top
+      }
+    }
+
+    function canonicalize(element, value, axis) /* ->> Missing some color, font, and transform formats (along with few assumptions made) */ {
+      var value        = value.toLowerCase();
+      var measurements = {
+        "angle"     : value.match(MEASUREMENTS["angle"]),
+        "duration"  : value.match(MEASUREMENTS["duration"]),
+        "frequency" : value.match(MEASUREMENTS["frequency"]),
+        "length"    : value.match(MEASUREMENTS["length"]),
+        "resolution": value.match(MEASUREMENTS["resolution"])
+      };
+
+      // ...
+      if (null !== measurements["angle"])
+      switch (measurements["angle"][2]) {
+        case "deg":  return (measurements["angle"][1])                      + "deg";
+        case "grad": return (measurements["angle"][1] * 0.90)               + "deg";
+        case "rad" : return (measurements["angle"][1] * (180.00 / Math.PI)) + "deg";
+        case "turn": return (measurements["angle"][1] * 360.00)             + "deg"
+      }
+
+      else if (null !== measurements["duration"])
+      switch (measurements["duration"][2]) /* ->> Canonicalizes to `s` unlike `Element::getAnimations(…)`’s `ms` */ {
+        case "ms": return (measurements["duration"][1] * 1000.00) + 's';
+        case 's' : return (measurements["duration"][1])           + 's'
+      }
+
+      else if (null !== measurements["frequency"])
+      switch (measurements["frequency"][2]) {
+        case "khz": return (measurements["frequency"][1] * 1000.00) + "Hz";
+        case "hz" : return (measurements["frequency"][1])           + "Hz"
+      }
+
+      else if (null !== measurements["length"])
+      switch (measurements["length"][2]) {
+        case "cm":             return (measurements["length"][1] * (96.00 / 2.54))   + "px";
+        case "em": case "rem": return (measurements["length"][1] * 16.00)            + "px"; // ->> Assumed `font-size` is `16px`
+        case "in":             return (measurements["length"][1] * (96.00 / 1.00))   + "px";
+        case "mm":             return (measurements["length"][1] * (96.00 / 25.40))  + "px";
+        case 'q' :             return (measurements["length"][1] * (96.00 / 101.60)) + "px";
+        case "pc":             return (measurements["length"][1] * 16.00)            + "px";
+        case "pt":             return (measurements["length"][1] * (96.00 / 72.00))  + "px";
+        case "px":             return (measurements["length"][1])                    + "px";
+        case "vh":             return (measurements["length"][1] * innerWidth)       + "px";
+        case "vw":             return (measurements["length"][1] * innerHeight)      + "px";
+
+        case '%': var parentElement = element.parentNode; {
+          if (null !== parentElement && parentElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1)
+          switch (axis) {
+            case HEIGHT_AXIS: return (measurements["length"][1] / 100.00) * bounds(parentElement).height;
+            case WIDTH_AXIS : return (measurements["length"][1] / 100.00) * bounds(parentElement).width
+          }
+        }
+      }
+
+      else if (null !== measurements["resolution"])
+      switch (measurements["resolution"][2]) {
+        case "dpcm":           return (measurements["resolution"][1] / (96.00 / 2.54)) + "dppx";
+        case "dpi" :           return (measurements["resolution"][1] / (96.00 / 1.00)) + "dppx";
+        case "dppx": case 'x': return (measurements["resolution"][1])                  + "dppx"
+      }
+
+      // ...
+      return value
+    }
+
+    function compare(specificityA, specificityB) {
+      return (
+        specificityA[0] !== specificityB[0] ? specificityA[0] - specificityB[0] :
+        specificityA[1] !== specificityB[1] ? specificityA[1] - specificityB[1] :
+                                              specificityA[2] - specificityB[2]
+      )
+    }
+
+    function delimit(string, delimiter) /* ->> Ignore parenthesized and quoted content when `string.split(…)`-ing */ {
+      var substring = "";
+      var value     = [];
+
+      // ...
+      for (var depth = 0, index = 0, quoted = null; index !== string.length; ++index) {
+        var character = string[index];
+
+        // ...
+        if (null !== quoted) { substring += character; switch (character) { case '\\': substring += string[++index]; break; case quoted: quoted = null } }
+        else switch (character) {
+          case '(':            ++depth;            substring += character; break;
+          case ')':            --depth;            substring += character; break;
+          case '"': case '\'': quoted = character; substring += character; break;
+          default: if (0 === depth) {
+            var match = null;
+
+            // ...
+            delimiter.lastIndex = index;
+            match               = delimiter.exec(string);
+
+            if (null !== match && match.index === index && match[0] !== "") {
+              substring = substring.replace(/^\s+|\s+$/g, ""); // --> .trim()
+              if (substring !== "") void value.push({delimiter: match[0]/* --> .trim() */.replace(/^\s+|\s+$/g, "").replace(/^$/, ' '), value: substring});
+
+              index   += match[0].length - 1;
+              substring = ""
+            } else substring += character
+          }   else substring += character
+        }
+      }
+
+      substring = substring.replace(/^\s+|\s+$/g, ""); // --> .trim()
+      if (substring !== "") void value.push({delimiter: "", value: substring});
+
+      // ...
+      return value
+    }
+
+    function interpolate(propertyName, propertyValueA, propertyValueB, progress, delimiter) {
+      var delimitedValueA = delimit(propertyValueA, delimiter);
+      var delimitedValueB = delimit(propertyValueB, delimiter);
+      var value           = "";
+
+      /* ... */
+      function lerp(valueA, valueB) {
+        var scalarA       = +valueA, scalarB = +valueB;
+        var interpolation = (progress * (scalarB - scalarA)) + scalarA;
+
+        return interpolation !== interpolation /* --> Number.isNaN(…) */ ? progress < 0.50 ? valueA : valueB : interpolation
+      }
+
+      function slerp(quaternionA, quaternionB) {
+        var distance      = (quaternionA.w * quaternionB.w) + (quaternionA.x * quaternionB.x) + (quaternionA.y * quaternionB.y) + (quaternionA.z * quaternionB.z);
+        var interpolation = {w: 0.00, x: 0.00, y: 0.00, z: 0.00};
+
+        // ...
+        if (distance > 0.9995) {
+          var n;
+
+          interpolation.w = lerp(quaternionA.w, quaternionB.w);
+          interpolation.x = lerp(quaternionA.x, quaternionB.x);
+          interpolation.y = lerp(quaternionA.y, quaternionB.y);
+          interpolation.z = lerp(quaternionA.z, quaternionB.z);
+
+          n = Math.sqrt((interpolation.w * interpolation.w) + (interpolation.x * interpolation.x) + (interpolation.y * interpolation.y) + (interpolation.z * interpolation.z)); // --> Math.hypot(...interpolation)
+
+          interpolation.w /= n;
+          interpolation.x /= n;
+          interpolation.y /= n;
+          interpolation.z /= n
+        }
+
+        else {
+          if (distance < 0.0000) { distance = -distance; quaternionB.w = -quaternionB.w; quaternionB.x = -quaternionB.x; quaternionB.y = -quaternionB.y; quaternionB.z = -quaternionB.z }
+          var angularDistance = Math.acos(distance);
+          var s               = [Math.cos(angularDistance * progress) - (distance * (Math.sin(angularDistance * progress) / Math.sin(angularDistance))), Math.sin(angularDistance * progress) / Math.sin(angularDistance)];
+
+          interpolation.w = (quaternionA.w * s[0]) + (quaternionB.w * s[1]);
+          interpolation.x = (quaternionA.x * s[0]) + (quaternionB.x * s[1]);
+          interpolation.y = (quaternionA.y * s[0]) + (quaternionB.y * s[1]);
+          interpolation.z = (quaternionA.z * s[0]) + (quaternionB.z * s[1])
+        }
+
+        return interpolation
+      }
+
+      // ...
+      for (var index = 0; ; ++index) {
+        var valueB        = delimitedValueB[index];
+        var valueA        = delimitedValueA[index];
+        var interpolation = progress < 0.50 ? valueA.value : valueB.value;
+
+        // ... ->> Expect absolute lengths canonicalized to `px`, angles to `deg`, colors (not wide-gamut) to legacy `rgb(…)`/ `rgba(…)`, frequencies to `Hz`, durations to `ms`, resolutions to `dppx`, and ignores interpolating other units (e.g. `em`, `vmax`, …) except `%`
+        if (index === delimitedValueA.length || index === delimitedValueB.length || valueA.delimiter !== valueB.delimiter)
+        break;
+
+        if (MEASUREMENTS["color"].test(valueA.value) && MEASUREMENTS["color"].test(valueB.value)) /* --> "rgb(…, …, …)" | "rgba(…, …, …, …)" */ {
+          var colorA = (valueA.value.replace(/(^rgba?\(\s*|\s*\)$)/g, "") + (valueA.value.indexOf('a') === -1 ? ", 1" : "")).split(/\s*,\s*/);
+          var colorB = (valueB.value.replace(/(^rgba?\(\s*|\s*\)$)/g, "") + (valueB.value.indexOf('a') === -1 ? ", 1" : "")).split(/\s*,\s*/);
+
+          interpolation = "rgba(" + Math.floor(lerp(colorA[0], colorB[0])) + ", " + Math.floor(lerp(colorA[1], colorB[1])) + ", " + Math.floor(lerp(colorA[2], colorB[2])) + ", " + lerp(colorA[3], colorB[3]) + ')'
+        }
+
+        else if (MEASUREMENTS["transform"].test(valueA.value) && MEASUREMENTS["transform"].test(valueB.value)) /* --> "matrix(…, …, …, …, …, …)" | "matrix3d(…, …, …, …, …, …, …, …, …, …, …, …, …, …, …, …)" */ {
+          var matrixA = null;
+          var matrixB = null;
+
+          // ...
+          if (/^matrix\(/.test(valueA.value)) { valueA.value = valueA.value.replace(/^matrix\(|\)$/g, "").split(/\s*,\s*/); valueA.value = "matrix3d(" + valueA.value[0] + ", " + valueA.value[1] + ", 0, 0, " + valueA.value[2] + ", " + valueA.value[3] + ", 0, 0, 0, 0, 1, 0" + valueA.value[4] + ", " + valueA.value[5] + ", 0, 1)" }
+          if (/^matrix\(/.test(valueB.value)) { valueB.value = valueB.value.replace(/^matrix\(|\)$/g, "").split(/\s*,\s*/); valueB.value = "matrix3d(" + valueB.value[0] + ", " + valueB.value[1] + ", 0, 0, " + valueB.value[2] + ", " + valueB.value[3] + ", 0, 0, 0, 0, 1, 0" + valueB.value[4] + ", " + valueB.value[5] + ", 0, 1)" }
+
+          matrixA = transform(valueA.value);
+          matrixB = transform(valueB.value);
+
+          if (null !== matrixA && null !== matrixB) {
+            var matrix = {
+              perspective: [lerp(matrixA.perspective[0], matrixB.perspective[0]), lerp(matrixA.perspective[1], matrixB.perspective[1]), lerp(matrixA.perspective[2], matrixB.perspective[2]), lerp(matrixA.perspective[3], matrixB.perspective[3])],
+              quaternion : slerp(matrixA.quaternion, matrixB.quaternion),
+              scale      : {x:  lerp(matrixA.scale      .x,  matrixB.scale      .x),  y:  lerp(matrixA.scale      .y,  matrixB.scale      .y),  z:  lerp(matrixA.scale      .z,  matrixB.scale      .z)},
+              skew       : {xy: lerp(matrixA.skew       .xy, matrixB.skew       .xy), xz: lerp(matrixA.skew       .xz, matrixB.skew       .xz), yz: lerp(matrixA.skew       .yz, matrixB.skew       .yz)},
+              translation: {x:  lerp(matrixA.translation.x,  matrixB.translation.x),  y:  lerp(matrixA.translation.y,  matrixB.translation.y),  z:  lerp(matrixA.translation.z,  matrixB.translation.z)}
+            }, rotations = [
+              [1.00 - (((matrix.quaternion.y * matrix.quaternion.y) + (matrix.quaternion.z * matrix.quaternion.z)) * 2.00),        (((matrix.quaternion.x * matrix.quaternion.y) + (matrix.quaternion.w * matrix.quaternion.z)) * 2.00),        (((matrix.quaternion.x * matrix.quaternion.z) - (matrix.quaternion.w * matrix.quaternion.y)) * 2.00)],
+              [       (((matrix.quaternion.x * matrix.quaternion.y) - (matrix.quaternion.w * matrix.quaternion.z)) * 2.00), 1.00 - (((matrix.quaternion.x * matrix.quaternion.x) + (matrix.quaternion.z * matrix.quaternion.z)) * 2.00),        (((matrix.quaternion.y * matrix.quaternion.z) + (matrix.quaternion.w * matrix.quaternion.x)) * 2.00)],
+              [       (((matrix.quaternion.x * matrix.quaternion.z) + (matrix.quaternion.w * matrix.quaternion.y)) * 2.00),        (((matrix.quaternion.y * matrix.quaternion.z) - (matrix.quaternion.w * matrix.quaternion.x)) * 2.00), 1.00 - (((matrix.quaternion.x * matrix.quaternion.x) + (matrix.quaternion.y * matrix.quaternion.y)) * 2.00)]
+            ];
+
+            // ...
+            interpolation = "matrix3d(";
+              for (var subindex = rotations[0].length; subindex--; ) { interpolation += (matrix.scale.x * ((rotations[0][subindex] * 1.00)           + 0.00                                      + 0.00))                   + ", " } interpolation += matrix.perspective[0] + ", ";
+              for (var subindex = rotations[1].length; subindex--; ) { interpolation += (matrix.scale.y * ((rotations[0][subindex] * matrix.skew.xy) + (rotations[1][subindex] * 1.00)           + 0.00))                   + ", " } interpolation += matrix.perspective[1] + ", ";
+              for (var subindex = rotations[2].length; subindex--; ) { interpolation += (matrix.scale.z * ((rotations[0][subindex] * matrix.skew.xz) + (rotations[1][subindex] * matrix.skew.yz) + rotations[2][subindex])) + ", " } interpolation += matrix.perspective[2] + ", ";
+            interpolation = (interpolation + matrix.translation.x + ", " + matrix.translation.y + ", " + matrix.translation.z + ", " + matrix.perspective[3] + ')').replace(/(\.\d{6})\d+/g, "$1")
+          }
+        }
+
+        else if (MEASUREMENTS['%']         .test(valueA.value) && MEASUREMENTS['%']         .test(valueB.value)) interpolation =            (lerp(valueA.value.replace(/%$/,    ""), valueB.value.replace(/%$/,    ""))  + '%')  .replace(/(\.\d{6})\d+/, "$1");
+        else if (MEASUREMENTS["angle"]     .test(valueA.value) && MEASUREMENTS["angle"]     .test(valueB.value)) interpolation =            (lerp(valueA.value.replace(/%$/,    ""), valueB.value.replace(/%$/,    ""))  + "deg").replace(/(\.\d{6})\d+/, "$1");
+        else if (MEASUREMENTS["duration"]  .test(valueA.value) && MEASUREMENTS["duration"]  .test(valueB.value)) interpolation = (Math.floor(lerp(valueA.value.replace(/ms$/,   ""), valueB.value.replace(/ms$/,   ""))) + "ms");
+        else if (MEASUREMENTS["frequency"] .test(valueA.value) && MEASUREMENTS["frequency"] .test(valueB.value)) interpolation =            (lerp(valueA.value.replace(/Hz$/,   ""), valueB.value.replace(/Hz$/,   ""))  + "Hz")  .replace(/(\.\d{6})\d+/, "$1");
+        else if (MEASUREMENTS["length"]    .test(valueA.value) && MEASUREMENTS["length"]    .test(valueB.value)) interpolation =            (lerp(valueA.value.replace(/px$/,   ""), valueB.value.replace(/px$/,   ""))  + "px")  .replace(/(\.\d{6})\d+/, "$1");
+        else if (MEASUREMENTS["resolution"].test(valueA.value) && MEASUREMENTS["resolution"].test(valueB.value)) interpolation =            (lerp(valueA.value.replace(/dppx$/, ""), valueB.value.replace(/dppx$/, ""))  + "dppx").replace(/(\.\d{6})\d+/, "$1");
+
+        else switch (propertyName) {
+          case "aspect-ratio":
+          case "fill-opacity": case "flex-grow": case "flex-shrink": case "flood-opacity": case "font-size-adjust": case "font-variation-settings":
+          case "opacity":
+          case "scale": case "shape-image-threshold": case "stop-opacity": case "stroke-dasharray": case "stroke-dashoffset": case "stroke-miterlimit": case "stroke-opacity": case "stroke-width":
+            interpolation = (lerp(valueA.value, valueB.value) + "").replace(/(\.\d{6})\d+/, "$1");
+            break;
+
+          case "column-count": case "math-depth":
+          case "order":        case "orphans":
+          case "widows":       case "z-index":
+            interpolation = Math.floor(lerp(valueA.value, valueB.value)) + "";
+            break;
+
+          case "font-weight":
+            interpolation = (Math.floor(lerp(valueA.value, valueB.value) / 100) * 100) + ""
+        }
+
+        // ...
+        value += interpolation + (valueA.delimiter || valueB.delimiter).replace(/\s*([,])+\s*/, "$1 ")
+      }
+
+      return value === "" ? progress < 0.50 ? propertyValueA : propertyValueB : value
+    }
+
+    function matches(element, selector) {
+      try {
+        if      (typeof element.matches               === "function") return element.matches              (selector);
+        else if (typeof element.mozMatchesSelector    === "function") return element.mozMatchesSelector   (selector);
+        else if (typeof element.msMatchesSelector     === "function") return element.msMatchesSelector    (selector);
+        else if (typeof element.oMatchesSelector      === "function") return element.oMatchesSelector     (selector);
+        else if (typeof element.webkitMatchesSelector === "function") return element.webkitMatchesSelector(selector)
+      } catch (error) { /* --> DOMException | SyntaxError */ }
+
+      return false // ->> Manual parse-testing of `Element::tagName` and such
+    }
+
+    function rank(selector) {
+      var specificity = {0: 0, 1: 0, 2: 0};
+
+      // ...
+      for (var index = 0; index !== selector.length; )
+      switch (selector[index]) {
+        case '#': for (++specificity[0], ++index; index !== selector.length; ++index) { if (!/[\w-]/.test(selector[index])) break } break; // ->> ID        selectors
+        case '.': for (++specificity[1], ++index; index !== selector.length; ++index) { if (!/[\w-]/.test(selector[index])) break } break; // ->> Class     selectors
+        case '[': for (++specificity[1];          index !== selector.length; )        { if (selector[index++] === ']')      break } break; // ->> Attribute selectors
+        case ':': ++index; {
+          var isPseudoElement = selector[index] === ':'; if    (isPseudoElement)                                            ++index;
+          var pseudoIndex     = index;                   while (index !== selector.length && /[\w-]/.test(selector[index])) ++index;
+          var pseudo          = selector.slice(pseudoIndex, index).toLowerCase();
+
+          // ...
+          if (selector[index] !== '(') ++specificity[isPseudoElement || pseudo === "after" || pseudo === "backdrop" || pseudo === "before" || pseudo === "file-selector-button" || pseudo === "first-letter" || pseudo === "first-line" || pseudo === "grammar-error" || pseudo === "marker" || pseudo === "placeholder" || pseudo === "selection" || pseudo === "spelling-error" ? 2 : 1];
+          else {
+            var selectors = null;
+
+            // ...
+            for (var depth = 0, subindex = index; subindex !== selector.length; ++subindex) {
+              if      (selector[subindex] === '(') { ++depth }
+              else if (selector[subindex] === ')') { --depth; if (0 === depth) { selectors = selector.slice(index + 1, subindex); index = subindex + 1; break } }
+            }
+
+            if (null === selectors) { selectors = selector.slice(index + 1); index = selector.length }
+
+            switch (pseudo) {
+              case "has":       case "is": case "not": { var selectorsSpecificity = rankmax(selectors); specificity[0] += selectorsSpecificity[0]; specificity[1] += selectorsSpecificity[1]; specificity[2] += selectorsSpecificity[2] } break;
+              case "nth-child": case "nth-last-child": { var subselectorIndex = selectors.search(/\bof\b/); if (subselectorIndex !== -1) { var subselectorSpecificity = rankmax(selectors.slice(subselectorIndex + /* --> "of" */ 2)/* --> .trim() */.replace(/^\s+|\s+$/g, "")); specificity[0] += subselectorSpecificity[0]; specificity[1] += subselectorSpecificity[1]; specificity[2] += subselectorSpecificity[2] } ++specificity[1] } break;
+              case "where":                            continue; break; // ->> Explicitly `0` specificity
+              default:                                 ++specificity[1] // ->> Pseudo-class selectors
+            }
+          }
+        } break;
+        default:
+          if (!/[A-z_\\]/.test(selector[index])) ++index;                                                               // ->> Combinators, whitespace, or universal selector `*`
+          else for (++specificity[2]; index !== selector.length; ++index) { if (!/[\w-]/.test(selector[index])) break } // ->> Type selectors
+      }
+
+      return specificity
+    }
+
+    function rankmax(selectors) {
+      var selectorList      = [];
+      var selectorListIndex = 0;
+      var specificity       = {0: 0, 1: 0, 2: 0};
+
+      // ...
+      for (var depth = 0, index = 0; index !== selectors.length; ++index)
+      switch (selectors[index]) {
+        case '(': ++depth; break;
+        case ')': --depth; break;
+        case ',': if (0 === depth) {
+          void selectorList.push(selectors.slice(selectorListIndex, index).replace(/^\s+|\s+$/g, "")); // --> .trim()
+          selectorListIndex = index + 1
+        }
+      }
+
+      void selectorList.push(selectors.slice(selectorListIndex).replace(/^\s+|\s+$/g, "")); // --> .trim()
+
+      for (var index = 0; index !== selectorList.length; ++index) {
+        var selectorSpecificity = null;
+
+        // ...
+        try { selectorSpecificity = rank(selectorList[index]) } catch (error) { /* --> InternalError | RangeError */ }
+        specificity = null !== selectorSpecificity && compare(selectorSpecificity, specificity) > 0 ? selectorSpecificity : specificity
+      }
+
+      return specificity
+    }
+
+    function transform(matrix) /* --> matrix === "matrix3d(…)" */ {
+      var matrix      = matrix.replace(/^matrix3d\(|\)$/g, "").split(/\s*,\s*/), columns = [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00], [0.00, 0.00, 0.00]]; // ->> Upper-left 3×3
+      var perspective = [0.00, 0.00, 0.00, 1.00];
+      var quaternion  = {x:  0.00, y:  0.00, z:  0.00, w: 0.00};
+      var scale       = {x:  0.00, y:  0.00, z:  0.00};
+      var skew        = {xy: 0.00, xz: 0.00, yz: 0.00};
+      var translation = {x:  0.00, y:  0.00, z:  0.00};
+      var trace       = 0.00;
+
+      /* ... */
+      function dot   (vectorA, vectorB) { return (vectorA[0] * vectorB[0]) + (vectorA[1] * vectorB[1]) + (vectorA[2] * vectorB[2]) }
+      function length(vector)           { return Math.sqrt(dot(vector, vector)) }
+
+      // ...
+      if (matrix.length !== 16) return null; matrix[15] = +matrix[15]; matrix[14]  = +matrix[14]; matrix[13]  = +matrix[13]; matrix[12]  = +matrix[12]; matrix[11]  = +matrix[11]; matrix[10]  = +matrix[10]; matrix[9]  = +matrix[9];  matrix[8]  = +matrix[8];  matrix[7]  = +matrix[7];  matrix[6]  = +matrix[6];  matrix[5]  = +matrix[5];  matrix[4]  = +matrix[4];  matrix[3]  = +matrix[3];  matrix[2]  = +matrix[2];  matrix[1]  = +matrix[1];  matrix[0]  = +matrix[0];
+      if (0.00 === matrix[15])  return null; matrix[15] = 1.00;        matrix[14] /=  matrix[15]; matrix[13] /=  matrix[15]; matrix[12] /=  matrix[15]; matrix[11] /=  matrix[15]; matrix[10] /=  matrix[15]; matrix[9] /=  matrix[15]; matrix[8] /=  matrix[15]; matrix[7] /=  matrix[15]; matrix[6] /=  matrix[15]; matrix[5] /=  matrix[15]; matrix[4] /=  matrix[15]; matrix[3] /=  matrix[15]; matrix[2] /=  matrix[15]; matrix[1] /=  matrix[15]; matrix[0] /=  matrix[15];
+
+      columns[0][0] = matrix[0];
+      columns[0][1] = matrix[1];
+      columns[0][2] = matrix[2];
+      columns[1][0] = matrix[4];
+      columns[1][1] = matrix[5];
+      columns[1][2] = matrix[6];
+      columns[2][0] = matrix[8];
+      columns[2][1] = matrix[9];
+      columns[2][2] = matrix[10];
+
+      // ...
+      if (0.00 !== matrix[3] || 0.00 !== matrix[7] || 0.00 !== matrix[11]) /* --> perspective ->> Bottom row at column-major indices `3`, `7`, `11`, and `15` */ {
+        var submatrix = matrix.slice();
+
+        // ...
+        submatrix[11] = submatrix[7] = submatrix[3] = 0.00;
+        submatrix[15]                               = 1.00;
+        submatrix                                   = (function() /* ->> Inversion (column-major) via cofactor expansion */ {
+          var inversion = [
+            +(submatrix[5] * submatrix[10] * submatrix[15]) - (submatrix[5] * submatrix[11] * submatrix[14]) - (submatrix[9] * submatrix[6] * submatrix[15]) + (submatrix[9] * submatrix[7] * submatrix[14]) + (submatrix[13] * submatrix[6] * submatrix[11]) - (submatrix[13] * submatrix[7] * submatrix[10]),
+            -(submatrix[1] * submatrix[10] * submatrix[15]) + (submatrix[1] * submatrix[11] * submatrix[14]) + (submatrix[9] * submatrix[2] * submatrix[15]) - (submatrix[9] * submatrix[3] * submatrix[14]) - (submatrix[13] * submatrix[2] * submatrix[11]) + (submatrix[13] * submatrix[3] * submatrix[10]),
+            +(submatrix[1] * submatrix[6]  * submatrix[15]) - (submatrix[1] * submatrix[7]  * submatrix[14]) - (submatrix[5] * submatrix[2] * submatrix[15]) + (submatrix[5] * submatrix[3] * submatrix[14]) + (submatrix[13] * submatrix[2] * submatrix[7])  - (submatrix[13] * submatrix[3] * submatrix[6]),
+            -(submatrix[1] * submatrix[6]  * submatrix[11]) + (submatrix[1] * submatrix[7]  * submatrix[10]) + (submatrix[5] * submatrix[2] * submatrix[11]) - (submatrix[5] * submatrix[3] * submatrix[10]) - (submatrix[9]  * submatrix[2] * submatrix[7])  + (submatrix[9]  * submatrix[3] * submatrix[6]),
+            -(submatrix[4] * submatrix[10] * submatrix[15]) + (submatrix[4] * submatrix[11] * submatrix[14]) + (submatrix[8] * submatrix[6] * submatrix[15]) - (submatrix[8] * submatrix[7] * submatrix[14]) - (submatrix[12] * submatrix[6] * submatrix[11]) + (submatrix[12] * submatrix[7] * submatrix[10]),
+            +(submatrix[0] * submatrix[10] * submatrix[15]) - (submatrix[0] * submatrix[11] * submatrix[14]) - (submatrix[8] * submatrix[2] * submatrix[15]) + (submatrix[8] * submatrix[3] * submatrix[14]) + (submatrix[12] * submatrix[2] * submatrix[11]) - (submatrix[12] * submatrix[3] * submatrix[10]),
+            -(submatrix[0] * submatrix[6]  * submatrix[15]) + (submatrix[0] * submatrix[7]  * submatrix[14]) + (submatrix[4] * submatrix[2] * submatrix[15]) - (submatrix[4] * submatrix[3] * submatrix[14]) - (submatrix[12] * submatrix[2] * submatrix[7])  + (submatrix[12] * submatrix[3] * submatrix[6]),
+            +(submatrix[0] * submatrix[6]  * submatrix[11]) - (submatrix[0] * submatrix[7]  * submatrix[10]) - (submatrix[4] * submatrix[2] * submatrix[11]) + (submatrix[4] * submatrix[3] * submatrix[10]) + (submatrix[8]  * submatrix[2] * submatrix[7])  - (submatrix[8]  * submatrix[3] * submatrix[6]),
+            +(submatrix[4] * submatrix[9]  * submatrix[15]) - (submatrix[4] * submatrix[11] * submatrix[13]) - (submatrix[8] * submatrix[5] * submatrix[15]) + (submatrix[8] * submatrix[7] * submatrix[13]) + (submatrix[12] * submatrix[5] * submatrix[11]) - (submatrix[12] * submatrix[7] * submatrix[9]),
+            -(submatrix[0] * submatrix[9]  * submatrix[15]) + (submatrix[0] * submatrix[11] * submatrix[13]) + (submatrix[8] * submatrix[1] * submatrix[15]) - (submatrix[8] * submatrix[3] * submatrix[13]) - (submatrix[12] * submatrix[1] * submatrix[11]) + (submatrix[12] * submatrix[3] * submatrix[9]),
+            +(submatrix[0] * submatrix[5]  * submatrix[15]) - (submatrix[0] * submatrix[7]  * submatrix[13]) - (submatrix[4] * submatrix[1] * submatrix[15]) + (submatrix[4] * submatrix[3] * submatrix[13]) + (submatrix[12] * submatrix[1] * submatrix[7])  - (submatrix[12] * submatrix[3] * submatrix[5]),
+            -(submatrix[0] * submatrix[5]  * submatrix[11]) + (submatrix[0] * submatrix[7]  * submatrix[9])  + (submatrix[4] * submatrix[1] * submatrix[11]) - (submatrix[4] * submatrix[3] * submatrix[9])  - (submatrix[8]  * submatrix[1] * submatrix[7])  + (submatrix[8]  * submatrix[3] * submatrix[5]),
+            -(submatrix[4] * submatrix[9]  * submatrix[14]) + (submatrix[4] * submatrix[10] * submatrix[13]) + (submatrix[8] * submatrix[5] * submatrix[14]) - (submatrix[8] * submatrix[6] * submatrix[13]) - (submatrix[12] * submatrix[5] * submatrix[10]) + (submatrix[12] * submatrix[6] * submatrix[9]),
+            +(submatrix[0] * submatrix[9]  * submatrix[14]) - (submatrix[0] * submatrix[10] * submatrix[13]) - (submatrix[8] * submatrix[1] * submatrix[14]) + (submatrix[8] * submatrix[2] * submatrix[13]) + (submatrix[12] * submatrix[1] * submatrix[10]) - (submatrix[12] * submatrix[2] * submatrix[9]),
+            -(submatrix[0] * submatrix[5]  * submatrix[14]) + (submatrix[0] * submatrix[6]  * submatrix[13]) + (submatrix[4] * submatrix[1] * submatrix[14]) - (submatrix[4] * submatrix[2] * submatrix[13]) - (submatrix[12] * submatrix[1] * submatrix[6])  + (submatrix[12] * submatrix[2] * submatrix[5]),
+            +(submatrix[0] * submatrix[5]  * submatrix[10]) - (submatrix[0] * submatrix[6]  * submatrix[9])  - (submatrix[4] * submatrix[1] * submatrix[10]) + (submatrix[4] * submatrix[2] * submatrix[9])  + (submatrix[8]  * submatrix[1] * submatrix[6])  - (submatrix[8]  * submatrix[2] * submatrix[5])
+          ], determinant = (inversion[0] * submatrix[0]) + (inversion[4] * submatrix[1]) + (inversion[8] * submatrix[2]) + (inversion[12] * submatrix[3]);
+
+          return 0.00 !== determinant ? [inversion[0] / determinant, inversion[1] / determinant, inversion[2] / determinant, inversion[3] / determinant, inversion[4] / determinant, inversion[5] / determinant, inversion[6] / determinant, inversion[7] / determinant, inversion[8] / determinant, inversion[9] / determinant, inversion[10] / determinant, inversion[11] / determinant, inversion[12] / determinant, inversion[13] / determinant, inversion[14] / determinant, inversion[15] / determinant] : null
+        })();
+
+        if (null === submatrix)
+        return null;
+
+        // ... --> perspective = mulPointByMatrix(Point point, Matrix = transpose(submatrix))
+        for (var index = perspective.length, point = [matrix[3], matrix[7], matrix[11], matrix[15]]; index--; ) {
+          perspective[index] = 0.00;
+
+          for (var subindex = point.length; subindex--; )
+          perspective[index] += point[subindex] * submatrix[index + (subindex * 4)]
+        }
+      }
+
+      scale.x = length(columns[0]);
+        columns[0][0] /= scale.x;
+        columns[0][1] /= scale.x;
+        columns[0][2] /= scale.x;
+      skew.xy = dot(columns[0], columns[1]);
+        columns[1][0] -= columns[0][0] * skew.xy;
+        columns[1][1] -= columns[0][1] * skew.xy;
+        columns[1][2] -= columns[0][2] * skew.xy;
+      scale.y = length(columns[1]);
+        columns[1][0] /= scale.y;
+        columns[1][1] /= scale.y;
+        columns[1][2] /= scale.y;
+      skew.xz = dot(columns[0], columns[2]);
+        columns[2][0] -= columns[0][0] * skew.xz;
+        columns[2][1] -= columns[0][1] * skew.xz;
+        columns[2][2] -= columns[0][2] * skew.xz;
+      skew.yz = dot(columns[1], columns[2]);
+        columns[2][0] -= columns[1][0] * skew.yz;
+        columns[2][1] -= columns[1][1] * skew.yz;
+        columns[2][2] -= columns[1][2] * skew.yz;
+      scale.z = length(columns[2]);
+        columns[2][0] /= scale.z;
+        columns[2][1] /= scale.z;
+        columns[2][2] /= scale.z;
+      skew.xy /= scale.y; skew.xz /= scale.z; skew.yz /= scale.z;
+
+      translation.x = matrix[12];
+      translation.y = matrix[13];
+      translation.z = matrix[14];
+
+      if (dot(columns[2], /* --> cross */ [(columns[0][1] * columns[1][2]) - (columns[0][2] * columns[1][1]), (columns[0][2] * columns[1][0]) - (columns[0][0] * columns[1][2]), (columns[0][0] * columns[1][1]) - (columns[0][1] * columns[1][0])]) < 0.00) /* ->> `cross` is scalar triple product sign (reflection handling, absorbed into X axis) */ {
+        columns[0][0] = -columns[0][0];
+        columns[0][1] = -columns[0][1];
+        columns[0][2] = -columns[0][2];
+        scale.x       = -scale.x;
+        skew .xy      = -skew .xy;
+        skew .xz      = -skew .xz
+      }
+
+      trace = columns[0][0] + columns[1][1] + columns[2][2]; /* ->> Shepperd’s method */ {
+        if      (trace > 0.00)                                                   { var s = 0.5 / Math.sqrt(1.00 + trace);                                         quaternion.w = 0.25                            / s; quaternion.x = (columns[1][2] - columns[2][1]) * s; quaternion.y = (columns[2][0] - columns[0][2]) * s; quaternion.z = (columns[0][1] - columns[1][0]) * s }
+        else if (columns[0][0] > columns[1][1] && columns[0][0] > columns[2][2]) { var s = 2.0 * Math.sqrt(1.00 + columns[0][0] - columns[1][1] - columns[2][2]); quaternion.w = (columns[1][2] - columns[2][1]) / s; quaternion.x = s / 4;                               quaternion.y = (columns[1][0] + columns[0][1]) / s; quaternion.z = (columns[2][0] + columns[0][2]) / s }
+        else if (columns[1][1] > columns[2][2])                                  { var s = 2.0 * Math.sqrt(1.00 + columns[1][1] - columns[0][0] - columns[2][2]); quaternion.w = (columns[2][0] - columns[0][2]) / s; quaternion.x = (columns[1][0] + columns[0][1]) / s; quaternion.y = s / 4;                               quaternion.z = (columns[2][1] + columns[1][2]) / s }
+        else                                                                     { var s = 2.0 * Math.sqrt(1.00 + columns[2][2] - columns[0][0] - columns[1][1]); quaternion.w = (columns[0][1] - columns[1][0]) / s; quaternion.x = (columns[2][0] + columns[0][2]) / s; quaternion.y = (columns[2][1] + columns[1][2]) / s; quaternion.z = s / 4 }
+      }
+
+      // ...
+      return {perspective: perspective, quaternion: quaternion, scale: scale, skew: skew, translation: translation}
+    }
+
+    // ... --> styleSheets = […]; styleRules = […] ->> Accessed/ cascaded in reverse (A)
+    if (0 === styleRules.length) {
+      for (var index = document.styleSheets.length; index; ) {
+        var styleSheet = document.styleSheets.item(--index);
+
+        try { void styleSheets.push({container: null, layer: layers[0], rules: styleSheet.cssRules, scope: null}) } catch (error) { // --> SecurityError
+        try { void styleSheets.push({container: null, layer: layers[0], rules: styleSheet.rules,    scope: null}) } catch (error) { /* --> SecurityError */ if (strict) return null } }
+      }
+
+      for (var order = 0; styleSheets.length; )
+      for (var index = 0, styleSheet = styleSheets.pop(), length = styleSheet.rules.length; index !== length; ++index) {
+        var rule = styleSheet.rules[index];
+
+        // ...
+        if (typeof CSSContainerRule === "function" && rule instanceof CSSContainerRule && typeof rule.cssRules === "object" && typeof rule.containerName === "string" && typeof rule.containerQuery === "string") // --> @container … (…) {}
+          void styleSheets.push({container: {name: rule.containerName, query: rule.containerQuery/* --> .trim() */.replace(/^\s+|\s+$/g, "")}, layer: styleSheet.layer, rules: rule.cssRules, scope: null});      // ->> `String .conditionText` or `String .cssText` otherwise
+
+        else if (typeof CSSLayerBlockRule === "function" && rule instanceof CSSLayerBlockRule && typeof rule.cssRules === "object" && typeof rule.name === "string") /* --> @layer … {} */ {
+          var layer      = rule.name !== "" ? (styleSheet.layer !== "" ? styleSheet.layer + '.' : "") + rule.name : styleSheet.layer;
+          var layerIndex = layers.length;
+
+          // ...
+          while (layerIndex--) { if (layer === layers[layerIndex]) break }
+          if (layerIndex === -1) { for (layerIndex = 0; ; ++layerIndex) if (layers[layerIndex] === styleSheet.layer) { void layers.splice(layerIndex, 0, layer); break } }
+
+          void styleSheets.push({container: null, layer: layer, rules: rule.cssRules, scope: null})
+        }
+
+        else if (typeof CSSLayerStatementRule === "function" && rule instanceof CSSLayerStatementRule && typeof rule.nameList === "object") /* --> @layer … */ {
+          for (var nameIndex = 0; nameIndex !== rule.nameList.length; ++nameIndex)
+          for (var layerIndex = layers.length; ; ) {
+            --layerIndex;
+
+            if (layerIndex === -1) { void layers.push(rule.nameList[nameIndex]); break }
+            if (layers[layerIndex] === rule.nameList[nameIndex]) break
+          }
+        }
+
+        else if (typeof CSSScopeRule === "function" && rule instanceof CSSScopeRule && typeof rule.cssRules === "object" && typeof rule.end === "string" && typeof rule.start === "string")
+          void styleSheets.push({container: null, layer: styleSheet.layer, rules: rule.cssRules, scope: {end: rule.end, start: rule.start}});
+
+        else switch (typeof rule.type !== "number" ? /* --> CSSRule.UNKNOWN_RULE */ 0x00 : rule.type) {
+          // --> CSSRule.STYLE_RULE === CSSStyleRule::type
+          case 0x01: void styleRules.push({container: styleSheet.container, layer: styleSheet.layer, order: order++, scope: styleSheet.scope, value: rule}); break;
+
+          // --> CSSRule.IMPORT_RULE === CSSImportRule::type --> @import
+          case 0x03: if (typeof rule.styleSheet === "object") {
+            try { void styleSheets.push({container: null, layer: styleSheet.layer, rules: rule.styleSheet.cssRules, scope: null}) } catch (error) { // --> SecurityError
+            try { void styleSheets.push({container: null, layer: styleSheet.layer, rules: rule.styleSheet.rules,    scope: null}) } catch (error) { /* --> SecurityError */ if (strict) return null } }
+          } break;
+
+          // --> CSSRule.MEDIA_RULE === CSSMediaRule::type --> @media
+          case 0x04: if (typeof rule.cssRules === "object" && typeof matchMedia === "function") {
+            if (matchMedia(typeof rule.media === "object" && typeof rule.media.mediaText === "string" ? rule.media.mediaText : typeof rule.conditionText === "string" ? rule.conditionText : "all"))
+            void styleSheets.push({container: null, layer: styleSheet.layer, rules: rule.cssRules, scope: null})
+          } break;
+
+          case 0x07: continue; // --> CSSRule.KEYFRAMES_RULE === CSSKeyframesRule::type --- CODE (Lapys) -> @keyframes
+          case 0x08: continue; // --> CSSRule.KEYFRAME_RULE  === CSSKeyframeRule ::type --- WARN (Lapys) -> Solely implemented via `Animation[] Element::getAnimations(…)`, otherwise non-trivial to evaluate active animations (and transitions) in composite order
+
+          // --> CSSRule.SUPPORTS_RULE === CSSSupportsRule::type --> @supports
+          case 0x0C: if (typeof rule.cssRules === "object" && typeof CSS === "object" && typeof CSS.supports === "function") try {
+            if (CSS.supports(typeof rule.conditionText === "string" ? rule.conditionText : "display: block"))
+            void styleSheets.push({container: null, layer: styleSheet.layer, rules: rule.cssRules, scope: null})
+          } catch (error) { if (strict) return null } break;
+
+          case 0x05: // --> CSSRule.FONT_FACE_RULE           === CSSFontFaceRule         ::type                                                              --> @font-face
+          case 0x06: // --> CSSRule.PAGE_RULE                === CSSPageRule             ::type                                                              --> @page
+          case 0x09: // --> CSSRule.MARGIN_RULE              === CSSMarginRule           ::type                                                              --> …
+          case 0x0A: // --> CSSRule.NAMESPACE_RULE           === CSSNamespaceRule        ::type                                                              --> @namespace
+          case 0x0B: // --> CSSRule.COUNTER_STYLE_RULE       === CSSCounterStyleRule     ::type                                                              --> @counter-style
+          case 0x0E: // --> CSSRule.FONT_FEATURE_VALUES_RULE === CSSFontFeatureValuesRule::type                                                              --> @font-feature-values
+          default:   // --> CSSRule.CHARSET_RULE {0x02} | CSSRule.DOCUMENT_RULE {0x0D} | CSSRule.REGION_STYLE_RULE {0x10} | CSSRule.VIEWPORT_RULE {0x0E} | … --> @container, @document, …
+            if (typeof rule.cssRules === "object")
+            void styleSheets.push({container: null, layer: styleSheet.layer, rules: rule.cssRules, scope: null})
+        }
+      }
+    }
+
+    // ...
+    for (var properties = [{
+      alternateName       : alt(propertyName),                                     // --> String {alt(…)}
+      animationInformation: {kind: 0x0, next: [], previous: [], properties: null}, // --> {kind: enum, next: …, previous: …, properties: …}
+      element             : element,                                               // --> HTMLElement
+      information         : null,                                                  // --> {layer: String, matches: Boolean, order: Number(Uint32) {< 0}, priority: String, specificity: {0: 0, 1: 0, 2: 0}*, value: String*}*
+      name                : propertyName,                                          // --> String
+      pending             : null,                                                  // --> this
+      priors              : [],                                                    // --> this[]
+      ruleInformation     : {containerQueries: [], index: 0, specificity: null},   // --> {containerQueries: {applicable: Boolean[], delimiter: "and"|"or", negate: Boolean, prior: this, value: String}[], index: Number(Uint32), specificity: {0: Number(Uint32), 1: Number(Uint32), 2: Number(Uint32)}}
+      unlayered           : []                                                     // --> String[] {applicable: [], delimiter: "", negate: false, prior: null, value: styleRule.container.query}
+    }]; properties.length; ) {
+      var property   = properties[properties.length - 1];
+      var cascaded   = null;
+      var animations = typeof property.element.getAnimations === "function" ? property.element.getAnimations({subtree: false}) : []; // --> CSSAnimation[]
+
+      /* ... ->> Recurse the `for … properties` loop in lieu of `getCSSPropertyValue(…) throw(InternalError | RangeError)` recursion */
+      function cascade(element, propertyName, alternatePropertyName) {
+        var subproperty = {
+          alternateName       : alternatePropertyName,
+          animationInformation: {kind: 0x0, next: [], previous: [], properties: null},
+          element             : element,
+          information         : null,
+          name                : propertyName,
+          pending             : property,
+          priors              : [],
+          rule                : {index: 0, specificity: null},
+          unlayered           : []
+        };
+
+        // ...
+        property.priors = [];
+
+        void properties.push(subproperty);
+        return subproperty
+      }
+
+      // ... --> .animationInformation = {…} --- WARN (Lapys) -> Limited support for some interpolated values
+      if (false) {
+        // for (var index = 0; index !== animations.length; ++index) {
+        //   var animation = animations[index];
+        //   var effect    = animation.effect;
+        //   var kind      = 0x0;
+
+        //   // ...
+        //   if      (typeof CSSAnimation  === "function" && animation instanceof CSSAnimation)  kind = ANIMATED;
+        //   else if (typeof CSSTransition === "function" && animation instanceof CSSTransition) kind = TRANSITIONED;
+
+        //   if (typeof effect === "object" && /* --> effect instanceof KeyframeEffect */ typeof effect.getKeyframes === "function" && typeof effect.getComputedTiming === "function" && 0x0 !== kind) {
+        //     var keyframes = effect.getKeyframes();               // --> {composite: String, computedOffset: Number, easing: String, offset: Number*, [property]: String{…}}[]
+        //     var next      = [];                                  // --> {keyframe: null, kind: ANIMATED | TRANSITIONED | 0x0, order: Number(Uint32), progress: Number, properties: {name: String, value: String}[]}[]
+        //     var previous  = [];                                  //     ^^^
+        //     var progress  = effect.getComputedTiming().progress; // --> Number*
+
+        //     // ...
+        //     if (null !== progress)
+        //     for (var subindex = 0; subindex !== keyframes.length; ++subindex) {
+        //       var keyframe    = keyframes[subindex];
+        //       var information = {keyframe: keyframe, kind: kind, order: index, progress: progress, properties: []};
+
+        //       // ... ->> Acknowledge shorthand properties replaced by their constituent longhand counterparts
+        //       if       (typeof keyframe[propertyName]          === "string") void information.properties.push({name: propertyName,          value: keyframe[propertyName]});
+        //       else if  (typeof keyframe[alternatePropertyName] === "string") void information.properties.push({name: alternatePropertyName, value: keyframe[alternatePropertyName]});
+        //       else for (var shorthandIndex = SHORTHANDS.length; shorthandIndex--; ) {
+        //         if (SHORTHANDS[shorthandIndex].name === propertyName) {
+        //           var composition = SHORTHANDS[shorthandIndex].composition;
+
+        //           for (shorthandIndex = 0; shorthandIndex < composition.length; shorthandIndex += 2) {
+        //             var longhandName = composition[shorthandIndex];
+
+        //             if (typeof keyframe[longhandName] === "string") { void information.properties.push({name: longhandName, value: keyframe[longhandName]}); continue } longhandName = alt(longhandName);
+        //             if (typeof keyframe[longhandName] === "string") { void information.properties.push({name: longhandName, value: keyframe[longhandName]}); continue }
+        //           }
+
+        //           break
+        //         }
+        //       }
+
+        //       if (keyframe.computedOffset >= progress) void next    .splice(0,               0, information); // ->> In reverse
+        //       if (keyframe.computedOffset <= progress) void previous.splice(previous.length, 0, information)  // --> .push(…)
+        //     }
+
+        //     for (var subindex = 0; subindex !== next    .length; ++subindex) void animationInformation.next    .push(next    [subindex])
+        //     for (var subindex = 0; subindex !== previous.length; ++subindex) void animationInformation.previous.push(previous[subindex])
+        //   }
+        // }
+
+        // if (animationInformation.next.length || animationInformation.previous.length) {
+        //   var next     = null;
+        //   var previous = null;
+
+        //   /* ... */
+        //   function getAnimationProperty(propertyName, information) {
+        //     var value = []; // --> (String|{information: Object*, value: String*})[]
+
+        //     // ...
+        //     for (var animationProperties = [propertyName], delimited = false, evaluated = false, expanded = false; animationProperties.length; delimited = !delimited) {
+        //       var subvalue                  = {information: {keyframe: null, kind: 0x0, order: -1, progress: 0.00, properties: []}, name: null, value: null};
+        //       var animationProperty         = animationProperties.pop(); // ->> Accessed in reverse (B)
+        //       var alternateAnimatonProperty = alt(animationProperty);
+
+        //       // ...
+        //       if (!delimited) {
+        //         evaluated = false;
+
+        //         for (var index    = information.length;                   !evaluated && index--; )
+        //         for (var subindex = information[index].properties.length; !evaluated && subindex--; ) {
+        //           if (alternateAnimatonProperty === information[index].properties[subindex].name || animationProperty === information[index].properties[subindex].name) {
+        //             evaluated            = true;
+        //             subvalue.information = information[index];
+        //             subvalue.name        = /void/;
+        //             subvalue.value       = information[index].properties[subindex].value
+        //           }
+        //         }
+
+        //         if (!evaluated && !expanded) {
+        //           var length = animationProperties.length;
+
+        //           // ...
+        //           for (var shorthandIndex = SHORTHANDS.length; shorthandIndex--; )
+        //           if (SHORTHANDS[shorthandIndex].name === animationProperty) {
+        //             var composition = SHORTHANDS[shorthandIndex].composition;
+
+        //             // ...
+        //             for (shorthandIndex = 0; shorthandIndex !== composition.length; ++shorthandIndex)
+        //             void animationProperties.splice(length, 0, composition[shorthandIndex]); // ->> Expanded in reverse (B)
+
+        //             break
+        //           }
+
+        //           delimited = length < animationProperties.length || delimited;
+        //           expanded  = true // ->> Prevent shorthand expansion beyond one level
+        //         } else                              void value.push(subvalue)
+        //       } else if (evaluated || value.length) void value.push(animationProperty)
+        //     }
+
+        //     return value
+        //   }
+
+        //   // ...
+        //   if      (0 === animationInformation.previous.length) animationInformation.previous = animationInformation.next;
+        //   else if (0 === animationInformation.next    .length) animationInformation.next     = animationInformation.previous;
+
+        //   next     = getAnimationProperty(propertyName, animationInformation.next);
+        //   previous = getAnimationProperty(propertyName, animationInformation.previous);
+
+        //   if (next.length || previous.length) {
+        //     animationInformation.properties = [];
+
+        //     for (var index = 0, length = next.length > previous.length ? next.length : previous.length; index < length; ++index) {
+        //       var subnext     = index < next    .length ? next    [index] : {information: {keyframe: null, kind: 0x0, order: -1, progress: 0.00, properties: []}, value: null};
+        //       var subprevious = index < previous.length ? previous[index] : {information: {keyframe: null, kind: 0x0, order: -1, progress: 0.00, properties: []}, value: null};
+
+        //       // ...
+        //       if (typeof subnext !== "string" && typeof subprevious !== "string") {
+        //         animationInformation.kind = ANIMATED === subnext.information.kind || ANIMATED === subprevious.information.kind ? ANIMATED : TRANSITIONED;
+
+        //         if      (subnext.information.order > subprevious.information.order) subprevious.value = null;
+        //         else if (subnext.information.order < subprevious.information.order) subnext    .value = null;
+
+        //         if (null !== subprevious.value && null !== subnext.value) /* ->> Does not interpolate perfectly i.e. what should `background-position-x: left 20px` to `background-position-x: right 20px` result in? */ {
+        //           var easing      = subprevious.information.keyframe.easing;
+        //           var offsetDelta = subnext.information.keyframe.computedOffset - subprevious.information.keyframe.computedOffset;
+        //           var progress    = offsetDelta > 0.00 ? (subprevious.information.progress - subprevious.information.keyframe.computedOffset) / offsetDelta : 1.00;
+
+        //           // ...
+        //           switch (easing) {
+        //             case "ease":        progress = bézier(0.25, 0.10, 0.25, 1.00, progress); break;
+        //             case "ease-in":     progress = bézier(0.42, 0.00, 1.00, 1.00, progress); break;
+        //             case "ease-in-out": progress = bézier(0.42, 0.00, 0.58, 1.00, progress); break;
+        //             case "ease-out":    progress = bézier(0.00, 0.00, 0.58, 1.00, progress); break;
+        //             case "linear":      /* Do nothing… */                                    break;
+        //             case "step-end":    progress = progress <  1.00 ? 0.00 : 1.00;           break;
+        //             case "step-start":  progress = progress <= 0.00 ? 0.00 : 1.00;           break;
+        //             default: var functions = {
+        //               "bézier": easing.match(/^cubic-bezier\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/),
+        //               "linear": easing.match(/^linear\((.+)\)$/),
+        //               "step"  : easing.match(/^steps\(\s*(\d+)\s*(?:,\s*([\w-]+))?\s*\)$/)
+        //             }; {
+        //               if (null !== functions["bézier"])
+        //                 progress = bézier(+functions["bézier"][1], +functions["bézier"][2], +functions["bézier"][3], +functions["bézier"][4], progress);
+
+        //               else if (null !== functions["linear"]) /* NOTE (Lapys) -> No idea how this works, to be honest…; See `https://developer.mozilla.org/docs/Web/CSS/Reference/Values/easing-function/linear` */ {
+        //                 var points = [];
+        //                 var tokens = functions["linear"].split(/\s*,\s*/);
+
+        //                 // ...
+        //                 for (var subindex = 0; subindex !== tokens.length; ++subindex) {
+        //                   var positions = [];
+        //                   var subtokens = tokens[subindex].split(/\s+/);
+
+        //                   // ...
+        //                   for (var subsubindex = 1; subsubindex !== subtokens.length; ++subsubindex)
+        //                   void positions.push(+subtokens[subsubindex] / 100.00);
+
+        //                   if (0 === positions.length)
+        //                   void positions.push(null);
+
+        //                   for (var subsubindex = 0; subsubindex !== positions.length; ++subsubindex)
+        //                   void points.push({input: positions[subsubindex], output: +subtokens[0]})
+        //                 }
+
+        //                 points[0]                .input = null !== points[0]                .input ? points[0]                .input : 0;
+        //                 points[points.length - 1].input = null !== points[points.length - 1].input ? points[points.length - 1].input : 1;
+
+        //                 for (var subindex = 1; subindex < points.length; ++subindex)
+        //                 if (null === points[subindex].input) {
+        //                   var inputEnd = 0, inputStart = 0; // --> points[rangeEnd, rangeStart].input
+        //                   var rangeEnd = 0, rangeStart = subindex - 1;
+
+        //                   // ...
+        //                   while (null !== pointers[subindex].input)
+        //                     ++subindex;
+
+        //                   rangeEnd   = subindex;
+        //                   inputEnd   = points[rangeEnd]  .input;
+        //                   inputStart = points[rangeStart].input;
+
+        //                   for (var count = rangeEnd - rangeStart, subsubindex = 1; count !== subsubindex; ++subsubindex)
+        //                   points[rangeStart + subsubindex].input = inputStart + ((inputEnd - inputStart) * (subsubindex / count))
+        //                 }
+
+        //                 // ...
+        //                 if      (progress <= points[0]                .input) progress = points[0]                .output;
+        //                 else if (progress >= points[points.length - 1].input) progress = points[points.length - 1].output;
+        //                 else {
+        //                   for (var subindex = 1; subindex !== points.length; ++subindex)
+        //                   if (progress <= points[subindex].input) {
+        //                     var count = points[subindex - 0].input - points[subindex - 1].input;
+
+        //                     progress = points[subindex - 1].output + ((points[subindex - 0].output - points[subindex - 1].output) * (count > 0 ? (t - points[subindex - 1].input) / count : 1));
+        //                     break
+        //                   }
+        //                 }
+        //               }
+
+        //               else if (null !== functions["step"]) {
+        //                 var intervalCount = +functions["step"][1];
+        //                 switch (+functions["step"][2] || "end") {
+        //                   case "both":  case "jump-both":         progress = Math.min((Math.floor(progress * intervalCount) + 1) / (intervalCount + 1), 1.00); break;
+        //                   case "start": case "jump-start":        progress = Math.min((Math.ceil (progress * intervalCount) + 0) / (intervalCount + 0), 1.00); break;
+        //                   case "none":  case "jump-none":         progress = Math.floor((progress * (intervalCount - 1)) + 0.50) / (intervalCount - 1);        break;
+        //                   case "end":   case "jump-end": default: progress = Math.floor((progress * (intervalCount - 0)) + 0.00) / (intervalCount - 0)
+        //                 }
+        //               }
+        //             }
+        //           }
+
+        //           void animationInformation.properties.push({name: /void/, value: interpolate(propertyName, subprevious.value, subnext.value, progress, propertyName === "border" ? /[\0\s]+/g : /[,\/\s]+/g)})
+        //         }
+        //         else if (null !== subnext.value && null === subprevious.value) void animationInformation.properties.push({name: /void/, value: subnext    .value});
+        //         else if (null === subnext.value && null !== subprevious.value) void animationInformation.properties.push({name: /void/, value: subprevious.value});
+        //         else                                                           void animationInformation.properties.push({name: /void/, value: ""})
+        //       } else                                                           void animationInformation.properties.push(typeof subnext === "string" ? subnext : typeof subprevious === "string" ? subprevious : ' ')
+        //     }
+        //   }
+        // }
+
+        // // TODO (Lapys) -> Keep track of expanded shorthand properties not caught by animation, so they can be acquired normally (through cascade); Don’t forget about `border`
+        // console.warn(propertyName, 0, animationInformation.properties);
+
+        // if (TRANSITIONED === animationInformation.kind && null !== animationInformation.properties)
+        // return animationInformation.properties; // TODO (Lapys) -> Re-plan around `animationInformation.properties` instead
+      }
+
+      // ... --> .information = {…}
+      for (; property.ruleInformation.index !== styleRules.length; ++property.ruleInformation.index) {
+        var styleRule   = styleRules[property.ruleInformation.index];
+        var style       = styleRule.value.style;
+        var selectors   = [];
+        var information = null;
+        var applicable  = true;
+
+        // ... --> applicable = …
+        if (null !== styleRule.container) {
+          var contained        = false;
+          var containerElement = property.element.parentNode;
+
+          // ...
+          if (null === containerElement || containerElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1)
+          continue;
+
+          applicable = false;
+          contained  = false;
+
+          // ... --> containers.name[…]
+          for (var index = containers.name.length; index--; )
+          if (containers.name[index].container === styleRule.container && containers.name[index].element === property.element) {
+            applicable = containers.name[index].applicable;
+            contained  = true;
+
+            break
+          }
+
+          if (!contained) {
+            if (property.priors.length === 1 && property.priors[0].name === "container-name") {
+              if (null !== property.priors[0].information && property.priors[0].information.value !== "") {
+                for (var names = property.priors[0].information.value.split(/\s+/); names.length; )
+                if (names.pop() === styleRule.container.name) { applicable = true; break }
+              }
+            }
+
+            else if (property.priors.length === 1 && property.priors[0].name === "container-type") {
+              if (null !== property.priors[0].information && property.priors[0].information.value !== "normal") {
+                applicable = true;
+                cascaded   = styleRule.container.name !== "" ? cascade(containerElement, "container-name", "containerName") : null
+              }
+            }
+
+            else cascaded = cascade(containerElement, "container-type", "containerType");
+
+            // ...
+            if (cascaded) break;
+            void containers.name.push({applicable: applicable, container: styleRule.container, element: property.element})
+          }
+
+          // ... --> containers.query[…]
+          if (applicable) {
+            if (0 === property.ruleInformation.containerQueries.length)
+            void property.ruleInformation.containerQueries.push({applicable: [], delimiter: "", negate: false, prior: null, value: styleRule.container.query});
+
+            while (property.ruleInformation.containerQueries.length) {
+              var containerQuery = property.ruleInformation.containerQueries[property.ruleInformation.containerQueries.length - 1];
+
+              // ...
+              if (0 === containerQuery.applicable.length) {
+                var conditions = []; // --> String[]
+                var negate     = false;
+
+                // ...
+                for (var value = null; containerQuery.value !== value; ) /* ->> Remove outer-level parentheses (except topmost) */ {
+                  containerQuery.value = containerQuery.value.replace(/^\s+|\s+$/g, ""); // --> .trim()
+
+                  for (var depth = 0, index = 0, indexes = {begin: 0, end: 0}; ; ++index)
+                  if (index === containerQuery.value.length) {
+                    var multiple = false;
+
+                    // ...
+                    void conditions.push(containerQuery.value.slice(indexes.end + (containerQuery.value[indexes.end] === '('), containerQuery.value.length));
+
+                    for (var subindex = conditions.length; subindex--; ) // ->> Keep parentheses of scroll-state descriptors and (computed) style queries
+                    if (/\s*(scroll-state|style)\s*$/.test(conditions[subindex])) {
+                      conditions[subindex + 1] = conditions[subindex + 0] + '(' + conditions[subindex + 1] + ')';
+                      void conditions.splice(subindex, 1)
+                    }
+
+                    value                = containerQuery.value;
+                    multiple             = conditions.length > 3;
+                    containerQuery.value = "";
+
+                    while (conditions.length)
+                    containerQuery.value = conditions.pop() + containerQuery.value;
+
+                    if (delimit(containerQuery.value, /\s*\b(and|or)\b\s*/g).length !== 1) {
+                      containerQuery.value = multiple ? value : containerQuery.value;
+                      value                = containerQuery.value;
+                    }
+
+                    break
+                  }
+                  else if (containerQuery.value[index] === '(') { if (0 === depth++) { indexes.begin = index; void conditions.push(containerQuery.value.slice(indexes.end   + (containerQuery.value[indexes.end] === '('), indexes.begin)) } }
+                  else if (containerQuery.value[index] === ')') { if (0 === --depth) { indexes.end   = index; void conditions.push(containerQuery.value.slice(indexes.begin + 1,                                           indexes.end++)) } }
+                }
+
+                containerQuery.value = containerQuery.value.replace(/^\s+|\s+$/g, ""); // --> .trim()
+
+                for (var match = null; null !== (match = containerQuery.value.match(/^\s*not\s*(.*)/)); ) {
+                  containerQuery.value =  match[1];
+                  negate               = !negate
+                }
+
+                conditions = delimit(containerQuery.value, /\s*\b(and|or)\b\s*/g); // ->> Remove outer-level parentheses
+
+                if (conditions.length !== 1) {
+                  for (containerQuery.delimiter = conditions[0].delimiter; conditions.length; negate = false)
+                  void property.ruleInformation.containerQueries.push({applicable: [], delimiter: "", negate: negate, query: containerQuery, value: conditions.pop().value});
+
+                  continue
+                }
+
+                // ...
+                applicable = false;
+                contained  = false;
+
+                for (var index = containers.query.length; index--; )
+                if (containers.query[index].container === styleRule.container && containers.query[index].element === property.element) {
+                  applicable = containers.query[index].applicable;
+                  contained  = true;
+                  void containerQuery.value;
+
+                  break
+                }
+
+                if (!contained) {
+                  var functions = {
+                    "scroll-state": containerQuery.value.match(/^scroll-state\s*\(\s*([-\w]+)\s*:\s*([-\w]+)\s*\)$/),
+                    "style"       : containerQuery.value.match(/^style\s*\(\s*([-\w]+)\s*:\s*(.+)\s*\)$/),
+                    '_'           : containerQuery.value.match(/^(max-|min-)?(aspect-ratio|block-size|height|inline-size|width)\s*([:<=>]+)\s*(.+)$/)
+                  };
+
+                  // ...
+                  if (null !== functions["scroll-state"])
+                  switch (functions["scroll-state"][1]) {
+                    case "scrollable": switch (functions["scroll-state"][2]) {
+                      case "bottom":           applicable = containerElement.clientHeight < containerElement.scrollHeight && containerElement.scrollHeight <= containerElement.clientHeight + containerElement.scrollTop; break;
+                      case "left"  :           applicable = containerElement.clientWidth  < containerElement.scrollWidth  && containerElement.scrollLeft   <= 0;                                                          break;
+                      case "right" :           applicable = containerElement.clientWidth  < containerElement.scrollWidth  && containerElement.scrollWidth  <= containerElement.clientWidth + containerElement.scrollLeft; break;
+                      case "top"   :           applicable = containerElement.clientHeight < containerElement.scrollHeight && containerElement.scrollTop    <= 0;                                                          break;
+                      case 'x': case "inline": applicable = containerElement.clientWidth  < containerElement.scrollWidth;                                                                                                 break;
+                      case 'y': case "block" : applicable = containerElement.clientHeight < containerElement.scrollHeight
+                    } break;
+
+                    case "snapped": /* ->> Scroll position approximation due to lacking DOM API */ {
+                      var containerParentElement = containerElement.parentNode;
+
+                      if (null !== containerParentElement && containerParentElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x1)
+                      switch (functions["scroll-state"][2]) {
+                        case 'x': case "inline": applicable = Math.abs(bounds(containerElement).left - bounds(containerParentElement).left) < 1.00; break;
+                        case 'y': case "block" : applicable = Math.abs(bounds(containerElement).top  - bounds(containerParentElement).top)  < 1.00
+                      }
+                    } break;
+
+                    case "stuck": {
+                      if (property.priors.length === 1 && (property.priors[0].name === "bottom" || property.priors[0].name === "left" || property.priors[0].name === "right" || property.priors[0].name === "top")) {
+                        if (null !== property.priors[0].information && (MEASUREMENTS["length"].test(property.priors[0].information.value) || /^-?0(\.0+(e0+)?)?$/.test(property.priors[0].information.value)))
+                        switch (functions["scroll-state"][2]) {
+                          case "bottom": applicable =   bounds(containerElement).bottom >= innerHeight - canonicalize(property.element, property.priors[0].information.value, 0x0).replace(/px$/, "");  break;
+                          case "left"  : applicable =   bounds(containerElement).left   <= 0           + canonicalize(property.element, property.priors[0].information.value, 0x0).replace(/px$/, "");  break;
+                          case "none"  : applicable = !(bounds(containerElement).top    <= 0           + canonicalize(property.element, property.priors[0].information.value, 0x0).replace(/px$/, "")); break;
+                          case "right" : applicable =   bounds(containerElement).right  >= innerWidth  - canonicalize(property.element, property.priors[0].information.value, 0x0).replace(/px$/, "");  break;
+                          case "top"   : applicable =   bounds(containerElement).top    <= 0           + canonicalize(property.element, property.priors[0].information.value, 0x0).replace(/px$/, "")
+                        }
+                      }
+
+                      else if (property.priors.length === 1 && property.priors[0].name === "position") {
+                        if (null !== property.priors[0].information && property.priors[0].information.value === "sticky")
+                        switch (functions["scroll-state"][2]) {
+                          case "bottom": case "left": case "right": case "top": cascaded = cascade(containerElement, functions["scroll-state"][2], functions["scroll-state"][2]); break;
+                          case "none":                                          cascaded = cascade(containerElement, "top",                        "top")
+                        }
+                      }
+
+                      else cascaded = cascade(containerElement, "position", "position")
+                    }
+                  }
+
+                  else if (null !== functions["style"]) {
+                    if (property.priors.length === 1 && property.priors[0].name === functions["style"][1]) applicable = null !== property.priors[0].information && canonicalize(property.element, functions["style"][2], 0x0) === canonicalize(property.element, property.priors[0].information.value, 0x0);
+                    else                                                                                   cascaded   = cascade(containerElement, functions["style"][1], alt(functions["style"][1]))
+                  }
+
+                  else if (null !== functions['_']) {
+                    var containerAxis = functions['_'][2] === "block" || functions['_'][2] === "height" ? HEIGHT_AXIS : functions['_'][2] === "inline" || functions['_'][2] === "width" ? WIDTH_AXIS : 0x0;
+
+                    if (0x0 !== containerAxis) {
+                      var containerElementBounds = bounds(containerElement);
+                      var containerThreshold     = 0.00;
+                      var containerSize          = 0.00;
+
+                      // ...
+                      if (functions['_'][2] === "aspect-ratio") {
+                        var aspects = functions['_'][4].split(/\s*\/\s*/);
+
+                        // ...
+                        containerSize      = containerElementBounds.width / containerElementBounds.height;
+                        containerThreshold = +aspects[0] / (+aspects[1] || 1.00);
+
+                        if      (/^max-/i.test(functions['_'][1] || "")) applicable = containerSize <= containerThreshold;
+                        else if (/^min-/i.test(functions['_'][1] || "")) applicable = containerSize >= containerThreshold;
+                        else                                             applicable = Math.abs(containerSize - containerThreshold) < 1.00e-3
+                      }
+
+                      else {
+                        containerThreshold = canonicalize(containerElement, functions['_'][4], containerAxis).replace(/px$/, "");
+                        switch (containerAxis) {
+                          case HEIGHT_AXIS: containerSize = containerElementBounds.height; break;
+                          case WIDTH_AXIS : containerSize = containerElementBounds.width
+                        }
+
+                        if      (/^max-/i.test(functions['_'][1] || "")) applicable = containerSize <= containerThreshold;
+                        else if (/^min-/i.test(functions['_'][1] || "")) applicable = containerSize >= containerThreshold;
+                        else switch (functions['_'][3] || ':') {
+                          case '<' :                    applicable = containerSize <   containerThreshold; break;
+                          case '=' :                    applicable = containerSize === containerThreshold; break;
+                          case '>' :                    applicable = containerSize >   containerThreshold; break;
+                          case "<=":                    applicable = containerSize <=  containerThreshold; break;
+                          case ">=": case ':': default: applicable = containerSize >=  containerThreshold
+                        }
+                      }
+                    }
+                  }
+
+                  // ...
+                  if (cascaded) break; // TODO
+                  void containers.query.push({applicable: applicable, container: styleRule.container, element: property.element})
+                }
+              } else switch (containerQuery.delimiter) {
+                case "and": for (applicable = true;  containerQuery.applicable.length; ) applicable = containerQuery.applicable.pop() && applicable; break;
+                case "or":  for (applicable = false; containerQuery.applicable.length; ) applicable = containerQuery.applicable.pop() || applicable
+              }
+
+              // ...
+              if (null !== containerQuery.prior) void containerQuery.prior.applicable.push(applicable);
+              if (true)                          void property.ruleInformation.containerQueries.pop()
+            }
+
+            if (cascaded)
+            break
+          }
+
+          void applicable;
+        }
+
+        else if (null !== styleRule.scope) {
+          // TODO: CACHE THIS
+          if (null !== styleRule.scope.start) {
+            var root = null;
+
+            for (var node = element; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x1; node = node.parentNode)
+            if  (matches(node, styleRule.scope.start)) { root = node; break }
+
+            if (element !== root)
+            if (null !== root && null !== styleRule.scope.end) {
+              for (var node = element.parentNode; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x1 && node !== root; node = node.parentNode)
+              if  (matches(node, styleRule.scope.end)) { applicable = false; break }
+            } else                                       applicable = false
+          }
+        }
+
+        if (applicable) {} // TODO
+
+        // ...
+        if (!applicable)
+        continue;
+
+        void property.information
+        information = {layer: styleRule.layer, matches: false, order: styleRule.order, priority: style.getPropertyPriority(property.name), specificity: null, value: style.getPropertyValue(property.name)};
+        selectors   = delimit(styleRule.value.selectorText, /\s*,\s*/g);
+      }
+
+      if (cascaded)
+      continue;
+
+      /* ??? */
+      for (var cascaded = false, unlayered = []; !cascaded; ) {
+        cascaded    = true;
+        information = null;
+
+        for (var index = 0, specificity = /* --> {0: 0, 1: 0, 2: 0} */ null; index !== rules.length; ++index) /* --> with (rules[index]) */ {
+          var rule           = rules[index].rule;
+          var selectors      = rule.selectorText.split(/\s*,\s*/);
+          var style          = rule.style;
+          var subinformation = {value: style.getPropertyValue(propertyName), matches: false, layer: rules[index].layer, order: rules[index].order, priority: style.getPropertyPriority(propertyName), specificity: null};
+
+          // ...
+          for (var subindex = selectors.length; subindex--; )
+          if (matches(element, selectors[subindex])) {
+            var selectorSpecificity = rank(selectors[subindex]);
+
+            specificity            = null === specificity || compare(selectorSpecificity, specificity) > 0 ? selectorSpecificity : specificity;
+            subinformation.matches = true
+          }
+
+          subinformation.specificity = specificity;
+
+          if (subinformation.matches && null !== subinformation.specificity && subinformation.value !== "")
+          for (var subindex = unlayered.length; ; ) {
+            --subindex;
+
+            if (subindex === -1) {
+              var precedes = false;
+
+              // ...
+              if (null === information || (information.priority !== "important" && subinformation.priority === "important"))
+                precedes = true;
+
+              else if (information.priority === subinformation.priority) {
+                if (information.layer !== subinformation.layer)                                       precedes = (layers.indexOf(information.layer) - layers.indexOf(subinformation.layer)) * (subinformation.priority === "important" ? -1 : +1) < 0;
+                else { var comparison = compare(information.specificity, subinformation.specificity); precedes = comparison < 0 || (0 === comparison && information.order < subinformation.order) }
+              }
+
+              // ...
+              if (precedes)
+              information = subinformation;
+
+              break
+            }
+
+            if (subinformation.layer === unlayered[subindex])
+            break
+          }
+        }
+
+        if (null !== information)
+        for (var resolved = false; !resolved; )
+        switch (information.value) {
+          case "inherit": {
+            cascaded = false;
+            element  = element.parentNode;
+            resolved = true;
+
+            if (null === element || element.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1)
+            return null
+          } break;
+
+          case "initial": switch (propertyName) {
+            case "align-content":         case "align-items": case "animation-direction": case "animation-range-end": case "animation-range-start":
+            case "background-blend-mode": case "box-direction":
+            case "column-gap":            case "container-type": case "content":
+            case "gap":                   case "initial-letter": case "justify-content": case "mix-blend-mode":
+            case "place-content":         case "position-try-order":
+            case "reading-flow":          case "row-gap":
+            case "scroll-snap-stop":
+            case "text-box": case "transition-behavior":
+            case "unicode-bidi":
+              return "normal";
+
+            case "align-self": case "animation-timeline": case "aspect-ratio":
+            case "block-size": case "bottom":             case "break-after": case "break-before": case "break-inside":
+            case "clip":       case "column-count":       case "column-width":
+            case "flex-basis":
+            case "grid-area": case "grid-auto-columns": case "grid-auto-rows": case "grid-column": case "grid-column-end": case "grid-column-start": case "grid-row": case "grid-row-end": case "grid-row-start":
+            case "height":
+            case "inline-size":       case "inset": case "inset-block": case "inset-block-end": case "inset-block-start": case "inset-inline": case "inset-inline-end": case "inset-inline-start": case "isolation":
+            case "justify-self":      case "left":
+            case "mask-border-width": case "mask-size":
+            case "offset-anchor":     case "offset-rotate":    case "overflow-anchor":   case "overscroll-behavior": case "overscroll-behavior-block": case "overscroll-behavior-inline": case "overscroll-behavior-x": case "overscroll-behavior-y":
+            case "page":              case "page-break-after": case "page-break-before": case "page-break-inside":   case "place-self":
+            case "right":
+            case "scroll-behavior": case "scroll-padding-block-end": case "scroll-padding-block-start": case "scroll-padding-bottom": case "scroll-padding-inline-end": case "scroll-padding-inline-start": case "scroll-padding-left": case "scroll-padding-right": case "scroll-padding-top": case "scrollbar-gutter":
+            case "table-layout":    case "text-box-edge":            case "text-decoration-thickness":  case "top":                   case "touch-action":
+            case "user-select":
+            case "view-timeline-inset":
+            case "width":   case "will-change":
+            case "z-index": case "-moz-user-input":
+              return "auto";
+
+            case "alignment-baseline":
+            case "vertical-align":
+              return "baseline";
+
+            case "anchor-name":     case "animation":        case "animation-fill-mode":    case "animation-name":           case "appearance":
+            case "backdrop-filter": case "background-image": case "border-block-end-style": case "border-block-start-style": case "border-block-style": case "border-bottom-style":          case "border-image":             case "border-image-source":           case "border-inline-end-style": case "border-inline-start-style": case "border-inline-style": case "border-left-style": case "border-right-style": case "border-style": case "border-top-style": case "box-shadow":
+            case "clear":           case "clip-path":        case "column-rule-style":      case "column-span":              case "contain":            case "contain-intrinsic-block-size": case "contain-intrinsic-height": case "contain-intrinsic-inline-size": case "contain-intrinsic-size":  case "contain-intrinsic-width":   case "container-name":      case "counter-increment": case "counter-reset":      case "counter-set":
+            case 'd':
+            case "filter": case "float":
+            case "grid":   case "grid-template": case "grid-template-areas": case "grid-template-columns": case "grid-template-rows":
+            case "line-clamp":
+            case "margin-trim":         case "mask":            case "mask-border-source": case "mask-image": case "max-block-size": case "max-height": case "max-inline-size": case "max-width":
+            case "offset-path":         case "outline-style":   case "overlay":
+            case "perspective":         case "position-anchor": case "position-area": case "position-try-fallbacks":
+            case "resize":              case "rotate":
+            case "scale":               case "scroll-marker-group":  case "scroll-snap-align":     case "scroll-snap-type":     case "scroll-timeline-name": case "shape-outside":
+            case "text-box-trim":       case "text-combine-upright": case "text-decoration":       case "text-decoration-line": case "text-emphasis-style":  case "timeline-scope": case "transform": case "transition": case "translate":
+            case "vector-effect":       case "view-timeline-name":   case "view-transition-class": case "view-transition-name":
+            case "-webkit-box-reflect": case "-webkit-mask-box-image":
+              return "none";
+
+            case "animation-delay":  case "animation-duration":
+            case "transition-delay": case "transition-duration":
+              return "0s";
+
+            case "animation-iteration-count":
+            case "border-image-width": case "box-flex-group": case "box-ordinal-group":
+            case "flex-shrink":        case "flood-opacity":
+            case "opacity":            case "stop-opacity": case "zoom":
+              return '1';
+
+            case "animation-timing-function":
+            case "transition-timing-function":
+              return "ease";
+
+            case "backface-visibility": case "content-visibility":
+            case "overflow":            case "overflow-block": case "overflow-inline": case "overflow-x": case "overflow-y":
+              return "visible";
+
+            case "background-clip":
+            case "mask-clip": case "mask-origin":
+              return "border-box";
+
+            case "background-position-x":   case "background-position-y":
+            case "-webkit-mask-position-x": case "-webkit-mask-position-y":
+              return "0%";
+
+            case "background-repeat":     case "mask-repeat":
+            case "-webkit-mask-repeat-x": case "-webkit-mask-repeat-y":
+              return "repeat";
+
+            case "border": case "border-block": case "border-block-end": case "border-block-start": case "border-bottom": case "border-inline": case "border-inline-end": case "border-inline-start": case "border-left": case "border-right": case "border-top":
+            case "column-rule":
+              return "medium none currentcolor";
+
+            case "border-block-color": case "border-block-end-color": case "border-block-start-color": case "border-bottom-color": case "border-color": case "border-inline-color": case "border-inline-end-color": case "border-inline-start-color": case "border-left-color": case "border-right-color": case "border-top-color":
+            case "column-rule-color":
+            case "text-decoration-color": case "text-emphasis-color":
+              return "currentcolor";
+
+            case "border-block-end-width": case "border-block-start-width": case "border-block-width": case "border-bottom-width": case "border-inline-end-width": case "border-inline-start-width": case "border-inline-width": case "border-left-width": case "border-right-width": case "border-top-width": case "border-width":
+            case "column-rule-width":      case "outline-width":
+              return "medium";
+
+            case "border-bottom-left-radius": case "border-bottom-right-radius": case "border-end-end-radius": case "border-end-start-radius": case "border-image-outset": case "border-start-end-radius": case "border-start-start-radius": case "border-top-left-radius": case "border-top-right-radius": case "box-flex":
+            case "cx":                        case "cy":
+            case "flex-grow":
+            case "margin":          case "margin-block":            case "margin-block-end": case "margin-block-start": case "margin-bottom": case "margin-inline": case "margin-inline-end": case "margin-inline-start": case "margin-left": case "margin-right": case "margin-top": case "mask-border-outset": case "mask-border-slice": case "min-block-size": case "min-height": case "min-inline-size": case "min-width":
+            case "offset-distance": case "order":                   case "outline-offset":
+            case "padding":         case "padding-block":           case "padding-block-end":         case "padding-block-start": case "padding-bottom": case "padding-inline": case "padding-inline-end": case "padding-inline-start": case "padding-left": case "padding-right": case "padding-top":
+            case 'r':               case "reading-order":           case "rx":                        case "ry":
+            case "scroll-margin":   case "scroll-margin-block-end": case "scroll-margin-block-start": case "scroll-margin-bottom": case "scroll-margin-inline-end": case "scroll-margin-inline-start": case "scroll-margin-left": case "scroll-margin-right": case "scroll-margin-top": case "shape-image-threshold": case "shape-margin":
+            case 'x':               case 'y':                       case "-moz-force-broken-image-icon":
+              return '0';
+
+            case "background-size":      case "columns":
+            case "scroll-padding-block": case "scroll-padding-inline":
+              return "auto auto";
+
+            case "border-radius":        case "scroll-padding":       return "0 0 0 0";
+            case "box-align":            case "mask-border-repeat":   return "stretch";
+            case "box-sizing":           case "-moz-float-edge":      return "content-box";
+            case "display":              case "-moz-orient":          return "inline";
+            case "flex-direction":       case "grid-auto-flow":       return "row";
+            case "flood-color":          case "stop-color":           return "black";
+            case "object-position":      case "perspective-origin":   return "50% 50%";
+            case "scroll-margin-block":  case "scroll-margin-inline": return "0 0";
+            case "scroll-timeline-axis": case "view-timeline-axis":   return "block";
+
+            case "all":                         return "initial";
+            case "animation-composition":       return "replace";
+            case "animation-play-state":        return "running";
+            case "animation-range":             return "normal normal";
+            case "background":                  return "none 0% 0%/auto auto repeat scroll border-box padding-box transparent";
+            case "background-attachment":       return "scroll";
+            case "background-color":            return "transparent";
+            case "background-origin":           return "padding-box";
+            case "background-position":         return "0% 0%";
+            case "border-image-repeat":         return "stretch stretch";
+            case "border-image-slice":          return "100%";
+            case "box-decoration-break":        return "slice";
+            case "box-lines":                   return "single";
+            case "box-orient":                  return "inline-axis";
+            case "box-pack":                    return "start";
+            case "color-interpolation":         return "sRGB";
+            case "color-interpolation-filters": return "linearRGB";
+            case "column-fill":                 return "balance";
+            case "container":                   return "none/normal";
+            case "field-sizing":                return "fixed";
+            case "flex":                        return "0 1 auto";
+            case "flex-flow":                   return "row nowrap";
+            case "flex-wrap":                   return "nowrap";
+            case "justify-items":               return "legacy";
+            case "lighting-color":              return "white";
+            case "mask-border":                 return "none 0/auto/0 stretch alpha";
+            case "mask-border-mode":            return "alpha";
+            case "mask-composite":              return "end";
+            case "mask-mode":                   return "match-source";
+            case "mask-position":               return "center";
+            case "mask-type":                   return "luminance";
+            case "object-fit":                  return "fill";
+            case "offset":                      return "normal none 0/auto";
+            case "outline":                     return "medium none invert";
+            case "outline-color":               return "invert";
+            case "overflow-clip-margin":        return "0px";
+            case "place-items":                 return "normal legacy";
+            case "position":                    return "static";
+            case "position-try":                return "normal none";
+            case "position-visibility":         return "anchors-visible";
+            case "scroll-timeline":             return "none block";
+            case "text-decoration-style":       return "solid";
+            case "text-emphasis":               return "none currentcolor";
+            case "text-overflow":               return "clip";
+            case "transform-box":               return "view-box";
+            case "transform-origin":            return "50% 50% 0";
+            case "transform-style":             return "flat";
+            case "transition-property":         return "all";
+            case "user-modify":                 return "read-only";
+            case "view-timeline":               return "none block auto";
+            case "-webkit-border-before":       return "medium none canvastext";
+            case "-webkit-border-before-color": return "canvastext";
+            case "-webkit-border-before-style": return "none";
+            case "-webkit-border-before-width": return "medium";
+            case "-webkit-mask-composite":      return "source-over";
+
+            default:
+              return null
+          } break;
+
+          case "revert":       information.value = "unset"; if (strict) return null;                      break; // ->> CSSOM prohibits user agent and user stylesheets access, so unable to rollback cascade layer from author origin
+          case "revert-layer": cascaded = false; resolved = true; void unlayered.push(information.layer); break;
+
+          case "unset": switch (propertyName) {
+            case "accent-color":
+            case "border-collapse": case "border-spacing":
+            case "caption-side":    case "caret-color": case "clip-rule": case "color": case "color-scheme": case "cursor":
+            case "direction":       case "dominant-baseline":
+            case "empty-cells":
+            case "fill":                case "fill-opacity":        case "fill-rule":             case "font": case "font-family": case "font-feature-settings": case "font-kerning": case "font-language-override": case "font-optical-sizing": case "font-palette": case "font-size": case "font-size-adjust": case "font-smooth": case "font-stretch": case "font-style": case "font-synthesis": case "font-synthesis-position": case "font-synthesis-small-caps": case "font-synthesis-style": case "font-synthesis-weight": case "font-variant": case "font-variant-alternates": case "font-variant-caps": case "font-variant-east-asian": case "font-variant-emoji": case "font-variant-ligatures": case "font-variant-numeric": case "font-variant-position": case "font-variation-settings": case "font-weight": case "font-width": case "forced-color-adjust":
+            case "hanging-punctuation": case "hyphenate-character": case "hyphenate-limit-chars": case "hyphens":
+            case "image-orientation":   case "image-rendering":     case "image-resolution":      case "interpolate-size":
+            case "letter-spacing":      case "line-break":          case "line-height":           case "line-height-step": case "list-style": case "list-style-image": case "list-style-position": case "list-style-type":
+            case "marker":              case "marker-end":          case "marker-mid":            case "marker-start":     case "math-depth": case "math-shift":       case "math-style":
+            case "orphans":             case "overflow-wrap":
+            case "paint-order":         case "pointer-events": case "print-color-adjust":
+            case "quotes":
+            case "ruby-align":      case "ruby-overhang":   case "ruby-position":
+            case "scrollbar-color": case "scrollbar-width": case "shape-rendering": case "speak":       case "speak-as":             case "stroke":                   case "stroke-dasharray":       case "stroke-dashoffset": case "stroke-linecap": case "stroke-linejoin":  case "stroke-miterlimit": case "stroke-opacity": case "stroke-width":
+            case "tab-size":        case "text-align":      case "text-align-last": case "text-anchor": case "text-decoration-skip": case "text-decoration-skip-ink": case "text-emphasis-position": case "text-indent":       case "text-justify":   case "text-orientation": case "text-rendering":    case "text-shadow":    case "text-size-adjust": case "text-spacing-trim": case "text-transform": case "text-underline-offset": case "text-underline-position": case "text-wrap": case "text-wrap-mode": case "text-wrap-style":
+            case "visibility":
+            case "white-space":                 case "white-space-collapse":    case "widows":                case "word-break":          case "word-spacing":              case "writing-mode":
+            case "-webkit-tap-highlight-color": case "-webkit-text-fill-color": case "-webkit-text-security": case "-webkit-text-stroke": case "-webkit-text-stroke-color": case "-webkit-text-stroke-width": case "-webkit-touch-callout":
+              information.value = "inherit";
+              break;
+
+            default:
+              information.value = "initial"
+          } break;
+
+          default:
+            resolved = true
+        }
+      }
+
+      // ...
+      if (null !== information) {
+        if (ANIMATED === animationInformation.kind && null !== animationInformation.properties && information.priority !== "important")
+          return animationInformation.properties;
+
+        return information.value !== "" ? information.value : null
+      }
+
+      if (null !== property.pending)
+      property.pending.prior = property;
+
+      void properties.pop()
+    }
+
+    // value.replace(/\s*([,\/]+)\s*/g, "$1").replace(/[,\/\s]+$/, "").replace(/,/g, ", ")
+
+    return null
+  }
+</script>
