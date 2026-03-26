@@ -125,7 +125,7 @@
       {name: "-webkit-text-stroke",    composition: ["-webkit-text-stroke-width",     ' ', "-webkit-text-stroke-color"]}
     ];
 
-    var containers  = {name: [], query: []};                 // --> {name&query: {applicable: Boolean, container: {name: String, query: String}, element: HTMLElement}[]}
+    var containers  = {name: [], query: []};                 // --> {name: {applicable: Boolean, container: {name: String, query: String}, element: HTMLElement}[], query: {applicable: Boolean, condition: String, container: {name: String, query: String}, element: HTMLElement}[]}
     var layers      = [""];                                  // --> String[]
     var styleSheets = [];                                    // --> {container|scope: {name: String, query: String}*|{end: String, start: String}*, layer: String,                        rules: CSSRuleList | DOMCSSRuleList}[]
     var styleRules  = null === styleRules ? [] : styleRules; // --> {container|scope: {name: String, query: String}*|{end: String, start: String}*, layer: String, order: Number(Uint32), value: CSSStyleRule}[]
@@ -978,10 +978,10 @@
           if (null === containerElement || containerElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1)
           continue;
 
+          // ... --> containers.name[…]
           applicable = false;
           contained  = false;
 
-          // ... --> containers.name[…]
           for (var index = containers.name.length; index--; )
           if (containers.name[index].container === styleRule.container && containers.name[index].element === property.element) {
             applicable = containers.name[index].applicable;
@@ -991,30 +991,30 @@
           }
 
           if (!contained) {
-            if (property.priors.length === 1 && property.priors[0].name === "container-name") {
-              if (null !== property.priors[0].information && property.priors[0].information.value !== "") {
+            switch (property.priors.length === 1 ? property.priors[0].name : null) {
+              case "container-name": if (null !== property.priors[0].information && property.priors[0].information.value !== "") {
+                // ... --> getCSSPropertyValue(element.parentNode, "container-name").includes(styleRule.container.name)
                 for (var names = property.priors[0].information.value.split(/\s+/); names.length; )
                 if (names.pop() === styleRule.container.name) { applicable = true; break }
-              }
+              } break;
+
+              case "container-type": if (null !== property.priors[0].information && property.priors[0].information.value !== "normal") {
+                // ... --> getCSSPropertyValue(element.parentNode, "container-type") !== "normal" || …
+                if (styleRule.container.name === "") applicable = true;
+                else                                 cascaded   = cascade(containerElement, "container-name", "containerName")
+              } break;
+
+              default:
+                cascaded = cascade(containerElement, "container-type", "containerType")
             }
 
-            else if (property.priors.length === 1 && property.priors[0].name === "container-type") {
-              if (null !== property.priors[0].information && property.priors[0].information.value !== "normal") {
-                applicable = true;
-                cascaded   = styleRule.container.name !== "" ? cascade(containerElement, "container-name", "containerName") : null
-              }
-            }
-
-            else cascaded = cascade(containerElement, "container-type", "containerType");
-
-            // ...
             if (cascaded) break;
             void containers.name.push({applicable: applicable, container: styleRule.container, element: property.element})
           }
 
           // ... --> containers.query[…]
           if (applicable) {
-            if (0 === property.ruleInformation.containerQueries.length)
+            if (0 === property.ruleInformation.containerQueries.length) // ->> Begin parsing the `styleRule.container.query` or otherwise continue
             void property.ruleInformation.containerQueries.push({applicable: [], delimiter: "", negate: false, prior: null, value: styleRule.container.query});
 
             while (property.ruleInformation.containerQueries.length) {
@@ -1026,38 +1026,38 @@
                 var negate     = false;
 
                 // ...
-                for (var value = null; containerQuery.value !== value; ) /* ->> Remove outer-level parentheses (except topmost) */ {
+                for (var value = null; containerQuery.value !== value; ) /* ->> Strip outer-level parentheses (except topmost) */ {
+                  var indexes  = {begin: 0, end: 0};
+                  var multiple = false;
+
+                  // ...
                   containerQuery.value = containerQuery.value.replace(/^\s+|\s+$/g, ""); // --> .trim()
 
-                  for (var depth = 0, index = 0, indexes = {begin: 0, end: 0}; ; ++index)
-                  if (index === containerQuery.value.length) {
-                    var multiple = false;
-
-                    // ...
-                    void conditions.push(containerQuery.value.slice(indexes.end + (containerQuery.value[indexes.end] === '('), containerQuery.value.length));
-
-                    for (var subindex = conditions.length; subindex--; ) // ->> Keep parentheses of scroll-state descriptors and (computed) style queries
-                    if (/\s*(scroll-state|style)\s*$/.test(conditions[subindex])) {
-                      conditions[subindex + 1] = conditions[subindex + 0] + '(' + conditions[subindex + 1] + ')';
-                      void conditions.splice(subindex, 1)
-                    }
-
-                    value                = containerQuery.value;
-                    multiple             = conditions.length > 3;
-                    containerQuery.value = "";
-
-                    while (conditions.length)
-                    containerQuery.value = conditions.pop() + containerQuery.value;
-
-                    if (delimit(containerQuery.value, /\s*\b(and|or)\b\s*/g).length !== 1) {
-                      containerQuery.value = multiple ? value : containerQuery.value;
-                      value                = containerQuery.value;
-                    }
-
-                    break
+                  for (var depth = 0, index = 0; index !== containerQuery.value.length; ++index)
+                  switch (containerQuery.value[index]) {
+                    case '(': if (0 === depth++) { indexes.begin = index; void conditions.push(containerQuery.value.slice(indexes.end   + (containerQuery.value[indexes.end] === '('), indexes.begin)) } break;
+                    case ')': if (0 === --depth) { indexes.end   = index; void conditions.push(containerQuery.value.slice(indexes.begin + 1,                                           indexes.end++)) }
                   }
-                  else if (containerQuery.value[index] === '(') { if (0 === depth++) { indexes.begin = index; void conditions.push(containerQuery.value.slice(indexes.end   + (containerQuery.value[indexes.end] === '('), indexes.begin)) } }
-                  else if (containerQuery.value[index] === ')') { if (0 === --depth) { indexes.end   = index; void conditions.push(containerQuery.value.slice(indexes.begin + 1,                                           indexes.end++)) } }
+
+                  void conditions.push(containerQuery.value.slice(indexes.end + (containerQuery.value[indexes.end] === '('), containerQuery.value.length));
+
+                  for (var subindex = conditions.length; subindex--; ) // ->> Keep parentheses of stripped scroll-state descriptors and (computed) style queries
+                  if (/\s*(scroll-state|style)\s*$/.test(conditions[subindex])) {
+                    conditions[subindex + 1] = conditions[subindex + 0] + '(' + conditions[subindex + 1] + ')';
+                    void conditions.splice(subindex, 1)
+                  }
+
+                  value                = containerQuery.value;
+                  multiple             = conditions.length > 3;
+                  containerQuery.value = "";
+
+                  while (conditions.length)
+                  containerQuery.value = conditions.pop() + containerQuery.value;
+
+                  if (delimit(containerQuery.value, /\s*\b(and|or)\b\s*/g).length !== 1) {
+                    containerQuery.value = multiple ? value : containerQuery.value; // ->> “except topmost”
+                    value                = containerQuery.value
+                  }
                 }
 
                 containerQuery.value = containerQuery.value.replace(/^\s+|\s+$/g, ""); // --> .trim()
@@ -1081,10 +1081,9 @@
                 contained  = false;
 
                 for (var index = containers.query.length; index--; )
-                if (containers.query[index].container === styleRule.container && containers.query[index].element === property.element) {
+                if (containers.query[index].condition === containerQuery.value && containers.query[index].container === styleRule.container && containers.query[index].element === property.element) {
                   applicable = containers.query[index].applicable;
                   contained  = true;
-                  void containerQuery.value;
 
                   break
                 }
@@ -1101,25 +1100,25 @@
                   switch (functions["scroll-state"][1]) {
                     case "scrollable": switch (functions["scroll-state"][2]) {
                       case "bottom":           applicable = containerElement.clientHeight < containerElement.scrollHeight && containerElement.scrollHeight <= containerElement.clientHeight + containerElement.scrollTop; break;
-                      case "left"  :           applicable = containerElement.clientWidth  < containerElement.scrollWidth  && containerElement.scrollLeft   <= 0;                                                          break;
+                      case "left"  :           applicable = containerElement.clientWidth  < containerElement.scrollWidth  && containerElement.scrollLeft   <= 0.00;                                                       break;
                       case "right" :           applicable = containerElement.clientWidth  < containerElement.scrollWidth  && containerElement.scrollWidth  <= containerElement.clientWidth + containerElement.scrollLeft; break;
-                      case "top"   :           applicable = containerElement.clientHeight < containerElement.scrollHeight && containerElement.scrollTop    <= 0;                                                          break;
+                      case "top"   :           applicable = containerElement.clientHeight < containerElement.scrollHeight && containerElement.scrollTop    <= 0.00;                                                       break;
                       case 'x': case "inline": applicable = containerElement.clientWidth  < containerElement.scrollWidth;                                                                                                 break;
                       case 'y': case "block" : applicable = containerElement.clientHeight < containerElement.scrollHeight
                     } break;
 
-                    case "snapped": /* ->> Scroll position approximation due to lacking DOM API */ {
-                      var containerParentElement = containerElement.parentNode;
-
+                    case "snapped": var containerParentElement = containerElement.parentNode; {
                       if (null !== containerParentElement && containerParentElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x1)
                       switch (functions["scroll-state"][2]) {
+                        // ->> Approximate with scroll position without existing DOM API
                         case 'x': case "inline": applicable = Math.abs(bounds(containerElement).left - bounds(containerParentElement).left) < 1.00; break;
                         case 'y': case "block" : applicable = Math.abs(bounds(containerElement).top  - bounds(containerParentElement).top)  < 1.00
                       }
                     } break;
 
-                    case "stuck": {
-                      if (property.priors.length === 1 && (property.priors[0].name === "bottom" || property.priors[0].name === "left" || property.priors[0].name === "right" || property.priors[0].name === "top")) {
+                    case "stuck": switch (property.priors.length === 1 ? property.priors[0].name : null) {
+                      // TODO (Lapys)
+                      case "bottom": case "left": case "right": case "top": {
                         if (null !== property.priors[0].information && (MEASUREMENTS["length"].test(property.priors[0].information.value) || /^-?0(\.0+(e0+)?)?$/.test(property.priors[0].information.value)))
                         switch (functions["scroll-state"][2]) {
                           case "bottom": applicable =   bounds(containerElement).bottom >= innerHeight - canonicalize(property.element, property.priors[0].information.value, 0x0).replace(/px$/, "");  break;
@@ -1128,17 +1127,19 @@
                           case "right" : applicable =   bounds(containerElement).right  >= innerWidth  - canonicalize(property.element, property.priors[0].information.value, 0x0).replace(/px$/, "");  break;
                           case "top"   : applicable =   bounds(containerElement).top    <= 0           + canonicalize(property.element, property.priors[0].information.value, 0x0).replace(/px$/, "")
                         }
-                      }
+                      } break;
 
-                      else if (property.priors.length === 1 && property.priors[0].name === "position") {
+                      case "position": {
+                        // ... --> getCSSPropertyValue(element.parentNode, "position") ???
                         if (null !== property.priors[0].information && property.priors[0].information.value === "sticky")
                         switch (functions["scroll-state"][2]) {
                           case "bottom": case "left": case "right": case "top": cascaded = cascade(containerElement, functions["scroll-state"][2], functions["scroll-state"][2]); break;
                           case "none":                                          cascaded = cascade(containerElement, "top",                        "top")
                         }
-                      }
+                      } break;
 
-                      else cascaded = cascade(containerElement, "position", "position")
+                      default:
+                        cascaded = cascade(containerElement, "position", "position")
                     }
                   }
 
@@ -1189,8 +1190,8 @@
                   }
 
                   // ...
-                  if (cascaded) break; // TODO
-                  void containers.query.push({applicable: applicable, container: styleRule.container, element: property.element})
+                  if (cascaded) break;
+                  void containers.query.push({applicable: applicable, condition: containerQuery.value, container: styleRule.container, element: property.element})
                 }
               } else switch (containerQuery.delimiter) {
                 case "and": for (applicable = true;  containerQuery.applicable.length; ) applicable = containerQuery.applicable.pop() && applicable; break;
