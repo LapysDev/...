@@ -1258,66 +1258,74 @@
           }
 
           for (var animationProperties = [
-            {names: [], information: property.animationInformation.next},
-            {names: [], information: property.animationInformation.previous}
+            {names: [property.name/* ||*/], information: property.animationInformation.next},
+            {names: [property.name/* ||*/], information: property.animationInformation.previous}
           ]; animationProperties.length; ) {
             var animationProperty      = animationProperties.pop();
             var animationPropertyValue = []; // --> (String {delimiter}|{information: Object*, value: String*})[]
 
             // ...
-            if (false)
-            for (var delimited = false, evaluated = false, expanded = false; ; delimited = !delimited) {
-              if (0 === animationProperty.names.length) {
-                switch (animationProperty.information) {
-                  case property.animationInformation.next:     next     = animationPropertyValue; break;
-                  case property.animationInformation.previous: previous = animationPropertyValue
-                }
-
-                break
-              }
+            for (var delimited = false, evaluated = false; animationProperty.names.length; delimited = !delimited) {
+              var name                 = animationProperty.names.pop(); // ->> Accessed in reverse (B)
+              var alternateName        = alt(name);
+              var subanimationProperty = {information: {keyframe: null, kind: UNDEFINED_EVENT, order: -1, progress: 0.00, properties: []}, name: null, value: null};
 
               // ...
+              if (!delimited) {
+                evaluated = false;
+
+                for (var index    = animationProperty.information                  .length; !evaluated && index--; )
+                for (var subindex = animationProperty.information[index].properties.length; !evaluated && subindex--; ) {
+                  evaluated = evaluated || alternateName === animationProperty.information[index].properties[subindex].name;
+                  evaluated = evaluated || name          === animationProperty.information[index].properties[subindex].name;
+
+                  if (evaluated) {
+                    subanimationProperty.information = animationProperty.information[index];
+                    subanimationProperty.name        = animationProperty.information[index].properties[subindex].name;
+                    subanimationProperty.value       = animationProperty.information[index].properties[subindex].value
+                  }
+                }
+
+                if (evaluated) void animationPropertyValue.push(subanimationProperty);
+                else {}
+              } else if (evaluated || animationPropertyValue.length); // ???
             }
 
-            // for (var animationPropertyNames = [property.name], delimited = false, evaluated = false, expanded = false; animationPropertyNames.length; delimited = !delimited) {
-            //   var subvalue                  = {information: {keyframe: null, kind: UNDEFINED_EVENT, order: -1, progress: 0.00, properties: []}, name: null, value: null};
-            //   var animationProperty         = animationPropertyNames.pop(); // ->> Accessed in reverse (B)
-            //   var alternateAnimatonProperty = alt(animationProperty);
+            switch (animationProperty.information) {
+              case property.animationInformation.next:     next     = animationPropertyValue; break;
+              case property.animationInformation.previous: previous = animationPropertyValue
+            }
 
-            //   // ...
-            //   if (!delimited) {
-            //     evaluated = false;
+            if (false)
+            for (var animationPropertyNames = [property.name], delimited = false, evaluated = false; animationPropertyNames.length; delimited = !delimited) {
+              var subvalue                  = {information: {keyframe: null, kind: UNDEFINED_EVENT, order: -1, progress: 0.00, properties: []}, name: null, value: null};
+              var animationProperty         = animationPropertyNames.pop(); // ->> Accessed in reverse (B)
+              var alternateAnimatonProperty = alt(animationProperty);
 
-            //     for (var index    = information.length;                   !evaluated && index--; )
-            //     for (var subindex = information[index].properties.length; !evaluated && subindex--; ) {
-            //       if (alternateAnimatonProperty === information[index].properties[subindex].name || animationProperty === information[index].properties[subindex].name) {
-            //         evaluated            = true;
-            //         subvalue.information = information[index];
-            //         subvalue.name        = /void/;
-            //         subvalue.value       = information[index].properties[subindex].value
-            //       }
-            //     }
+              // ...
+              if (!delimited) {
+                evaluated = false;
 
-            //     if (!evaluated && !expanded) {
-            //       var length = animationPropertyNames.length;
+                /* sets `value` in air-quotes */
+                if (!evaluated) {
+                  var length = animationPropertyNames.length;
 
-            //       // ...
-            //       for (var shorthandIndex = SHORTHANDS.length; shorthandIndex--; )
-            //       if (SHORTHANDS[shorthandIndex].name === animationProperty) {
-            //         var composition = SHORTHANDS[shorthandIndex].composition;
+                  // ...
+                  for (var shorthandIndex = SHORTHANDS.length; shorthandIndex--; )
+                  if (SHORTHANDS[shorthandIndex].name === animationProperty) {
+                    var composition = SHORTHANDS[shorthandIndex].composition;
 
-            //         // ...
-            //         for (shorthandIndex = 0; shorthandIndex !== composition.length; ++shorthandIndex)
-            //         void animationPropertyNames.splice(length, 0, composition[shorthandIndex]); // ->> Expanded in reverse (B)
+                    // ...
+                    for (shorthandIndex = 0; shorthandIndex !== composition.length; ++shorthandIndex)
+                    void animationPropertyNames.splice(length, 0, composition[shorthandIndex]); // ->> Expanded in reverse (B)
 
-            //         break
-            //       }
+                    break
+                  }
 
-            //       delimited = length < animationPropertyNames.length || delimited;
-            //       expanded  = true // ->> Prevent shorthand expansion beyond one level
-            //     } else                              void value.push(subvalue)
-            //   } else if (evaluated || value.length) void value.push(animationProperty)
-            // }
+                  delimited = length < animationPropertyNames.length || delimited;
+                } else                              void value.push(subvalue)
+              } else if (evaluated || value.length) void value.push(animationProperty)
+            }
           } // next|previous = getAnimationProperty(property.name, property.animationInformation.next|previous);
 
           // CONTINUE FROM HERE
