@@ -2,7 +2,7 @@
   html { border-width: 20px 20px 20px 20px; color: darkblue }
   body, html { display: table; height: 100.0%; width: 100.0% }
   body {
-    animation     : animateA 10.0s linear 0.0s 1 running forwards, animateB 10.0s linear 0.0s 1 running forwards;
+    animation     : animateA 10.0s linear 0.0s 1 running forwards, animateB 10.0s ease 0.0s 1 running forwards;
     border-width  : inherit;
     border-style  : solid solid solid solid;
     border-color  : yellow yellow yellow yellow;
@@ -31,10 +31,10 @@
   var time = 10, interval = setInterval(function() { document.body.innerText = !time ? clearInterval(interval) >>> 0 : time-- }, 1.0e3);
 
   function getCSSPropertyValue(element, propertyName, strict = false, $ = null) /* ->> Non-standards consistent */ {
-    var ANIMATION_EVENT                   = 0x1, TRANSITION_EVENT   = 0x2;
-    var DEPTH_AXIS                        = 0x3, HORIZONTAL_AXIS    = 0x1, VERTICAL_AXIS = 0x2, UNDEFINED_AXIS = 0x0;
-    var GRID_TEMPLATE_COLUMNS             = 0x1, GRID_TEMPLATE_ROWS = 0x2;
-    var METRIC_ACTUAL_BOUNDING_BOX_ASCENT = 0x1, METRIC_WIDTH       = 0x2;
+    var CSS_ANIMATION_EVENT               = 0x03, CSS_TRANSITION_EVENT = 0x02, JAVASCRIPT_ANIMATION_EVENT = 0x01, UNDEFINED_EVENT = 0x00;
+    var DEPTH_AXIS                        = 0x03, HORIZONTAL_AXIS      = 0x01, VERTICAL_AXIS              = 0x02, UNDEFINED_AXIS  = 0x00;
+    var GRID_TEMPLATE_COLUMNS             = 0x01, GRID_TEMPLATE_ROWS   = 0x02;
+    var METRIC_ACTUAL_BOUNDING_BOX_ASCENT = 0x01, METRIC_WIDTH         = 0x02;
     var SHORTHANDS = [
       // ->> Complete longhand expansions only, use NUL terminators to delimit special cases e.g. `border`
       {name: "animation",              composition: ["animation-name",                ' ', "animation-duration", ' ', "animation-timing-function", ' ', "animation-delay", ' ', "animation-iteration-count", ' ', "animation-direction", ' ', "animation-fill-mode", ' ', "animation-play-state", ' ', "animation-timeline"]},
@@ -152,6 +152,16 @@
       return (pointAY * (1.00 - value) * (1.00 - value) * value * 3) + (pointBY * (1.00 - value) * value * value * 3) + (value * value * value)
     }
 
+    function block(writingMode) {
+      switch (writingMode) {
+        case "vertical-rl":                                    // --> right → left
+        case "vertical-lr":                                    // --> left  → right
+        case "sideways-rl":                                    // --> right → left
+        case "sideways-lr":            return HORIZONTAL_AXIS; // --> left  → right
+        case "horizontal-tb": default: return VERTICAL_AXIS    // --> top   → bottom
+      }
+    }
+
     function bounds(element) {
       if (typeof element.getBoundingClientRect === "function") return element.getBoundingClientRect();
       var left = 0.00;
@@ -163,7 +173,7 @@
         top  += node.offsetTop
       }
 
-      for (var node = element.parentNode; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x1; node = node.parentNode) {
+      for (var node = element.parentNode; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x01; node = node.parentNode) {
         left -= node.scrollLeft || 0.00;
         top  -= node.scrollTop  || 0.00
       }
@@ -176,96 +186,10 @@
       }
     }
 
-    window.canonicalize = canonicalize;
     function canonicalize(element, name, value, axis) /* ->> Missing some color, font, and transform formats (along with few assumptions made) */ {
       var $      = {containers: containers, layers: layers, scopes: scopes, styleRules: styleRules};
       var canon  = "";
       var values = delimit(value.toLowerCase(), /[,\/\s]+/g);
-
-      /* ... */
-      function block(writingMode) {
-        switch (writingMode) {
-          case "vertical-rl":                                    // --> right → left
-          case "vertical-lr":                                    // --> left  → right
-          case "sideways-rl":                                    // --> right → left
-          case "sideways-lr":            return HORIZONTAL_AXIS; // --> left  → right
-          case "horizontal-tb": default: return VERTICAL_AXIS    // --> top   → bottom
-        }
-      }
-
-      function inline(writingMode) {
-        switch (writingMode) {
-          case "vertical-rl":                                   // --> switch direction { ltr => top    → bottom, … }
-          case "vertical-lr":                                   // --> switch direction { ltr => top    → bottom, … }
-          case "sideways-rl":                                   // --> switch direction { ltr => top    → bottom, … }
-          case "sideways-lr":            return VERTICAL_AXIS;  // --> switch direction { ltr => bottom → top,    … }
-          case "horizontal-tb": default: return HORIZONTAL_AXIS // --> switch direction { ltr => left   → right,  … }
-        }
-      }
-
-      function metric(glyph, font, kind) {
-        var canvas  = document.createElement("canvas");
-        var context = typeof canvas.getContext === "function" ? canvas.getContext("2d", {"alpha": false, "colorSpace": "srgb", "colorType": "unorm8", "desynchronized": true, "willReadFrequently": false}) : null;
-
-        return null !== context ? (metric = function metric(glyph, font, kind) {
-          context.font = font;
-
-          if (typeof context.measureText === "function")
-          switch (kind) {
-            case METRIC_ACTUAL_BOUNDING_BOX_ASCENT: return context.measureText(glyph).actualBoundingBoxAscent;
-            case METRIC_WIDTH:                      return context.measureText(glyph).width
-          }
-
-          return null
-        })() : null
-      }
-
-      function mode(element) {
-        return propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null
-      }
-
-      function size() {
-        var containerNode         = /* --> :root */ document.documentElement || document;
-        var containerFontSize     = {priority: "", value: ""};
-        var containerStyle        = null;
-        var containerStyleInlined = false;
-        var element               = null;
-        var fontSize              = 16.00;
-
-        // ...
-        if (null !== containerNode) {
-          element = document.createElement("div");
-
-          if (containerNode.nodeType === /* --> Node.ELEMENT_NODE */ 0x1) {
-            containerStyle        = containerNode.style;
-            containerStyleInlined = null !== containerNode.getAttribute("style")
-          }
-
-          // ...
-          if (null !== containerStyle) {
-            if (containerStyleInlined) {
-              if (typeof containerStyle.getPropertyPriority === "function") containerFontSize.priority = containerStyle.getPropertyPriority("font-size");
-              if (typeof containerStyle.removeProperty      === "function") containerFontSize.value    = containerStyle.removeProperty     ("font-size");
-              if (typeof containerStyle.setProperty         === "function")                              containerStyle.setProperty        ("font-size", "initial", "important")
-            } else containerStyle.cssText = "font-size: initial !important" // ->> Unsure if Internet Explorer 7- supports `containerNode.setAttribute("style", "…")`
-          }
-
-          element.style.cssText = "height: 0 !important; position: absolute !important; width: 1rem !important";
-          element               = containerNode.appendChild(element);
-          fontSize              = element.offsetWidth;
-
-          if (null !== containerStyle) {
-            if (containerStyleInlined) {
-              if (containerFontSize.value !== "") { if (typeof containerStyle.setProperty    === "function")      containerStyle.setProperty   ("font-size", containerFontSize.value, containerFontSize.priority) }
-              else                                { if (typeof containerStyle.removeProperty === "function") void containerStyle.removeProperty("font-size") }
-            } else containerNode.removeAttribute("style")
-          }
-
-          void containerNode.removeChild(element)
-        }
-
-        return fontSize // ->> Typical default
-      }
 
       // ... --> values = […]
       if (name === "gap" && values.length === 1)
@@ -332,7 +256,7 @@
           case "padding":              case "padding-block":            case "padding-block-end":          case "padding-block-start": case "padding-bottom": case "padding-inline": case "padding-inline-end": case "padding-inline-start": case "padding-left": case "padding-right": case "padding-top":
           case "scroll-padding-block": case "scroll-padding-block-end": case "scroll-padding-block-start": case "shape-margin":
           case "text-indent":          case "-webkit-border-before":
-            axis = block(mode(element));
+            axis = block(propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null);
             break;
 
           case "border-image-width": case "border-width":
@@ -349,7 +273,7 @@
           case "max-inline-size":       case "min-inline-size":
           case "scroll-padding-inline": case "scroll-padding-inline-end": case "scroll-padding-inline-start":
           case "tab-size":              case "word-spacing":
-            axis = inline(mode(element));
+            axis = inline(propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null);
             break;
 
           case "contain-intrinsic-size":
@@ -358,8 +282,8 @@
 
           case "flex": case "flex-basis": switch (propertyName !== "flex-direction" ? getCSSPropertyValue(element, "flex-direction", false, $) : null) {
             // ->> Reversed directions when `-reverse`’d
-            case "column": case "column-reverse": axis = block (mode(element)); break;
-            case "row":    case "row-reverse":    axis = inline(mode(element))
+            case "column": case "column-reverse": axis = block (propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null); break;
+            case "row":    case "row-reverse":    axis = inline(propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null)
           } break;
 
           case "grid": case "grid-template": {
@@ -373,8 +297,8 @@
             }
 
             switch (gridTemplate) {
-              case GRID_TEMPLATE_COLUMNS: axis = block (mode(element)); break;
-              case GRID_TEMPLATE_ROWS:    axis = inline(mode(element))
+              case GRID_TEMPLATE_COLUMNS: axis = block (propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null); break;
+              case GRID_TEMPLATE_ROWS:    axis = inline(propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null)
             }
           } break;
 
@@ -452,7 +376,7 @@
             var font        = {family: null, size: null, stretch: null, style: null, variant: null, weight: null};
             var fontElement = element;
             var glyph       = '\0';
-            var kind        = 0x0;
+            var kind        = 0x00;
             var value       = null;
 
             // ...
@@ -465,7 +389,7 @@
 
             switch (measurements["length"][2]) {
               case "rcap": case "rch": case "rex": case "ric":
-                for (var rootElement = fontElement; null !== rootElement && rootElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x1; rootElement = rootElement.parentNode)
+                for (var rootElement = fontElement; null !== rootElement && rootElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x01; rootElement = rootElement.parentNode)
                 fontElement = rootElement // --> :root
             }
 
@@ -490,7 +414,7 @@
 
             // ...
             for (; ; containerElement = containerElement.parentNode) {
-              if (null === containerElement && containerElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) {
+              if (null === containerElement && containerElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x01) {
                 containerElement = null;
                 break
               }
@@ -501,8 +425,8 @@
 
             // ... ->> Padding should not be ignored and `ResizeObserver` could alternatively be used to measure the `element`’s content-box dimensions
             switch (measurements["length"][2]) {
-              case "cqb": axis = block (mode(element)); break; case "cqh": axis = VERTICAL_AXIS; break;
-              case "cqi": axis = inline(mode(element)); break; case "cqw": axis = HORIZONTAL_AXIS
+              case "cqb": axis = block (propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null); break; case "cqh": axis = VERTICAL_AXIS; break;
+              case "cqi": axis = inline(propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null); break; case "cqw": axis = HORIZONTAL_AXIS
             }
 
             if (UNDEFINED_AXIS === axis || HORIZONTAL_AXIS === axis) {
@@ -543,8 +467,8 @@
           case "pt":                                             measurement.value = (measurements["length"][1] * (96.00 / 72.00))                   + "px"; break;
           case "px":                                             measurement.value = (measurements["length"][1])                                     + "px"; break;
 
-          case "dvb": case "lvb": case "svb": case "vb": switch (block (mode(element))) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * innerWidth) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * innerHeight) + "px" } break;
-          case "dvi": case "lvi": case "svi": case "vi": switch (inline(mode(element))) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * innerWidth) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * innerHeight) + "px" } break;
+          case "dvb": case "lvb": case "svb": case "vb": switch (block (propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null)) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * innerWidth) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * innerHeight) + "px" } break;
+          case "dvi": case "lvi": case "svi": case "vi": switch (inline(propertyName !== "writing-mode" ? getCSSPropertyValue(element, "writing-mode", false, $) : null)) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * innerWidth) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * innerHeight) + "px" } break;
 
           case "em": case "rem": {
             var fontElement = element;
@@ -552,7 +476,7 @@
 
             // ...
             if (measurements["length"][2] === "rem") {
-              for (var rootElement = fontElement; null !== rootElement && rootElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x1; rootElement = rootElement.parentNode)
+              for (var rootElement = fontElement; null !== rootElement && rootElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x01; rootElement = rootElement.parentNode)
               fontElement = rootElement // --> :root
             }
 
@@ -560,7 +484,7 @@
               fontElement = element.parentNode;
 
             while (true) {
-              if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) { fontSize = size() + "px"; break }
+              if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x01) { fontSize = size() + "px"; break }
               fontSize = getCSSPropertyValue(fontElement, "font-size", false, $);
 
               if (null !== fontSize) break;
@@ -577,7 +501,7 @@
 
             // ...
             if (measurements["length"][2] === "rlh") {
-              for (var rootElement = fontElement; null !== rootElement && rootElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x1; rootElement = rootElement.parentNode)
+              for (var rootElement = fontElement; null !== rootElement && rootElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x01; rootElement = rootElement.parentNode)
               fontElement = rootElement // --> :root
             }
 
@@ -585,7 +509,7 @@
               fontElement = element.parentNode;
 
             while (true) {
-              if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) break; // ->> Presumably default `font-size` multiplied by `~1.2`
+              if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x01) break; // ->> Presumably default `font-size` multiplied by `~1.2`
               lineHeight = getCSSPropertyValue(fontElement, "line-height", false, $);
 
               if (null !== lineHeight) break;
@@ -606,7 +530,7 @@
 
               // ...
               while (true) {
-                if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) { fontSize = size() + "px"; break }
+                if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x01) { fontSize = size() + "px"; break }
                 fontSize = getCSSPropertyValue(fontElement, "font-size", false, $);
 
                 if (null !== fontSize) break;
@@ -643,7 +567,7 @@
 
               // ...
               while (true) {
-                if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) break;
+                if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x01) break;
                 lineHeight = getCSSPropertyValue(fontElement, "line-height", false, $);
 
                 if (null !== lineHeight) break;
@@ -660,7 +584,7 @@
               var containerElement = element.parentNode;
 
               // ... ->> Assumes layout measurement
-              if (null !== containerElement && containerElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x1)
+              if (null !== containerElement && containerElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x01)
               switch (axis) {
                 case HORIZONTAL_AXIS: measurement.value = ((measurements["length"][1] / 100.00) * bounds(containerElement).width)  + "px"; break;
                 case VERTICAL_AXIS:   measurement.value = ((measurements["length"][1] / 100.00) * bounds(containerElement).height) + "px"
@@ -729,6 +653,16 @@
 
       // ...
       return value
+    }
+
+    function inline(writingMode) {
+      switch (writingMode) {
+        case "vertical-rl":                                   // --> switch direction { ltr => top    → bottom, … }
+        case "vertical-lr":                                   // --> switch direction { ltr => top    → bottom, … }
+        case "sideways-rl":                                   // --> switch direction { ltr => top    → bottom, … }
+        case "sideways-lr":            return VERTICAL_AXIS;  // --> switch direction { ltr => bottom → top,    … }
+        case "horizontal-tb": default: return HORIZONTAL_AXIS // --> switch direction { ltr => left   → right,  … }
+      }
     }
 
     function interpolate(propertyName, propertyValueA, propertyValueB, progress, delimiter) {
@@ -873,6 +807,23 @@
       return false // ->> Manual parse-testing of `Element::tagName` and such
     }
 
+    function metric(glyph, font, kind) {
+      var canvas  = document.createElement("canvas");
+      var context = typeof canvas.getContext === "function" ? canvas.getContext("2d", {"alpha": false, "colorSpace": "srgb", "colorType": "unorm8", "desynchronized": true, "willReadFrequently": false}) : null;
+
+      return null !== context ? (metric = function metric(glyph, font, kind) {
+        context.font = font;
+
+        if (typeof context.measureText === "function")
+        switch (kind) {
+          case METRIC_ACTUAL_BOUNDING_BOX_ASCENT: return context.measureText(glyph).actualBoundingBoxAscent;
+          case METRIC_WIDTH:                      return context.measureText(glyph).width
+        }
+
+        return null
+      })() : null
+    }
+
     function rank(selector) {
       var specificity = {0: 0, 1: 0, 2: 0};
 
@@ -943,6 +894,49 @@
       }
 
       return specificity
+    }
+
+    function size() {
+      var containerNode         = /* --> :root */ document.documentElement || document;
+      var containerFontSize     = {priority: "", value: ""};
+      var containerStyle        = null;
+      var containerStyleInlined = false;
+      var element               = null;
+      var fontSize              = 16.00;
+
+      // ...
+      if (null !== containerNode) {
+        element = document.createElement("div");
+
+        if (containerNode.nodeType === /* --> Node.ELEMENT_NODE */ 0x01) {
+          containerStyle        = containerNode.style;
+          containerStyleInlined = null !== containerNode.getAttribute("style")
+        }
+
+        // ...
+        if (null !== containerStyle) {
+          if (containerStyleInlined) {
+            if (typeof containerStyle.getPropertyPriority === "function") containerFontSize.priority = containerStyle.getPropertyPriority("font-size");
+            if (typeof containerStyle.removeProperty      === "function") containerFontSize.value    = containerStyle.removeProperty     ("font-size");
+            if (typeof containerStyle.setProperty         === "function")                              containerStyle.setProperty        ("font-size", "initial", "important")
+          } else containerStyle.cssText = "font-size: initial !important" // ->> Unsure if Internet Explorer 7- supports `containerNode.setAttribute("style", "…")`
+        }
+
+        element.style.cssText = "height: 0 !important; position: absolute !important; width: 1rem !important";
+        element               = containerNode.appendChild(element);
+        fontSize              = element.offsetWidth;
+
+        if (null !== containerStyle) {
+          if (containerStyleInlined) {
+            if (containerFontSize.value !== "") { if (typeof containerStyle.setProperty    === "function")      containerStyle.setProperty   ("font-size", containerFontSize.value, containerFontSize.priority) }
+            else                                { if (typeof containerStyle.removeProperty === "function") void containerStyle.removeProperty("font-size") }
+          } else containerNode.removeAttribute("style")
+        }
+
+        void containerNode.removeChild(element)
+      }
+
+      return fontSize // ->> Typical default
     }
 
     function transform(matrix) /* --> matrix === "matrix3d(…)" */ {
@@ -1133,7 +1127,7 @@
           } break;
 
           case 0x07: continue; // --> CSSRule.KEYFRAMES_RULE === CSSKeyframesRule::type --- CODE (Lapys) -> @keyframes
-          case 0x08: continue; // --> CSSRule.KEYFRAME_RULE  === CSSKeyframeRule ::type --- WARN (Lapys) -> Solely implemented via `Animation[] Element::getAnimations(…)`, otherwise non-trivial to evaluate active animations (and transitions) in composite order
+          case 0x08: continue; // --> CSSRule.KEYFRAME_RULE  === CSSKeyframeRule ::type --- WARN (Lapys) -> Solely implemented via `Animation[] Element::getAnimations(…)`, otherwise non-trivial to evaluate active animations (and transitions — including ones from `Animation Element::animate(…)`) in composite order
 
           // --> CSSRule.SUPPORTS_RULE === CSSSupportsRule::type --> @supports
           case 0x0C: if (typeof rule.cssRules === "object" && typeof CSS === "object" && typeof CSS.supports === "function") try {
@@ -1157,15 +1151,15 @@
     // ...
     cascade:
     for (var properties = [{
-      alternateName       : alt(propertyName),                                     // --> String {alt(…)}
-      animationInformation: {kind: 0x0, next: [], previous: [], properties: null}, // --> {kind: enum, next: …, previous: …, properties: …}
-      element             : element,                                               // --> HTMLElement
-      information         : null,                                                  // --> {layer: String*, matches: Boolean, order: Number(Uint32) {< 0}, priority: "important" | …, specificity: {0: 0, 1: 0, 2: 0}*, value: String*}*
-      name                : propertyName,                                          // --> String
-      pending             : null,                                                  // --> this
-      priors              : [],                                                    // --> this[]
-      ruleInformation     : {containerQueries: [], index: 0, specificity: null},   // --> {containerQueries: {applicable: Boolean[], delimiter: "and"|"or", negate: Boolean, prior: this, value: String}[], index: Number(Uint32), specificity: {0: Number(Uint32), 1: Number(Uint32), 2: Number(Uint32)}}
-      unlayered           : []                                                     // --> String[] {applicable: [], delimiter: "", negate: false, prior: null, value: styleRule.container.query}
+      alternateName       : alt(propertyName),                                                 // --> String {alt(…)}
+      animationInformation: {kind: UNDEFINED_EVENT, next: [], previous: [], properties: null}, // --> {kind: enum, next: …, previous: …, properties: …}
+      element             : element,                                                           // --> HTMLElement
+      information         : null,                                                              // --> {layer: String*, matches: Boolean, order: Number(Uint32) {< 0}, priority: "important" | …, specificity: {0: 0, 1: 0, 2: 0}*, value: String*}*
+      name                : propertyName,                                                      // --> String
+      pending             : null,                                                              // --> this
+      priors              : [],                                                                // --> this[]
+      ruleInformation     : {containerQueries: [], index: 0, specificity: null},               // --> {containerQueries: {applicable: Boolean[], delimiter: "and"|"or", negate: Boolean, prior: this, value: String}[], index: Number(Uint32), specificity: {0: Number(Uint32), 1: Number(Uint32), 2: Number(Uint32)}}
+      unlayered           : []                                                                 // --> String[] {applicable: [], delimiter: "", negate: false, prior: null, value: styleRule.container.query}
     }], count = 50; properties.length; ) {
       if (count-- === 0) { throw Error("dang") }
       var reverted   = false;
@@ -1177,7 +1171,7 @@
       function cascade(element, propertyName, alternatePropertyName) {
         var subproperty = {
           alternateName       : alternatePropertyName,
-          animationInformation: {kind: 0x0, next: [], previous: [], properties: null},
+          animationInformation: {kind: UNDEFINED_EVENT, next: [], previous: [], properties: null},
           element             : element,
           information         : null,
           name                : propertyName,
@@ -1198,230 +1192,252 @@
       console.log(TAB + "[BEGIN]", property.name, '<' + property.element.tagName + '>');
 
       // ... --> .animationInformation = {…} --- WARN (Lapys) -> Limited support for some interpolated values
-      if (false) {
-        // for (var index = 0; index !== animations.length; ++index) {
-        //   var animation = animations[index];
-        //   var effect    = animation.effect;
-        //   var kind      = 0x0;
+      if (true) {
+        for (var index = 0; index !== animations.length; ++index) {
+          var animation = animations[index];
+          var kind      = UNDEFINED_EVENT;
 
-        //   // ...
-        //   if      (typeof CSSAnimation  === "function" && animation instanceof CSSAnimation)  kind = ANIMATION_EVENT;
-        //   else if (typeof CSSTransition === "function" && animation instanceof CSSTransition) kind = TRANSITION_EVENT;
+          // ...
+          switch (true) {
+            case typeof Animation     === "function" && animation instanceof Animation:     kind = JAVASCRIPT_ANIMATION_EVENT; break;
+            case typeof CSSAnimation  === "function" && animation instanceof CSSAnimation:  kind = CSS_ANIMATION_EVENT;        break;
+            case typeof CSSTransition === "function" && animation instanceof CSSTransition: kind = CSS_TRANSITION_EVENT
+          }
 
-        //   if (typeof effect === "object" && /* --> effect instanceof KeyframeEffect */ typeof effect.getKeyframes === "function" && typeof effect.getComputedTiming === "function" && 0x0 !== kind) {
-        //     var keyframes = effect.getKeyframes();               // --> {composite: String, computedOffset: Number, easing: String, offset: Number*, [property]: String{…}}[]
-        //     var next      = [];                                  // --> {keyframe: null, kind: ANIMATION_EVENT | TRANSITION_EVENT | 0x0, order: Number(Uint32), progress: Number, properties: {name: String, value: String}[]}[]
-        //     var previous  = [];                                  //     ^^^
-        //     var progress  = effect.getComputedTiming().progress; // --> Number*
+          if (typeof animation.effect === "object" /* --> animation.effect instanceof KeyframeEffect */ && typeof animation.effect.getComputedTiming === "function" && typeof animation.effect.getKeyframes === "function" && UNDEFINED_EVENT !== kind) {
+            var keyframes = animation.effect.getKeyframes();               // --> {composite: String, computedOffset: Number, easing: String, offset: Number*, [property.name…]: String{…}}[]
+            var next      = [];                                            // --> {keyframe: null, kind: CSS_ANIMATION_EVENT | CSS_TRANSITION_EVENT | …, order: Number(Uint32), progress: Number, properties: {name: String, value: String}[]}[]
+            var previous  = [];                                            //       ^^^
+            var progress  = animation.effect.getComputedTiming().progress; // --> Number*
 
-        //     // ...
-        //     if (null !== progress)
-        //     for (var subindex = 0; subindex !== keyframes.length; ++subindex) {
-        //       var keyframe    = keyframes[subindex];
-        //       var information = {keyframe: keyframe, kind: kind, order: index, progress: progress, properties: []};
+            // ...
+            if (null !== progress)
+            for (var subindex = 0; subindex !== keyframes.length; ++subindex) {
+              var keyframe    = keyframes[subindex];
+              var information = {keyframe: keyframe, kind: kind, order: index, progress: progress, properties: []};
 
-        //       // ... ->> Acknowledge shorthand properties replaced by their constituent longhand counterparts
-        //       if       (typeof keyframe[propertyName]          === "string") void information.properties.push({name: propertyName,          value: keyframe[propertyName]});
-        //       else if  (typeof keyframe[alternatePropertyName] === "string") void information.properties.push({name: alternatePropertyName, value: keyframe[alternatePropertyName]});
-        //       else for (var shorthandIndex = SHORTHANDS.length; shorthandIndex--; ) {
-        //         if (SHORTHANDS[shorthandIndex].name === propertyName) {
-        //           var composition = SHORTHANDS[shorthandIndex].composition;
+              // ... ->> Acknowledge shorthand properties replaced by their constituent longhand counterparts
+              if       (typeof keyframe[property.name]          === "string") void information.properties.push({name: property.name,          value: keyframe[property.name]});
+              else if  (typeof keyframe[property.alternateName] === "string") void information.properties.push({name: property.alternateName, value: keyframe[property.alternateName]});
+              else for (var shorthandIndex = SHORTHANDS.length; shorthandIndex--; ) {
+                if (SHORTHANDS[shorthandIndex].name === property.name) {
+                  var composition = SHORTHANDS[shorthandIndex].composition;
 
-        //           for (shorthandIndex = 0; shorthandIndex < composition.length; shorthandIndex += 2) {
-        //             var longhandName = composition[shorthandIndex];
+                  for (shorthandIndex = 0; shorthandIndex < composition.length; shorthandIndex += 2) {
+                    var name          = composition[shorthandIndex];
+                    var alternateName = alt(name);
 
-        //             if (typeof keyframe[longhandName] === "string") { void information.properties.push({name: longhandName, value: keyframe[longhandName]}); continue } longhandName = alt(longhandName);
-        //             if (typeof keyframe[longhandName] === "string") { void information.properties.push({name: longhandName, value: keyframe[longhandName]}); continue }
-        //           }
+                    // ...
+                    if (typeof keyframe[name]          === "string") { void information.properties.push({name: name,          value: keyframe[name]});          continue }
+                    if (typeof keyframe[alternateName] === "string") { void information.properties.push({name: alternateName, value: keyframe[alternateName]}); continue }
+                  }
 
-        //           break
-        //         }
-        //       }
+                  break
+                }
+              }
 
-        //       if (keyframe.computedOffset >= progress) void next    .splice(0,               0, information); // ->> In reverse
-        //       if (keyframe.computedOffset <= progress) void previous.splice(previous.length, 0, information)  // --> .push(…)
-        //     }
+              if (0 !== information.properties.length) {
+                if (keyframe.computedOffset >= progress) void next    .splice(0,               0, information); // --> .unshift(…) ->> In reverse
+                if (keyframe.computedOffset <= progress) void previous.splice(previous.length, 0, information)  // --> .push   (…)
+              }
+            }
 
-        //     for (var subindex = 0; subindex !== next    .length; ++subindex) void animationInformation.next    .push(next    [subindex])
-        //     for (var subindex = 0; subindex !== previous.length; ++subindex) void animationInformation.previous.push(previous[subindex])
-        //   }
-        // }
+            for (var subindex = 0; subindex !== next    .length; ++subindex) void property.animationInformation.next    .push(next    [subindex])
+            for (var subindex = 0; subindex !== previous.length; ++subindex) void property.animationInformation.previous.push(previous[subindex])
+          }
+        }
 
-        // if (animationInformation.next.length || animationInformation.previous.length) {
-        //   var next     = null;
-        //   var previous = null;
+        if (property.animationInformation.next.length || property.animationInformation.previous.length) {
+          var next     = null;
+          var previous = null;
 
-        //   /* ... */
-        //   function getAnimationProperty(propertyName, information) {
-        //     var value = []; // --> (String|{information: Object*, value: String*})[]
+          // ...
+          switch (0) {
+            case property.animationInformation.next    .length: property.animationInformation.next     = property.animationInformation.previous; break;
+            case property.animationInformation.previous.length: property.animationInformation.previous = property.animationInformation.next
+          }
 
-        //     // ...
-        //     for (var animationProperties = [propertyName], delimited = false, evaluated = false, expanded = false; animationProperties.length; delimited = !delimited) {
-        //       var subvalue                  = {information: {keyframe: null, kind: 0x0, order: -1, progress: 0.00, properties: []}, name: null, value: null};
-        //       var animationProperty         = animationProperties.pop(); // ->> Accessed in reverse (B)
-        //       var alternateAnimatonProperty = alt(animationProperty);
+          for (var animationProperties = [
+            {names: [], information: property.animationInformation.next},
+            {names: [], information: property.animationInformation.previous}
+          ]; animationProperties.length; ) {
+            var animationProperty      = animationProperties.pop();
+            var animationPropertyValue = []; // --> (String {delimiter}|{information: Object*, value: String*})[]
 
-        //       // ...
-        //       if (!delimited) {
-        //         evaluated = false;
+            // ...
+            if (false)
+            for (var delimited = false, evaluated = false, expanded = false; ; delimited = !delimited) {
+              if (0 === animationProperty.names.length) {
+                switch (animationProperty.information) {
+                  case property.animationInformation.next:     next     = animationPropertyValue; break;
+                  case property.animationInformation.previous: previous = animationPropertyValue
+                }
 
-        //         for (var index    = information.length;                   !evaluated && index--; )
-        //         for (var subindex = information[index].properties.length; !evaluated && subindex--; ) {
-        //           if (alternateAnimatonProperty === information[index].properties[subindex].name || animationProperty === information[index].properties[subindex].name) {
-        //             evaluated            = true;
-        //             subvalue.information = information[index];
-        //             subvalue.name        = /void/;
-        //             subvalue.value       = information[index].properties[subindex].value
-        //           }
-        //         }
+                break
+              }
 
-        //         if (!evaluated && !expanded) {
-        //           var length = animationProperties.length;
+              // ...
+            }
 
-        //           // ...
-        //           for (var shorthandIndex = SHORTHANDS.length; shorthandIndex--; )
-        //           if (SHORTHANDS[shorthandIndex].name === animationProperty) {
-        //             var composition = SHORTHANDS[shorthandIndex].composition;
+            // for (var animationPropertyNames = [property.name], delimited = false, evaluated = false, expanded = false; animationPropertyNames.length; delimited = !delimited) {
+            //   var subvalue                  = {information: {keyframe: null, kind: UNDEFINED_EVENT, order: -1, progress: 0.00, properties: []}, name: null, value: null};
+            //   var animationProperty         = animationPropertyNames.pop(); // ->> Accessed in reverse (B)
+            //   var alternateAnimatonProperty = alt(animationProperty);
 
-        //             // ...
-        //             for (shorthandIndex = 0; shorthandIndex !== composition.length; ++shorthandIndex)
-        //             void animationProperties.splice(length, 0, composition[shorthandIndex]); // ->> Expanded in reverse (B)
+            //   // ...
+            //   if (!delimited) {
+            //     evaluated = false;
 
-        //             break
-        //           }
+            //     for (var index    = information.length;                   !evaluated && index--; )
+            //     for (var subindex = information[index].properties.length; !evaluated && subindex--; ) {
+            //       if (alternateAnimatonProperty === information[index].properties[subindex].name || animationProperty === information[index].properties[subindex].name) {
+            //         evaluated            = true;
+            //         subvalue.information = information[index];
+            //         subvalue.name        = /void/;
+            //         subvalue.value       = information[index].properties[subindex].value
+            //       }
+            //     }
 
-        //           delimited = length < animationProperties.length || delimited;
-        //           expanded  = true // ->> Prevent shorthand expansion beyond one level
-        //         } else                              void value.push(subvalue)
-        //       } else if (evaluated || value.length) void value.push(animationProperty)
-        //     }
+            //     if (!evaluated && !expanded) {
+            //       var length = animationPropertyNames.length;
 
-        //     return value
-        //   }
+            //       // ...
+            //       for (var shorthandIndex = SHORTHANDS.length; shorthandIndex--; )
+            //       if (SHORTHANDS[shorthandIndex].name === animationProperty) {
+            //         var composition = SHORTHANDS[shorthandIndex].composition;
 
-        //   // ...
-        //   if      (0 === animationInformation.previous.length) animationInformation.previous = animationInformation.next;
-        //   else if (0 === animationInformation.next    .length) animationInformation.next     = animationInformation.previous;
+            //         // ...
+            //         for (shorthandIndex = 0; shorthandIndex !== composition.length; ++shorthandIndex)
+            //         void animationPropertyNames.splice(length, 0, composition[shorthandIndex]); // ->> Expanded in reverse (B)
 
-        //   next     = getAnimationProperty(propertyName, animationInformation.next);
-        //   previous = getAnimationProperty(propertyName, animationInformation.previous);
+            //         break
+            //       }
 
-        //   if (next.length || previous.length) {
-        //     animationInformation.properties = [];
+            //       delimited = length < animationPropertyNames.length || delimited;
+            //       expanded  = true // ->> Prevent shorthand expansion beyond one level
+            //     } else                              void value.push(subvalue)
+            //   } else if (evaluated || value.length) void value.push(animationProperty)
+            // }
+          } // next|previous = getAnimationProperty(property.name, property.animationInformation.next|previous);
 
-        //     for (var index = 0, length = next.length > previous.length ? next.length : previous.length; index < length; ++index) {
-        //       var subnext     = index < next    .length ? next    [index] : {information: {keyframe: null, kind: 0x0, order: -1, progress: 0.00, properties: []}, value: null};
-        //       var subprevious = index < previous.length ? previous[index] : {information: {keyframe: null, kind: 0x0, order: -1, progress: 0.00, properties: []}, value: null};
+          // CONTINUE FROM HERE
+          if (false)
+          if (next.length || previous.length) {
+            animationInformation.properties = [];
 
-        //       // ...
-        //       if (typeof subnext !== "string" && typeof subprevious !== "string") {
-        //         animationInformation.kind = ANIMATION_EVENT === subnext.information.kind || ANIMATION_EVENT === subprevious.information.kind ? ANIMATION_EVENT : TRANSITION_EVENT;
+            for (var index = 0, length = next.length > previous.length ? next.length : previous.length; index < length; ++index) {
+              var subnext     = index < next    .length ? next    [index] : {information: {keyframe: null, kind: UNDEFINED_EVENT, order: -1, progress: 0.00, properties: []}, value: null};
+              var subprevious = index < previous.length ? previous[index] : {information: {keyframe: null, kind: UNDEFINED_EVENT, order: -1, progress: 0.00, properties: []}, value: null};
 
-        //         if      (subnext.information.order > subprevious.information.order) subprevious.value = null;
-        //         else if (subnext.information.order < subprevious.information.order) subnext    .value = null;
+              // ...
+              if (typeof subnext !== "string" && typeof subprevious !== "string") {
+                animationInformation.kind = CSS_ANIMATION_EVENT === subnext.information.kind || CSS_ANIMATION_EVENT === subprevious.information.kind ? CSS_ANIMATION_EVENT : CSS_TRANSITION_EVENT;
 
-        //         if (null !== subprevious.value && null !== subnext.value) /* ->> Does not interpolate perfectly i.e. what should `background-position-x: left 20px` to `background-position-x: right 20px` result in? */ {
-        //           var easing      = subprevious.information.keyframe.easing;
-        //           var offsetDelta = subnext.information.keyframe.computedOffset - subprevious.information.keyframe.computedOffset;
-        //           var progress    = offsetDelta > 0.00 ? (subprevious.information.progress - subprevious.information.keyframe.computedOffset) / offsetDelta : 1.00;
+                if      (subnext.information.order > subprevious.information.order) subprevious.value = null;
+                else if (subnext.information.order < subprevious.information.order) subnext    .value = null;
 
-        //           // ...
-        //           switch (easing) {
-        //             case "ease":        progress = bézier(0.25, 0.10, 0.25, 1.00, progress); break;
-        //             case "ease-in":     progress = bézier(0.42, 0.00, 1.00, 1.00, progress); break;
-        //             case "ease-in-out": progress = bézier(0.42, 0.00, 0.58, 1.00, progress); break;
-        //             case "ease-out":    progress = bézier(0.00, 0.00, 0.58, 1.00, progress); break;
-        //             case "linear":      /* Do nothing… */                                    break;
-        //             case "step-end":    progress = progress <  1.00 ? 0.00 : 1.00;           break;
-        //             case "step-start":  progress = progress <= 0.00 ? 0.00 : 1.00;           break;
-        //             default: var functions = {
-        //               "bézier": easing.match(/^cubic-bezier\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/),
-        //               "linear": easing.match(/^linear\((.+)\)$/),
-        //               "step"  : easing.match(/^steps\(\s*(\d+)\s*(?:,\s*([\w-]+))?\s*\)$/)
-        //             }; {
-        //               if (null !== functions["bézier"])
-        //                 progress = bézier(+functions["bézier"][1], +functions["bézier"][2], +functions["bézier"][3], +functions["bézier"][4], progress);
+                if (null !== subprevious.value && null !== subnext.value) /* ->> Does not interpolate perfectly i.e. what should `background-position-x: left 20px` to `background-position-x: right 20px` result in? */ {
+                  var easing      = subprevious.information.keyframe.easing;
+                  var offsetDelta = subnext.information.keyframe.computedOffset - subprevious.information.keyframe.computedOffset;
+                  var progress    = offsetDelta > 0.00 ? (subprevious.information.progress - subprevious.information.keyframe.computedOffset) / offsetDelta : 1.00;
 
-        //               else if (null !== functions["linear"]) /* NOTE (Lapys) -> No idea how this works, to be honest…; See `https://developer.mozilla.org/docs/Web/CSS/Reference/Values/easing-function/linear` */ {
-        //                 var points = [];
-        //                 var tokens = functions["linear"].split(/\s*,\s*/);
+                  // ...
+                  switch (easing) {
+                    case "ease":        progress = bézier(0.25, 0.10, 0.25, 1.00, progress); break;
+                    case "ease-in":     progress = bézier(0.42, 0.00, 1.00, 1.00, progress); break;
+                    case "ease-in-out": progress = bézier(0.42, 0.00, 0.58, 1.00, progress); break;
+                    case "ease-out":    progress = bézier(0.00, 0.00, 0.58, 1.00, progress); break;
+                    case "linear":      /* Do nothing… */                                    break;
+                    case "step-end":    progress = progress <  1.00 ? 0.00 : 1.00;           break;
+                    case "step-start":  progress = progress <= 0.00 ? 0.00 : 1.00;           break;
+                    default: var functions = {
+                      "bézier": easing.match(/^cubic-bezier\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/),
+                      "linear": easing.match(/^linear\((.+)\)$/),
+                      "step"  : easing.match(/^steps\(\s*(\d+)\s*(?:,\s*([\w-]+))?\s*\)$/)
+                    }; {
+                      if (null !== functions["bézier"])
+                        progress = bézier(+functions["bézier"][1], +functions["bézier"][2], +functions["bézier"][3], +functions["bézier"][4], progress);
 
-        //                 // ...
-        //                 for (var subindex = 0; subindex !== tokens.length; ++subindex) {
-        //                   var positions = [];
-        //                   var subtokens = tokens[subindex].split(/\s+/);
+                      else if (null !== functions["linear"]) /* NOTE (Lapys) -> No idea how this works, to be honest…; See `https://developer.mozilla.org/docs/Web/CSS/Reference/Values/easing-function/linear` */ {
+                        var points = [];
+                        var tokens = functions["linear"].split(/\s*,\s*/);
 
-        //                   // ...
-        //                   for (var subsubindex = 1; subsubindex !== subtokens.length; ++subsubindex)
-        //                   void positions.push(+subtokens[subsubindex] / 100.00);
+                        // ...
+                        for (var subindex = 0; subindex !== tokens.length; ++subindex) {
+                          var positions = [];
+                          var subtokens = tokens[subindex].split(/\s+/);
 
-        //                   if (0 === positions.length)
-        //                   void positions.push(null);
+                          // ...
+                          for (var subsubindex = 1; subsubindex !== subtokens.length; ++subsubindex)
+                          void positions.push(+subtokens[subsubindex] / 100.00);
 
-        //                   for (var subsubindex = 0; subsubindex !== positions.length; ++subsubindex)
-        //                   void points.push({input: positions[subsubindex], output: +subtokens[0]})
-        //                 }
+                          if (0 === positions.length)
+                          void positions.push(null);
 
-        //                 points[0]                .input = null !== points[0]                .input ? points[0]                .input : 0;
-        //                 points[points.length - 1].input = null !== points[points.length - 1].input ? points[points.length - 1].input : 1;
+                          for (var subsubindex = 0; subsubindex !== positions.length; ++subsubindex)
+                          void points.push({input: positions[subsubindex], output: +subtokens[0]})
+                        }
 
-        //                 for (var subindex = 1; subindex < points.length; ++subindex)
-        //                 if (null === points[subindex].input) {
-        //                   var inputEnd = 0, inputStart = 0; // --> points[rangeEnd, rangeStart].input
-        //                   var rangeEnd = 0, rangeStart = subindex - 1;
+                        points[0]                .input = null !== points[0]                .input ? points[0]                .input : 0;
+                        points[points.length - 1].input = null !== points[points.length - 1].input ? points[points.length - 1].input : 1;
 
-        //                   // ...
-        //                   while (null !== pointers[subindex].input)
-        //                     ++subindex;
+                        for (var subindex = 1; subindex < points.length; ++subindex)
+                        if (null === points[subindex].input) {
+                          var inputEnd = 0, inputStart = 0; // --> points[rangeEnd, rangeStart].input
+                          var rangeEnd = 0, rangeStart = subindex - 1;
 
-        //                   rangeEnd   = subindex;
-        //                   inputEnd   = points[rangeEnd]  .input;
-        //                   inputStart = points[rangeStart].input;
+                          // ...
+                          while (null !== pointers[subindex].input)
+                            ++subindex;
 
-        //                   for (var count = rangeEnd - rangeStart, subsubindex = 1; count !== subsubindex; ++subsubindex)
-        //                   points[rangeStart + subsubindex].input = inputStart + ((inputEnd - inputStart) * (subsubindex / count))
-        //                 }
+                          rangeEnd   = subindex;
+                          inputEnd   = points[rangeEnd]  .input;
+                          inputStart = points[rangeStart].input;
 
-        //                 // ...
-        //                 if      (progress <= points[0]                .input) progress = points[0]                .output;
-        //                 else if (progress >= points[points.length - 1].input) progress = points[points.length - 1].output;
-        //                 else {
-        //                   for (var subindex = 1; subindex !== points.length; ++subindex)
-        //                   if (progress <= points[subindex].input) {
-        //                     var count = points[subindex - 0].input - points[subindex - 1].input;
+                          for (var count = rangeEnd - rangeStart, subsubindex = 1; count !== subsubindex; ++subsubindex)
+                          points[rangeStart + subsubindex].input = inputStart + ((inputEnd - inputStart) * (subsubindex / count))
+                        }
 
-        //                     progress = points[subindex - 1].output + ((points[subindex - 0].output - points[subindex - 1].output) * (count > 0 ? (t - points[subindex - 1].input) / count : 1));
-        //                     break
-        //                   }
-        //                 }
-        //               }
+                        // ...
+                        if      (progress <= points[0]                .input) progress = points[0]                .output;
+                        else if (progress >= points[points.length - 1].input) progress = points[points.length - 1].output;
+                        else {
+                          for (var subindex = 1; subindex !== points.length; ++subindex)
+                          if (progress <= points[subindex].input) {
+                            var count = points[subindex - 0].input - points[subindex - 1].input;
 
-        //               else if (null !== functions["step"]) {
-        //                 var intervalCount = +functions["step"][1];
-        //                 switch (+functions["step"][2] || "end") {
-        //                   case "both":  case "jump-both":         progress = Math.min((Math.floor(progress * intervalCount) + 1) / (intervalCount + 1), 1.00); break;
-        //                   case "start": case "jump-start":        progress = Math.min((Math.ceil (progress * intervalCount) + 0) / (intervalCount + 0), 1.00); break;
-        //                   case "none":  case "jump-none":         progress = Math.floor((progress * (intervalCount - 1)) + 0.50) / (intervalCount - 1);        break;
-        //                   case "end":   case "jump-end": default: progress = Math.floor((progress * (intervalCount - 0)) + 0.00) / (intervalCount - 0)
-        //                 }
-        //               }
-        //             }
-        //           }
+                            progress = points[subindex - 1].output + ((points[subindex - 0].output - points[subindex - 1].output) * (count > 0 ? (t - points[subindex - 1].input) / count : 1));
+                            break
+                          }
+                        }
+                      }
 
-        //           void animationInformation.properties.push({name: /void/, value: interpolate(propertyName, subprevious.value, subnext.value, progress, propertyName === "border" ? /[\0\s]+/g : /[,\/\s]+/g)})
-        //         }
-        //         else if (null !== subnext.value && null === subprevious.value) void animationInformation.properties.push({name: /void/, value: subnext    .value});
-        //         else if (null === subnext.value && null !== subprevious.value) void animationInformation.properties.push({name: /void/, value: subprevious.value});
-        //         else                                                           void animationInformation.properties.push({name: /void/, value: ""})
-        //       } else                                                           void animationInformation.properties.push(typeof subnext === "string" ? subnext : typeof subprevious === "string" ? subprevious : ' ')
-        //     }
-        //   }
-        // }
+                      else if (null !== functions["step"]) {
+                        var intervalCount = +functions["step"][1];
+                        switch (+functions["step"][2] || "end") {
+                          case "both":  case "jump-both":         progress = Math.min((Math.floor(progress * intervalCount) + 1) / (intervalCount + 1), 1.00); break;
+                          case "start": case "jump-start":        progress = Math.min((Math.ceil (progress * intervalCount) + 0) / (intervalCount + 0), 1.00); break;
+                          case "none":  case "jump-none":         progress = Math.floor((progress * (intervalCount - 1)) + 0.50) / (intervalCount - 1);        break;
+                          case "end":   case "jump-end": default: progress = Math.floor((progress * (intervalCount - 0)) + 0.00) / (intervalCount - 0)
+                        }
+                      }
+                    }
+                  }
 
-        // // TODO (Lapys) -> Keep track of expanded shorthand properties not caught by animation, so they can be acquired normally (through cascade); Don’t forget about `border`
-        // console.warn(propertyName, 0, animationInformation.properties);
+                  void animationInformation.properties.push({name: /void/, value: interpolate(propertyName, subprevious.value, subnext.value, progress, propertyName === "border" ? /[\0\s]+/g : /[,\/\s]+/g)})
+                }
+                else if (null !== subnext.value && null === subprevious.value) void animationInformation.properties.push({name: /void/, value: subnext    .value});
+                else if (null === subnext.value && null !== subprevious.value) void animationInformation.properties.push({name: /void/, value: subprevious.value});
+                else                                                           void animationInformation.properties.push({name: /void/, value: ""})
+              } else                                                           void animationInformation.properties.push(typeof subnext === "string" ? subnext : typeof subprevious === "string" ? subprevious : ' ')
+            }
+          }
+        }
 
-        // if (TRANSITION_EVENT === animationInformation.kind && null !== animationInformation.properties)
+        // TODO (Lapys) -> Keep track of expanded shorthand properties not caught by animation, so they can be acquired normally (through cascade); Don’t forget about `border`
+        // console.warn(property.name, 0, property.animationInformation.properties);
+
+        // if (CSS_TRANSITION_EVENT === animationInformation.kind && null !== animationInformation.properties)
         // return animationInformation.properties; // TODO (Lapys) -> Re-plan around `animationInformation.properties` instead
       }
 
@@ -1440,7 +1456,7 @@
             var containerElement = property.element.parentNode;
 
             // ...
-            if (null === containerElement || containerElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1)
+            if (null === containerElement || containerElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x01)
             continue;
 
             // ... --> containers.name[…]
@@ -1574,7 +1590,7 @@
                       } break;
 
                       case "snapped": var containerParentElement = containerElement.parentNode; {
-                        if (null !== containerParentElement && containerParentElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x1)
+                        if (null !== containerParentElement && containerParentElement.nodeType === /* --> Node.ELEMENT_NODE */ 0x01)
                         switch (functions["scroll-state"][2]) {
                           // ->> Approximate with scroll position without existing DOM API
                           case 'x': case "inline": applicable = Math.abs(bounds(containerElement).left - bounds(containerParentElement).left) < 1.00; break;
@@ -1697,12 +1713,12 @@
               if (null !== styleRule.scope.start) {
                 var root = null;
 
-                for (var node = element; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x1; node = node.parentNode)
+                for (var node = element; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x01; node = node.parentNode)
                 if  (matches(node, styleRule.scope.start)) { root = node; break }
 
                 if (element !== root)
                 if (null !== root && null !== styleRule.scope.end) {
-                  for (var node = element.parentNode; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x1 && node !== root; node = node.parentNode)
+                  for (var node = element.parentNode; null !== node && node.nodeType === /* --> Node.ELEMENT_NODE */ 0x01 && node !== root; node = node.parentNode)
                   if  (matches(node, styleRule.scope.end)) { applicable = false; break }
                 } else                                       applicable = false
               }
@@ -1712,7 +1728,7 @@
           }
 
           if (applicable) {
-            information = {layer: styleRule.layer, matches: false, order: styleRule.order, priority: typeof style === "function" ? style.getPropertyPriority(property.name) : "", specificity: null, value: style[property.alternateName] /* --> style.getPropertyValue(property.name) */};
+            information = {layer: styleRule.layer, matches: false, order: styleRule.order, priority: typeof style.getPropertyPriority !== "function" ? "" : style.getPropertyPriority(property.name), specificity: null, value: typeof style.getPropertyValue !== "function" ? style[property.name] || style[property.alternateName] : style.getPropertyValue(property.name)};
 
             for (var selectors = delimit(styleRule.value.selectorText, /\s*,\s*/g); selectors.length; ) {
               var selector = selectors.pop().value;
@@ -1771,7 +1787,7 @@
         for (var value = [property.information.value]; value.length; )
         switch (value.pop()) {
           case "inherit": {
-            if (null !== property.element.parentNode && property.element.parentNode.nodeType === /* --> Node.ELEMENT_NODE */ 0x1) /* --> getCSSPropertyValue(element.parentNode, propertyName) */ {
+            if (null !== property.element.parentNode && property.element.parentNode.nodeType === /* --> Node.ELEMENT_NODE */ 0x01) /* --> getCSSPropertyValue(element.parentNode, propertyName) */ {
               if (property.priors.length === 1 && property.priors[0].name === property.name) property.information.value = null !== property.priors[0].information ? property.priors[0].information.value : property.information.value;
               else                                                                           cascaded                   = cascade(property.element.parentNode, property.name, property.alternateName)
             } else void value.push("initial")
@@ -2022,7 +2038,7 @@
         }
 
         // TODO (Lapys)
-        // if (ANIMATION_EVENT === animationInformation.kind && null !== animationInformation.properties && information.priority !== "important")
+        // if (CSS_ANIMATION_EVENT === animationInformation.kind && null !== animationInformation.properties && information.priority !== "important")
         //   return animationInformation.properties;
 
         property.information.value = property.information.value.replace(/\s*([,\/]+)\s*/g, "$1").replace(/[,\/\s]+$/, "").replace(/,/g, ", ")
