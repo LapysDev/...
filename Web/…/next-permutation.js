@@ -1,4 +1,5 @@
-var DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+// var DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+var DIGITS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 var count  = [DIGITS[0]];
 
 for (var FIRST = DIGITS[0], LAST = DIGITS[DIGITS.length - 1], OVERFLOW = DIGITS[1], number = 0; count.length <= 3 && number !== 420; ++number) {
