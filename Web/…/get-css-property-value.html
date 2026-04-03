@@ -31,7 +31,6 @@
   var time = 10, interval = setInterval(function() { document.body.innerText = !time ? clearInterval(interval) >>> 0 : time-- }, 1.0e3);
 
   function getCSSPropertyValue(element, propertyName, strict = false, $ = null) /* ->> Non-standards consistent */ {
-    // TODO (Lapys) -> Check canonicalize(font-size) for html:0.5em body:2.0em
     var ANIMATION_EVENT                   = 0x1, TRANSITION_EVENT   = 0x2;
     var DEPTH_AXIS                        = 0x3, HORIZONTAL_AXIS    = 0x1, VERTICAL_AXIS = 0x2, UNDEFINED_AXIS = 0x0;
     var GRID_TEMPLATE_COLUMNS             = 0x1, GRID_TEMPLATE_ROWS = 0x2;
@@ -177,6 +176,7 @@
       }
     }
 
+    window.canonicalize = canonicalize;
     function canonicalize(element, name, value, axis) /* ->> Missing some color, font, and transform formats (along with few assumptions made) */ {
       var $      = {containers: containers, layers: layers, scopes: scopes, styleRules: styleRules};
       var canon  = "";
@@ -225,22 +225,41 @@
       }
 
       function size() {
-        var containerNode = document.body || document.documentElement || document;
-        var element       = null;
-        var elementStyle  = null;
-        var fontSize      = 16.00;
+        var containerNode         = /* --> :root */ document.documentElement || document;
+        var containerFontSize     = {priority: "", value: ""};
+        var containerStyle        = null;
+        var containerStyleInlined = false;
+        var element               = null;
+        var fontSize              = 16.00;
 
         // ...
         if (null !== containerNode) {
-          element      = document.createElement("div");
-          elementStyle = element.style;
+          element = document.createElement("div");
 
-          elementStyle.setProperty("height",   '0',        "important");
-          elementStyle.setProperty("position", "absolute", "important");
-          elementStyle.setProperty("width",    "1rem",     "important");
+          if (containerNode.nodeType === /* --> Node.ELEMENT_NODE */ 0x1) {
+            containerStyle        = containerNode.style;
+            containerStyleInlined = null !== containerNode.getAttribute("style")
+          }
 
-          element  = containerNode.appendChild(element);
-          fontSize = element.offsetWidth;
+          // ...
+          if (null !== containerStyle) {
+            if (containerStyleInlined) {
+              if (typeof containerStyle.getPropertyPriority === "function") containerFontSize.priority = containerStyle.getPropertyPriority("font-size");
+              if (typeof containerStyle.removeProperty      === "function") containerFontSize.value    = containerStyle.removeProperty     ("font-size");
+              if (typeof containerStyle.setProperty         === "function")                              containerStyle.setProperty        ("font-size", "initial", "important")
+            } else containerStyle.cssText = "font-size: initial !important" // ->> Unsure if Internet Explorer 7- supports `containerNode.setAttribute("style", "…")`
+          }
+
+          element.style.cssText = "height: 0 !important; position: absolute !important; width: 1rem !important";
+          element               = containerNode.appendChild(element);
+          fontSize              = element.offsetWidth;
+
+          if (null !== containerStyle) {
+            if (containerStyleInlined) {
+              if (containerFontSize.value !== "") { if (typeof containerStyle.setProperty    === "function")      containerStyle.setProperty   ("font-size", containerFontSize.value, containerFontSize.priority) }
+              else                                { if (typeof containerStyle.removeProperty === "function") void containerStyle.removeProperty("font-size") }
+            } else containerNode.removeAttribute("style")
+          }
 
           void containerNode.removeChild(element)
         }
@@ -524,7 +543,7 @@
           case "pt":                                             measurement.value = (measurements["length"][1] * (96.00 / 72.00))                   + "px"; break;
           case "px":                                             measurement.value = (measurements["length"][1])                                     + "px"; break;
 
-          case "dvb": case "lvb": case "svb": case "vb": switch (block(mode(element)))  { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * innerWidth) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * innerHeight) + "px" } break;
+          case "dvb": case "lvb": case "svb": case "vb": switch (block (mode(element))) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * innerWidth) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * innerHeight) + "px" } break;
           case "dvi": case "lvi": case "svi": case "vi": switch (inline(mode(element))) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * innerWidth) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * innerHeight) + "px" } break;
 
           case "em": case "rem": {
@@ -540,9 +559,12 @@
             else if (propertyName === "font-size")
               fontElement = element.parentNode;
 
-            for (; null === fontSize; fontElement = fontElement.parentNode) {
+            while (true) {
               if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) { fontSize = size() + "px"; break }
-              fontSize = getCSSPropertyValue(fontElement, "font-size", false, $)
+              fontSize = getCSSPropertyValue(fontElement, "font-size", false, $);
+
+              if (null !== fontSize) break;
+              fontElement = fontElement.parentNode
             }
 
             fontSize          = canonicalize(fontElement, "font-size", fontSize, UNDEFINED_AXIS);
@@ -562,9 +584,12 @@
             else if (propertyName === "line-height")
               fontElement = element.parentNode;
 
-            for (; null === lineHeight; fontElement = fontElement.parentNode) {
+            while (true) {
               if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) break; // ->> Presumably default `font-size` multiplied by `~1.2`
-              lineHeight = getCSSPropertyValue(fontElement, "line-height", false, $)
+              lineHeight = getCSSPropertyValue(fontElement, "line-height", false, $);
+
+              if (null !== lineHeight) break;
+              fontElement = fontElement.parentNode
             }
 
             if (null !== lineHeight) {
@@ -580,9 +605,12 @@
               var fontSize    = null;
 
               // ...
-              for (; null === fontSize; fontElement = fontElement.parentNode) {
+              while (true) {
                 if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) { fontSize = size() + "px"; break }
-                fontSize = getCSSPropertyValue(fontElement, "font-size", false, $)
+                fontSize = getCSSPropertyValue(fontElement, "font-size", false, $);
+
+                if (null !== fontSize) break;
+                fontElement = fontElement.parentNode
               }
 
               fontSize          = canonicalize(fontElement, "font-size", fontSize, UNDEFINED_AXIS);
@@ -614,9 +642,12 @@
               var lineHeight  = null;
 
               // ...
-              for (; null === lineHeight; fontElement = fontElement.parentNode) {
+              while (true) {
                 if (null === fontElement || fontElement.nodeType !== /* --> Node.ELEMENT_NODE */ 0x1) break;
-                lineHeight = getCSSPropertyValue(fontElement, "line-height", false, $)
+                lineHeight = getCSSPropertyValue(fontElement, "line-height", false, $);
+
+                if (null !== lineHeight) break;
+                fontElement = fontElement.parentNode
               }
 
               if (null !== lineHeight) {
@@ -1681,7 +1712,7 @@
           }
 
           if (applicable) {
-            information = {layer: styleRule.layer, matches: false, order: styleRule.order, priority: style.getPropertyPriority(property.name), specificity: null, value: style.getPropertyValue(property.name)};
+            information = {layer: styleRule.layer, matches: false, order: styleRule.order, priority: typeof style === "function" ? style.getPropertyPriority(property.name) : "", specificity: null, value: style[property.alternateName] /* --> style.getPropertyValue(property.name) */};
 
             for (var selectors = delimit(styleRule.value.selectorText, /\s*,\s*/g); selectors.length; ) {
               var selector = selectors.pop().value;
