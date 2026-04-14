@@ -2000,8 +2000,9 @@
                   break;
               }
 
+              // TODO (Lapys) -> Use `/` delimiter to canonicalize `line-height: normal`
               // TODO (Lapys) -> Choose between `.animationInformation` and `.information`
-              // TODO (Lapys) -> Check `padding-left`, `padding-top`, and `padding`
+              // TODO (Lapys) -> Check `padding-left`, `padding-top`, and `padding` (don’t forget `accumulate`)
               // TODO (Lapys) -> Ensure `font-size` and `line-height` are cached (it ain’t pluralized for no reason)
               // TODO (Lapys) -> Allow recursed to inherit automatically?
               console.log(TAB + "%c[… (" + properties.length + ")]    ", "color: greenyellow", propertyName, '<' + property.element.tagName + ATTRS + '>', property.styleInformation, property.information, property.animationInformation);
@@ -2316,12 +2317,15 @@
 
             console.log(TAB + "%c[END (" + properties.length + ")]  ", "color: orangered", propertyName, (null !== property.information ? '`' + property.information.value + '`' : "―"), '<' + property.element.tagName + ATTRS + '>' + (null !== property.origin ? " -> <" + property.origin.element.tagName + '>' : ""), "\n\n");
 
-            property.animationInformation.frame      = UNDEFINED_FRAME;
-            property.animationInformation.next       = [];
-            property.animationInformation.previous   = [];
-            property.animationInformation.properties = [];
-            property.information                     = null;
-            property.ruleInformation.index           = 0
+            // ... ->> Discard additionally cascaded `.names`
+            if (property.nameInformation.index !== Math.max(property.alternateNames.length, property.names.length) - 1) {
+              property.animationInformation.frame      = UNDEFINED_FRAME;
+              property.animationInformation.next       = [];
+              property.animationInformation.previous   = [];
+              property.animationInformation.properties = [];
+              property.information                     = null;
+              property.ruleInformation.index           = 0
+            }
           }
 
           if (cascaded)
