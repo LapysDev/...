@@ -52,7 +52,7 @@
         "timeline"          : document.timeline || null
       });
 
-      function getCSSPropertyValue(element, propertyName, strict = false) /* ->> Non-standards consistent */ {
+      function getCSSPropertyValue(element, propertyName, strict = false) /* ->> Non-standards consistent; doesn’t acknowledge vendor extensions */ {
         var $        = arguments.length > 3 ? arguments[3] || null : null;
         var document = element.ownerDocument || (function() { return /* --> globalThis */ this })().document; // --> HTMLDocument
 
@@ -70,85 +70,82 @@
           "resolution": "dpcm|dpi|dppx|x"
         }, UNIT_VALUE = function(match) { return UNITS[match.slice(1, -1)] }, UNIT_MATCH = /<[%a-z]+>/g, SHORTHANDS = [
           // ->> Complete longhand expansions only, use NUL terminators to delimit special cases e.g. `border`
-          {name: "animation",              composition: delimit("animation-name                animation-duration animation-timing-function animation-delay animation-iteration-count animation-direction animation-fill-mode animation-play-state animation-timeline"                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "animation-range",        composition: delimit("animation-range-start         animation-range-end"                                                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "background",             composition: delimit("background-image              background-position-x background-position-y / background-size background-repeat background-origin background-clip background-attachment background-color"                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "background-position",    composition: delimit("background-position-x         background-position-y"                                                                                                                                                                                         .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "background-repeat",      composition: delimit("background-repeat-x           background-repeat-y"                                                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border",                 composition: delimit("border-top-width              border-right-width border-bottom-width border-left-width\0border-top-style border-right-style border-bottom-style border-left-style\0border-top-color border-right-color border-bottom-color border-left-color".replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-block",           composition: delimit("border-block-width            border-block-style border-block-color"                                                                                                                                                                         .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-block-color",     composition: delimit("border-block-start-color      border-block-end-color"                                                                                                                                                                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-block-end",       composition: delimit("border-block-end-width        border-block-end-style   border-block-end-color"                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-block-start",     composition: delimit("border-block-start-width      border-block-start-style border-block-start-color"                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-block-style",     composition: delimit("border-block-start-style      border-block-end-style"                                                                                                                                                                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-block-width",     composition: delimit("border-block-start-width      border-block-end-width"                                                                                                                                                                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-bottom",          composition: delimit("border-bottom-width           border-bottom-style  border-bottom-color"                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-color",           composition: delimit("border-top-color              border-right-color   border-bottom-color  border-left-color"                                                                                                                                                   .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-image",           composition: delimit("border-image-source           border-image-slice / border-image-width / border-image-outset border-image-repeat"                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-inline",          composition: delimit("border-inline-width           border-inline-style  border-inline-color"                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-inline-color",    composition: delimit("border-inline-start-color     border-inline-end-color"                                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-inline-end",      composition: delimit("border-inline-end-width       border-inline-end-style   border-inline-end-color"                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-inline-start",    composition: delimit("border-inline-start-width     border-inline-start-style border-inline-start-color"                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-inline-style",    composition: delimit("border-inline-start-style     border-inline-end-style"                                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-inline-width",    composition: delimit("border-inline-start-width     border-inline-end-width"                                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-left",            composition: delimit("border-left-width             border-left-style       border-left-color"                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-radius",          composition: delimit("border-top-left-radius        border-top-right-radius border-bottom-right-radius border-bottom-left-radius"                                                                                                                                  .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-right",           composition: delimit("border-right-width            border-right-style      border-right-color"                                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-style",           composition: delimit("border-top-style              border-right-style      border-bottom-style border-left-style"                                                                                                                                                 .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-top",             composition: delimit("border-top-width              border-top-style        border-top-color"                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "border-width",           composition: delimit("border-top-width              border-right-width      border-bottom-width border-left-width"                                                                                                                                                 .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "caret",                  composition: delimit("caret-color                   caret-shape"                                                                                                                                                                                                   .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "column-rule",            composition: delimit("column-rule-width             column-rule-style column-rule-color"                                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "columns",                composition: delimit("column-width                  column-count"                                                                                                                                                                                                  .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "contain-intrinsic-size", composition: delimit("contain-intrinsic-width       contain-intrinsic-height"                                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "container",              composition: delimit("container-name /              container-type"                                                                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "flex",                   composition: delimit("flex-grow                     flex-shrink flex-basis"                                                                                                                                                                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "flex-flow",              composition: delimit("flex-direction                flex-wrap"                                                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "font",                   composition: delimit("font-style                    font-variant             font-weight       font-stretch         font-size /             line-height           font-family"                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "font-variant",           composition: delimit("font-variant-ligatures        font-variant-alternates  font-variant-caps font-variant-numeric font-variant-east-asian font-variant-position font-variant-emoji"                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "gap",                    composition: delimit("row-gap                       column-gap"                                                                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "grid",                   composition: delimit("grid-template-rows            grid-template-columns grid-template-areas grid-auto-rows grid-auto-columns grid-auto-flow"                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "grid-area",              composition: delimit("grid-row-start     /          grid-column-start /   grid-row-end /      grid-column-end"                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "grid-column",            composition: delimit("grid-column-start  /          grid-column-end"                                                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "grid-row",               composition: delimit("grid-row-start     /          grid-row-end"                                                                                                                                                                                                  .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "grid-template",          composition: delimit("grid-template-rows /          grid-template-columns grid-template-areas"                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "inset",                  composition: delimit("top                           right                 bottom left"                                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "inset-block",            composition: delimit("inset-block-start             inset-block-end"                                                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "inset-inline",           composition: delimit("inset-inline-start            inset-inline-end"                                                                                                                                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "list-style",             composition: delimit("list-style-position           list-style-image list-style-type"                                                                                                                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "margin",                 composition: delimit("margin-top                    margin-right     margin-bottom margin-left"                                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "margin-block",           composition: delimit("margin-block-start            margin-block-end"                                                                                                                                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "margin-inline",          composition: delimit("margin-inline-start           margin-inline-end"                                                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "marker",                 composition: delimit("marker-start                  marker-mid          marker-end"                                                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "mask",                   composition: delimit("mask-image                    mask-position     / mask-size           mask-repeat        mask-origin        mask-clip mask-composite mask-mode"                                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "mask-border",            composition: delimit("mask-border-source            mask-border-slice / mask-border-width / mask-border-outset mask-border-repeat mask-border-mode"                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "offset",                 composition: delimit("offset-position               offset-path         offset-distance     offset-rotate /    offset-anchor"                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "outline",                composition: delimit("outline-width                 outline-style       outline-color"                                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "overflow",               composition: delimit("overflow-x                    overflow-y"                                                                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "overscroll-behavior",    composition: delimit("overscroll-behavior-x         overscroll-behavior-y"                                                                                                                                                                                         .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "padding",                composition: delimit("padding-top                   padding-right padding-bottom padding-left"                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "padding-block",          composition: delimit("padding-block-start           padding-block-end"                                                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "padding-inline",         composition: delimit("padding-inline-start          padding-inline-end"                                                                                                                                                                                            .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "place-content",          composition: delimit("align-content                 justify-content"                                                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "place-items",            composition: delimit("align-items                   justify-items"                                                                                                                                                                                                 .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "place-self",             composition: delimit("align-self                    justify-self"                                                                                                                                                                                                  .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "scroll-margin",          composition: delimit("scroll-margin-top             scroll-margin-right scroll-margin-bottom scroll-margin-left"                                                                                                                                                   .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "scroll-margin-block",    composition: delimit("scroll-margin-block-start     scroll-margin-block-end"                                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "scroll-margin-inline",   composition: delimit("scroll-margin-inline-start    scroll-margin-inline-end"                                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "scroll-padding",         composition: delimit("scroll-padding-top            scroll-padding-right scroll-padding-bottom scroll-padding-left"                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "scroll-padding-block",   composition: delimit("scroll-padding-block-start    scroll-padding-block-end"                                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "scroll-padding-inline",  composition: delimit("scroll-padding-inline-start   scroll-padding-inline-end"                                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "scroll-timeline",        composition: delimit("scroll-timeline-name          scroll-timeline-axis"                                                                                                                                                                                          .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "text-box",               composition: delimit("text-box-trim                 text-box-edge"                                                                                                                                                                                                 .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "text-decoration",        composition: delimit("text-decoration-line          text-decoration-style text-decoration-color text-decoration-thickness"                                                                                                                                         .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "text-emphasis",          composition: delimit("text-emphasis-style           text-emphasis-color"                                                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "text-wrap",              composition: delimit("text-wrap-mode                text-wrap-style"                                                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "transition",             composition: delimit("transition-property           transition-duration transition-timing-function transition-delay transition-behavior"                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "view-timeline",          composition: delimit("view-timeline-name            view-timeline-axis  view-timeline-inset"                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "white-space",            composition: delimit("white-space-collapse          text-wrap-mode"                                                                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "-webkit-border-before",  composition: delimit("-webkit-border-before-width   -webkit-border-before-style    -webkit-border-before-color"                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "-webkit-mask-box-image", composition: delimit("-webkit-mask-box-image-source -webkit-mask-box-image-slice / -webkit-mask-box-image-width / -webkit-mask-box-image-outset -webkit-mask-box-image-repeat"                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
-          {name: "-webkit-text-stroke",    composition: delimit("-webkit-text-stroke-width     -webkit-text-stroke-color"                                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)}
+          {name: "animation",              composition: delimit("animation-name              animation-duration animation-timing-function animation-delay animation-iteration-count animation-direction animation-fill-mode animation-play-state animation-timeline"                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "animation-range",        composition: delimit("animation-range-start       animation-range-end"                                                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "background",             composition: delimit("background-image            background-position-x background-position-y / background-size background-repeat background-origin background-clip background-attachment background-color"                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "background-position",    composition: delimit("background-position-x       background-position-y"                                                                                                                                                                                         .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "background-repeat",      composition: delimit("background-repeat-x         background-repeat-y"                                                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border",                 composition: delimit("border-top-width            border-right-width border-bottom-width border-left-width\0border-top-style border-right-style border-bottom-style border-left-style\0border-top-color border-right-color border-bottom-color border-left-color".replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-block",           composition: delimit("border-block-width          border-block-style border-block-color"                                                                                                                                                                         .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-block-color",     composition: delimit("border-block-start-color    border-block-end-color"                                                                                                                                                                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-block-end",       composition: delimit("border-block-end-width      border-block-end-style   border-block-end-color"                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-block-start",     composition: delimit("border-block-start-width    border-block-start-style border-block-start-color"                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-block-style",     composition: delimit("border-block-start-style    border-block-end-style"                                                                                                                                                                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-block-width",     composition: delimit("border-block-start-width    border-block-end-width"                                                                                                                                                                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-bottom",          composition: delimit("border-bottom-width         border-bottom-style  border-bottom-color"                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-color",           composition: delimit("border-top-color            border-right-color   border-bottom-color  border-left-color"                                                                                                                                                   .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-image",           composition: delimit("border-image-source         border-image-slice / border-image-width / border-image-outset border-image-repeat"                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-inline",          composition: delimit("border-inline-width         border-inline-style  border-inline-color"                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-inline-color",    composition: delimit("border-inline-start-color   border-inline-end-color"                                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-inline-end",      composition: delimit("border-inline-end-width     border-inline-end-style   border-inline-end-color"                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-inline-start",    composition: delimit("border-inline-start-width   border-inline-start-style border-inline-start-color"                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-inline-style",    composition: delimit("border-inline-start-style   border-inline-end-style"                                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-inline-width",    composition: delimit("border-inline-start-width   border-inline-end-width"                                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-left",            composition: delimit("border-left-width           border-left-style       border-left-color"                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-radius",          composition: delimit("border-top-left-radius      border-top-right-radius border-bottom-right-radius border-bottom-left-radius"                                                                                                                                  .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-right",           composition: delimit("border-right-width          border-right-style      border-right-color"                                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-style",           composition: delimit("border-top-style            border-right-style      border-bottom-style border-left-style"                                                                                                                                                 .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-top",             composition: delimit("border-top-width            border-top-style        border-top-color"                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "border-width",           composition: delimit("border-top-width            border-right-width      border-bottom-width border-left-width"                                                                                                                                                 .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "caret",                  composition: delimit("caret-color                 caret-shape"                                                                                                                                                                                                   .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "column-rule",            composition: delimit("column-rule-width           column-rule-style column-rule-color"                                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "columns",                composition: delimit("column-width                column-count"                                                                                                                                                                                                  .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "contain-intrinsic-size", composition: delimit("contain-intrinsic-width     contain-intrinsic-height"                                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "container",              composition: delimit("container-name /            container-type"                                                                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "flex",                   composition: delimit("flex-grow                   flex-shrink flex-basis"                                                                                                                                                                                        .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "flex-flow",              composition: delimit("flex-direction              flex-wrap"                                                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "font",                   composition: delimit("font-style                  font-variant             font-weight       font-stretch         font-size /             line-height           font-family"                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "font-variant",           composition: delimit("font-variant-ligatures      font-variant-alternates  font-variant-caps font-variant-numeric font-variant-east-asian font-variant-position font-variant-emoji"                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "gap",                    composition: delimit("row-gap                     column-gap"                                                                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "grid",                   composition: delimit("grid-template-rows          grid-template-columns grid-template-areas grid-auto-rows grid-auto-columns grid-auto-flow"                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "grid-area",              composition: delimit("grid-row-start     /        grid-column-start /   grid-row-end /      grid-column-end"                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "grid-column",            composition: delimit("grid-column-start  /        grid-column-end"                                                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "grid-row",               composition: delimit("grid-row-start     /        grid-row-end"                                                                                                                                                                                                  .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "grid-template",          composition: delimit("grid-template-rows /        grid-template-columns grid-template-areas"                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "inset",                  composition: delimit("top                         right                 bottom left"                                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "inset-block",            composition: delimit("inset-block-start           inset-block-end"                                                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "inset-inline",           composition: delimit("inset-inline-start          inset-inline-end"                                                                                                                                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "list-style",             composition: delimit("list-style-position         list-style-image list-style-type"                                                                                                                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "margin",                 composition: delimit("margin-top                  margin-right     margin-bottom margin-left"                                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "margin-block",           composition: delimit("margin-block-start          margin-block-end"                                                                                                                                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "margin-inline",          composition: delimit("margin-inline-start         margin-inline-end"                                                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "marker",                 composition: delimit("marker-start                marker-mid          marker-end"                                                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "mask",                   composition: delimit("mask-image                  mask-position     / mask-size           mask-repeat        mask-origin        mask-clip mask-composite mask-mode"                                                                                              .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "mask-border",            composition: delimit("mask-border-source          mask-border-slice / mask-border-width / mask-border-outset mask-border-repeat mask-border-mode"                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "offset",                 composition: delimit("offset-position             offset-path         offset-distance     offset-rotate /    offset-anchor"                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "outline",                composition: delimit("outline-width               outline-style       outline-color"                                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "overflow",               composition: delimit("overflow-x                  overflow-y"                                                                                                                                                                                                    .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "overscroll-behavior",    composition: delimit("overscroll-behavior-x       overscroll-behavior-y"                                                                                                                                                                                         .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "padding",                composition: delimit("padding-top                 padding-right padding-bottom padding-left"                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "padding-block",          composition: delimit("padding-block-start         padding-block-end"                                                                                                                                                                                             .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "padding-inline",         composition: delimit("padding-inline-start        padding-inline-end"                                                                                                                                                                                            .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "place-content",          composition: delimit("align-content               justify-content"                                                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "place-items",            composition: delimit("align-items                 justify-items"                                                                                                                                                                                                 .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "place-self",             composition: delimit("align-self                  justify-self"                                                                                                                                                                                                  .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "scroll-margin",          composition: delimit("scroll-margin-top           scroll-margin-right scroll-margin-bottom scroll-margin-left"                                                                                                                                                   .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "scroll-margin-block",    composition: delimit("scroll-margin-block-start   scroll-margin-block-end"                                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "scroll-margin-inline",   composition: delimit("scroll-margin-inline-start  scroll-margin-inline-end"                                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "scroll-padding",         composition: delimit("scroll-padding-top          scroll-padding-right scroll-padding-bottom scroll-padding-left"                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "scroll-padding-block",   composition: delimit("scroll-padding-block-start  scroll-padding-block-end"                                                                                                                                                                                      .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "scroll-padding-inline",  composition: delimit("scroll-padding-inline-start scroll-padding-inline-end"                                                                                                                                                                                     .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "scroll-timeline",        composition: delimit("scroll-timeline-name        scroll-timeline-axis"                                                                                                                                                                                          .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "text-box",               composition: delimit("text-box-trim               text-box-edge"                                                                                                                                                                                                 .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "text-decoration",        composition: delimit("text-decoration-line        text-decoration-style text-decoration-color text-decoration-thickness"                                                                                                                                         .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "text-emphasis",          composition: delimit("text-emphasis-style         text-emphasis-color"                                                                                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "text-wrap",              composition: delimit("text-wrap-mode              text-wrap-style"                                                                                                                                                                                               .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "transition",             composition: delimit("transition-property         transition-duration transition-timing-function transition-delay transition-behavior"                                                                                                                           .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "view-timeline",          composition: delimit("view-timeline-name          view-timeline-axis  view-timeline-inset"                                                                                                                                                                       .replace(/\s+/g, ' '), /[,\/\s\0]+/g)},
+          {name: "white-space",            composition: delimit("white-space-collapse        text-wrap-mode"                                                                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)}
         ], MEASUREMENTS = {
           // --> Values represented from functions such as `calc(…)` unsupported for non-`function` measurements
           '%'                 : new RegExp("^(\\-?@)(<%>)$"    .replace(/@/g, "[e.+\\-\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               .replace(UNIT_MATCH, UNIT_VALUE), ""),
@@ -281,7 +278,7 @@
                 case "background-position-y":    case "border-bottom": case "border-bottom-width": case "border-top": case "border-top-width": case "bottom":
                 case "contain-intrinsic-height": case "height":
                 case "max-height":               case "min-height":
-                case "row-gap":                  case "top": case "-webkit-mask-position-y":
+                case "row-gap":                  case "top":
                   property.axis = VERTICAL_AXIS;
                   break;
 
@@ -289,7 +286,7 @@
                 case "column-gap":            case "contain-intrinsic-width":
                 case "left":
                 case "max-width": case "min-width":
-                case "right":     case "width": case "-webkit-mask-position-x":
+                case "right":     case "width":
                   property.axis = HORIZONTAL_AXIS;
                   break;
 
@@ -300,7 +297,7 @@
                 case "margin":               case "margin-block":             case "margin-block-end":           case "margin-block-start":  case "margin-bottom":  case "margin-inline":  case "margin-inline-end":  case "margin-inline-start":  case "margin-left":  case "margin-right":  case "margin-top": case "max-block-size": case "min-block-size":
                 case "padding":              case "padding-block":            case "padding-block-end":          case "padding-block-start": case "padding-bottom": case "padding-inline": case "padding-inline-end": case "padding-inline-start": case "padding-left": case "padding-right": case "padding-top":
                 case "scroll-padding-block": case "scroll-padding-block-end": case "scroll-padding-block-start": case "shape-margin":
-                case "text-indent":          case "-webkit-border-before": {
+                case "text-indent":          {
                   try { property.axis = block(getCSSPropertyValue(property.element, "writing-mode", false, $)) }
                   catch (error) { /* --> InternalError | RangeError */ }
                 } break;
@@ -384,8 +381,8 @@
                 }
               }
 
-              // ...
-              if (property.name === "font" || property.name === "font-size")
+              // ... --> measurement.value = "…"
+              if (property.name === "font-size" || property.name === "font")
               switch (measurement.value) {
                 case "large":     measurement.value = "1.20rem"; break;
                 case "medium":    measurement.value = "1.00rem"; break;
@@ -398,12 +395,15 @@
                 default: // --> larger, math, smaller, …
               }
 
-              // ...
+              if (property.name === "line-height" || (property.name === "font" && property.delimiter/* --> .trim() */.replace(/^\s+|\s+$/g, "") === '/'))
+              switch (measurement.value) { case "normal": /* --> measurement.value = "1.2" */ }
+
+              // ... ->> Compute `measurement.value` (as necessary)
               if (measurements["function-color"]     = measurement.value.match(MEASUREMENTS["function-color"]))     void measurements; // ->> Parser required e.g. `hwb(0.50turn 10% 0% / 0.50)`                                  is `rgb(26 255 255 / 0.50)`
               if (measurements["function-transform"] = measurement.value.match(MEASUREMENTS["function-transform"])) void measurements; // ->> Parser required e.g. `perspective(500px) rotateY(30deg) translate3d(10px, 0, 20px)` is `matrix3d(0.87, 0.00, -0.50, 0.05, 0.00, 1.00, 0.00, 0.00, 0.50, 0.00, 0.87, -0.05, 10.00, 0.00, 20.00, 0.96)`
               if (measurements["function-value"]     = measurement.value.match(MEASUREMENTS["function-value"]))     void measurements; // ->> Parser required e.g. `calc((3em + 5lh) / 2)`                                  could be `54px` (`calc(1.50em + 2.50lh)`)
 
-              // ...
+              // ... ->> Canonicalize `measurement.value`
               if (measurements["angle"] = measurement.value.match(MEASUREMENTS["angle"]))
               switch (measurements["angle"][2]) {
                 case "deg":  measurement.value = (measurements["angle"][1])                      + "deg"; break;
@@ -762,7 +762,7 @@
             case "tab-size":        case "text-decoration-thickness": case "text-indent":             case "text-shadow":               case "text-underline-offset": case "top":                  case "transform":                case "transform-origin":           case "translate":
             case "vertical-align":
             case "width": case "word-spacing":
-            case 'x':     case 'y': case "-webkit-border-before": {
+            case 'x':     case 'y': {
               void alternatePropertyNames.unshift("fontSize",  "lineHeight");
               void propertyNames         .unshift("font-size", "line-height");
             } break;
@@ -877,7 +877,7 @@
         }
 
         function inherits(propertyName) {
-          switch (unalt(propertyName)) {
+          switch (noalt(propertyName)) {
             case "accent-color":
             case "border-collapse": case "border-spacing":
             case "caption-side":    case "caret-color": case "clip-rule": case "color": case "color-scheme": case "cursor":
@@ -895,8 +895,7 @@
             case "scrollbar-color": case "scrollbar-width": case "shape-rendering": case "speak":       case "speak-as":             case "stroke":                   case "stroke-dasharray":       case "stroke-dashoffset": case "stroke-linecap": case "stroke-linejoin":  case "stroke-miterlimit": case "stroke-opacity": case "stroke-width":
             case "tab-size":        case "text-align":      case "text-align-last": case "text-anchor": case "text-decoration-skip": case "text-decoration-skip-ink": case "text-emphasis-position": case "text-indent":       case "text-justify":   case "text-orientation": case "text-rendering":    case "text-shadow":    case "text-size-adjust": case "text-spacing-trim": case "text-transform": case "text-underline-offset": case "text-underline-position": case "text-wrap": case "text-wrap-mode": case "text-wrap-style":
             case "visibility":
-            case "white-space":                 case "white-space-collapse":    case "widows":                case "word-break":          case "word-spacing":              case "writing-mode":
-            case "-webkit-tap-highlight-color": case "-webkit-text-fill-color": case "-webkit-text-security": case "-webkit-text-stroke": case "-webkit-text-stroke-color": case "-webkit-text-stroke-width": case "-webkit-touch-callout":
+            case "white-space": case "white-space-collapse": case "widows": case "word-break": case "word-spacing": case "writing-mode":
               return true
           }
 
@@ -939,6 +938,24 @@
           }
 
           return false // ->> Parser required e.g. `Element::tagName` and such (right-to-left evaluation)
+        }
+
+        function noalt(propertyName) {
+          return propertyName.replace(/[A-Z]/g, function(match) { return '-' + match.toLowerCase() })
+        }
+
+        function nocomment(value) /* ->> Thankfully no-needed */ {
+          var uncommented = "";
+
+          // ...
+          for (var depth = 0, index = 0; index !== value.length; ++index)
+          switch (value.charAt(index)) {
+            case '/': if (value.charAt(index + 1) === '*') { depth++;              ++index } break;
+            case '*': if (value.charAt(index + 1) === '/') { depth -= 0 !== depth; ++index } break;
+            default:  if (0 === depth) uncommented += value.charAt(index)
+          }
+
+          return uncommented
         }
 
         function probe() {
@@ -1056,24 +1073,6 @@
           return interpolation
         }
 
-        function unalt(propertyName) {
-          return propertyName.replace(/[A-Z]/g, function(match) { return '-' + match.toLowerCase() })
-        }
-
-        function uncomment(value) /* ->> Thankfully unneeded */ {
-          var uncommented = "";
-
-          // ...
-          for (var depth = 0, index = 0; index !== value.length; ++index)
-          switch (value.charAt(index)) {
-            case '/': if (value.charAt(index + 1) === '*') { depth++;              ++index } break;
-            case '*': if (value.charAt(index + 1) === '/') { depth -= 0 !== depth; ++index } break;
-            default:  if (0 === depth) uncommented += value.charAt(index)
-          }
-
-          return uncommented
-        }
-
         // ...
         $ = $ ? {
           containers           : $.containers            || containers,
@@ -1103,7 +1102,7 @@
 
             // ...
             if (typeof CSSContainerRule === "function" && rule instanceof CSSContainerRule && typeof rule.cssRules === "object" && typeof rule.containerName === "string" && typeof rule.containerQuery === "string") // --> @container … (…) {}
-              void styleSheets.splice(count, 0, {containers: styleSheet.containers.concat({name: rule.containerName, query: uncomment(rule.containerQuery/* --> .trim() */.replace(/^\s+|\s+$/g, ""))}), layer: styleSheet.layer, rules: rule.cssRules, scopes: styleSheet.scopes}); // ->> `String .conditionText` or `String .cssText` otherwise
+              void styleSheets.splice(count, 0, {containers: styleSheet.containers.concat({name: rule.containerName, query: nocomment(rule.containerQuery/* --> .trim() */.replace(/^\s+|\s+$/g, ""))}), layer: styleSheet.layer, rules: rule.cssRules, scopes: styleSheet.scopes}); // ->> `String .conditionText` or `String .cssText` otherwise
 
             else if (typeof CSSLayerBlockRule === "function" && rule instanceof CSSLayerBlockRule && typeof rule.cssRules === "object" && typeof rule.name === "string") /* --> @layer … {} */ {
               var layer      = rule.name !== "" ? (styleSheet.layer !== "" ? styleSheet.layer + '.' : "") + rule.name : styleSheet.layer;
@@ -1996,16 +1995,14 @@
 
               switch (property.animationInformation.frame) {
                 case CSS_TRANSITION_FRAME:
-                  // if (null === property.information)
-                  break;
+                  // if (null !== property.information && property.information.priority === "important")
+                  break
               }
 
-              // TODO (Lapys) -> Use `/` delimiter to canonicalize `line-height: normal`
               // TODO (Lapys) -> Choose between `.animationInformation` and `.information`
-              // TODO (Lapys) -> Check `padding-left`, `padding-top`, and `padding` (don’t forget `accumulate`)
-              // TODO (Lapys) -> Ensure `font-size` and `line-height` are cached (it ain’t pluralized for no reason)
-              // TODO (Lapys) -> Allow recursed to inherit automatically?
-              console.log(TAB + "%c[… (" + properties.length + ")]    ", "color: greenyellow", propertyName, '<' + property.element.tagName + ATTRS + '>', property.styleInformation, property.information, property.animationInformation);
+              // TODO (Lapys) -> Allow recursed instances to inherit automatically
+              // TODO (Lapys) -> Test `padding-left`, `padding-top`, and `padding` (don’t forget `accumulate` animations)
+              console.log(TAB + "%c[sia (" + properties.length + ")] ", "color: greenyellow", propertyName, '<' + property.element.tagName + ATTRS + '>', property.styleInformation, property.information, property.animationInformation);
 
               // alternateNames      : alternatePropertyNames,                                                                  // --> String {alt(…)}[]
               // animationInformation: {frame: UNDEFINED_FRAME, next: [], previous: [], properties: []},                        // --> {frame: enum, next: Object[], previous: Object[], properties: …}
@@ -2029,7 +2026,7 @@
                   } else void value.push("initial")
                 } break;
 
-                case "initial": switch (propertyName) {
+                case "initial": switch (noalt(propertyName)) {
                   case "align-content":         case "align-items": case "animation-direction": case "animation-range-end": case "animation-range-start":
                   case "background-blend-mode": case "box-direction":
                   case "column-gap":            case "container-type": case "content":
@@ -2075,14 +2072,13 @@
                   case "filter": case "float":
                   case "grid":   case "grid-template": case "grid-template-areas": case "grid-template-columns": case "grid-template-rows":
                   case "line-clamp":
-                  case "margin-trim":         case "mask":            case "mask-border-source": case "mask-image": case "max-block-size": case "max-height": case "max-inline-size": case "max-width":
-                  case "offset-path":         case "outline-style":   case "overlay":
-                  case "perspective":         case "position-anchor": case "position-area": case "position-try-fallbacks":
-                  case "resize":              case "rotate":
-                  case "scale":               case "scroll-marker-group":  case "scroll-snap-align":     case "scroll-snap-type":     case "scroll-timeline-name": case "shape-outside":
-                  case "text-box-trim":       case "text-combine-upright": case "text-decoration":       case "text-decoration-line": case "text-emphasis-style":  case "timeline-scope": case "transform": case "transition": case "translate":
-                  case "vector-effect":       case "view-timeline-name":   case "view-transition-class": case "view-transition-name":
-                  case "-webkit-box-reflect": case "-webkit-mask-box-image":
+                  case "margin-trim":   case "mask":            case "mask-border-source": case "mask-image": case "max-block-size": case "max-height": case "max-inline-size": case "max-width":
+                  case "offset-path":   case "outline-style":   case "overlay":
+                  case "perspective":   case "position-anchor": case "position-area": case "position-try-fallbacks":
+                  case "resize":        case "rotate":
+                  case "scale":         case "scroll-marker-group":  case "scroll-snap-align":     case "scroll-snap-type":     case "scroll-timeline-name": case "shape-outside":
+                  case "text-box-trim": case "text-combine-upright": case "text-decoration":       case "text-decoration-line": case "text-emphasis-style":  case "timeline-scope": case "transform": case "transition": case "translate":
+                  case "vector-effect": case "view-timeline-name":   case "view-transition-class": case "view-transition-name":
                     property.information.value = "none";
                     break;
 
@@ -2111,16 +2107,6 @@
                   case "background-clip":
                   case "mask-clip": case "mask-origin":
                     property.information.value = "border-box";
-                    break;
-
-                  case "background-position-x":   case "background-position-y":
-                  case "-webkit-mask-position-x": case "-webkit-mask-position-y":
-                    property.information.value = "0%";
-                    break;
-
-                  case "background-repeat":     case "mask-repeat":
-                  case "-webkit-mask-repeat-x": case "-webkit-mask-repeat-y":
-                    property.information.value = "repeat";
                     break;
 
                   case "border": case "border-block": case "border-block-end": case "border-block-start": case "border-bottom": case "border-inline": case "border-inline-end": case "border-inline-start": case "border-left": case "border-right": case "border-top":
@@ -2156,15 +2142,17 @@
                     property.information.value = "auto auto";
                     break;
 
-                  case "border-radius":        case "scroll-padding":       property.information.value = "0 0 0 0";     break;
-                  case "box-align":            case "mask-border-repeat":   property.information.value = "stretch";     break;
-                  case "box-sizing":           case "-moz-float-edge":      property.information.value = "content-box"; break;
-                  case "display":              case "-moz-orient":          property.information.value = "inline";      break;
-                  case "flex-direction":       case "grid-auto-flow":       property.information.value = "row";         break;
-                  case "flood-color":          case "stop-color":           property.information.value = "black";       break;
-                  case "object-position":      case "perspective-origin":   property.information.value = "50% 50%";     break;
-                  case "scroll-margin-block":  case "scroll-margin-inline": property.information.value = "0 0";         break;
-                  case "scroll-timeline-axis": case "view-timeline-axis":   property.information.value = "block";       break;
+                  case "background-position-x": case "background-position-y": property.information.value = "0%";          break;
+                  case "background-repeat":     case "mask-repeat":           property.information.value = "repeat";      break;
+                  case "border-radius":         case "scroll-padding":        property.information.value = "0 0 0 0";     break;
+                  case "box-align":             case "mask-border-repeat":    property.information.value = "stretch";     break;
+                  case "box-sizing":            case "-moz-float-edge":       property.information.value = "content-box"; break;
+                  case "display":               case "-moz-orient":           property.information.value = "inline";      break;
+                  case "flex-direction":        case "grid-auto-flow":        property.information.value = "row";         break;
+                  case "flood-color":           case "stop-color":            property.information.value = "black";       break;
+                  case "object-position":       case "perspective-origin":    property.information.value = "50% 50%";     break;
+                  case "scroll-margin-block":   case "scroll-margin-inline":  property.information.value = "0 0";         break;
+                  case "scroll-timeline-axis":  case "view-timeline-axis":    property.information.value = "block";       break;
 
                   case "all":                         property.information.value = "initial";                                                               break;
                   case "animation-composition":       property.information.value = "replace";                                                               break;
@@ -2217,11 +2205,6 @@
                   case "user-modify":                 property.information.value = "read-only";                                                             break;
                   case "view-timeline":               property.information.value = "none block auto";                                                       break;
                   case "writing-mode":                property.information.value = "horizontal-tb";                                                         break;
-                  case "-webkit-border-before":       property.information.value = "medium none canvastext";                                                break;
-                  case "-webkit-border-before-color": property.information.value = "canvastext";                                                            break;
-                  case "-webkit-border-before-style": property.information.value = "none";                                                                  break;
-                  case "-webkit-border-before-width": property.information.value = "medium";                                                                break;
-                  case "-webkit-mask-composite":      property.information.value = "source-over";                                                           break;
 
                   default:
                     property.information.value = null
@@ -2305,11 +2288,11 @@
             break; // --> continue cascade
 
             if (null !== property.information)
-            switch (propertyName) {
-              case "flex-direction": case "flexDirection": property.styleInformation["flex-direction"] = property.information.value;                                                                                                     break;
-              case "font-size":      case "fontSize":      property.styleInformation["font-size"]      = canonicalize(property.element, "font-size",   property.information.value, UNDEFINED_AXIS, $).replace(CANON_MATCH, CANON_VALUE); break;
-              case "line-height":    case "lineHeight":    property.styleInformation["line-height"]    = canonicalize(property.element, "line-height", property.information.value, UNDEFINED_AXIS, $).replace(CANON_MATCH, CANON_VALUE); break;
-              case "writing-mode":   case "writingMode":   property.styleInformation["writing-mode"]   = property.information.value
+            switch (noalt(propertyName)) {
+              case "flex-direction": property.styleInformation["flex-direction"] = property.information.value;                                                                                                     break;
+              case "font-size":      property.styleInformation["font-size"]      = canonicalize(property.element, "font-size",   property.information.value, UNDEFINED_AXIS, $).replace(CANON_MATCH, CANON_VALUE); break;
+              case "line-height":    property.styleInformation["line-height"]    = canonicalize(property.element, "line-height", property.information.value, UNDEFINED_AXIS, $).replace(CANON_MATCH, CANON_VALUE); break;
+              case "writing-mode":   property.styleInformation["writing-mode"]   = property.information.value
             }
 
             window.CANON_MATCH = CANON_MATCH;
