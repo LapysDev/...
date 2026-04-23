@@ -283,7 +283,7 @@
 
         /* ... */
         function alt(propertyName) {
-          return (propertyName + "").replace(/^-+[a-z]/, function(match) { return match.replace(/-/g, '+') }).replace(/-([a-z])/g, function(match, $1) { return $1.toUpperCase() }).replace(/^\++/, function(match) { return match.replace(/\+/g, '-') })
+          return propertyName.replace(/^-+[a-z]/, function(match) { return match.replace(/-/g, '+') }).replace(/-([a-z])/g, function(match, $1) { return $1.toUpperCase() }).replace(/^\++/, function(match) { return match.replace(/\+/g, '-') })
         }
 
         function bézier(pointAX, pointAY, pointBX, pointBY, progress) /* ->> For `KeyframeEffect::getKeyframes().easing` */ {
@@ -489,7 +489,7 @@
               if (property.name === "line-height" || (property.name === "font" && property.delimiter/* --> .trim() */.replace(/^\s+|\s+$/g, "") === '/'))
               switch (measurement.value) { case "normal": /* --> measurement.value = "1.2" */ }
 
-              // ... ->> Compute `measurement.value` (as necessary)
+              // ... ->> Compute `measurement.value` (as necessary) --- TODO (Lapys)
               if (measurements["function-color"]     = measurement.value.match(MEASUREMENTS["function-color"]))     void measurements; // ->> Parser required e.g. `hwb(0.50turn 10% 0% / 0.50)`                                  is `rgb(26 255 255 / 0.50)`
               if (measurements["function-transform"] = measurement.value.match(MEASUREMENTS["function-transform"])) void measurements; // ->> Parser required e.g. `perspective(500px) rotateY(30deg) translate3d(10px, 0, 20px)` is `matrix3d(0.87, 0.00, -0.50, 0.05, 0.00, 1.00, 0.00, 0.00, 0.50, 0.00, 0.87, -0.05, 10.00, 0.00, 20.00, 0.96)`
               if (measurements["function-value"]     = measurement.value.match(MEASUREMENTS["function-value"]))     void measurements; // ->> Parser required e.g. `calc((3em + 5lh) / 2)`                                  could be `54px` (`calc(1.50em + 2.50lh)`)
@@ -826,17 +826,13 @@
         }
 
         function cascade(element, propertyName, property, properties) {
-          var cascaded     = false;
-          var names        = [{alternate: alt(propertyName), toString: function() { return propertyName }}];
-          var propertyName = propertyName + "";
-          var style        = {"display": null, "flex-direction": null, "font-size": null, "line-height": null, "writing-mode": null, __proto__: null};
+          var cascaded      = false;
+          var propertyNames = [propertyName];
+          var style         = {"display": null, "flex-direction": null, "font-size": null, "line-height": null, "writing-mode": null, '__proto__': null};
 
           // ...
-          for (var index = properties.length; index--; )
-          if (element === properties[index].element) {
-            cascaded = true;
-            break
-          }
+          for (var index = properties.length; !cascaded && index--; )
+          cascaded = element === properties[index].element;
 
           if (!cascaded) // ->> Preemptively account for relevant metadata e.g. for `…em` and `…lh` measurements
           switch (propertyName) {
@@ -855,36 +851,33 @@
             case "tab-size":        case "text-decoration-thickness": case "text-indent":             case "text-shadow":               case "text-underline-offset": case "top":                  case "transform":                case "transform-origin":           case "translate":
             case "vertical-align":
             case "width": case "word-spacing":
-            case 'x':     case 'y':          void names.push({alternate: "fontSize",      toString: function() { return "font-size" }}, {alternate: "lineHeight", toString: function() { return "line-height" }}); break;
-            case "flex":  case "flex-basis": void names.push({alternate: "flexDirection", toString: function() { return "flex-direction" }});                                                                      break;
-            case "font":  case "font-size":  void names.push({alternate: "lineHeight",    toString: function() { return "line-height" }});                                                                         break;
-            case "line-height":              void names.push({alternate: "fontSize",      toString: function() { return "font-size" }});                                                                           break;
-            case "writing-mode":             void names.push({alternate: "display",       toString: function() { return "display" }})
+            case 'x':     case 'y':          void propertyNames.push("font-size", "line-height"); break;
+            case "flex":  case "flex-basis": void propertyNames.push("flex-direction");           break;
+            case "font":  case "font-size":  void propertyNames.push("line-height");              break;
+            case "line-height":              void propertyNames.push("font-size");                break;
+            case "writing-mode":             void propertyNames.push("display")
           }
 
           if (null !== property) {
             property.priors = [];
 
             for (var subproperty = property; null !== subproperty; subproperty = subproperty.origin)
-            if (element === subproperty.element) {
-              style = subproperty.style;
-              break
-            }
+            if (element === subproperty.element) { style = subproperty.style; break }
           }
 
           return (void properties.push({
-            animation  : {frame: UNDEFINED_FRAME, next: [], previous: [], properties: [], value: null}, // --> {frame: enum, next: Object[], previous: Object[], properties: …, value: String*}
-            element    : element,                                                                       // --> HTMLElement
-            information: null,                                                                          // --> {layer: String*, matches: Boolean, order: Number(Uint32) {< 0}, priority: "important" | …, specificity: {0: 0, 1: 0, 2: 0}*, text: String*, value: String}*
-            name       : names[0],                                                                      // --> class extends String { alternate = this|String{alt(…)} }
-            names      : names,                                                                         // --> class extends String { alternate = this|String{alt(…)} }[]
-            origin     : property,                                                                      // --> this
-            priors     : [],                                                                            // --> this[]
-            rule       : {containerQueries: [], specificity: null},                                     // --> {specificity: {0: Number(Uint32), 1: Number(Uint32), 2: Number(Uint32)}, containerQueries: {applicable: Boolean[], delimiter: "and"|"or", negate: Boolean, prior: this, value: String}[]}
-            ruleIndex  : 0,                                                                             // --> Number(Uint32)
-            style      : style,                                                                         // --> CSSStyleDeclaration
-            unlayered  : [],                                                                            // --> String[] {applicable: [], delimiter: "", negate: false, prior: null, value: styleRule.container.query}
-            unset      : false                                                                          // --> Boolean
+            animation  : {end: null, frame: UNDEFINED_FRAME, next: [], previous: [], properties: [], value: null}, // --> {end: Object*, frame: enum, next: Object[], previous: Object[], properties: …, value: String*}
+            element    : element,                                                                                  // --> HTMLElement
+            information: null,                                                                                     // --> {layer: String*, matches: Boolean, order: Number(Uint32) {< 0}, priority: "important" | …, specificity: {0: 0, 1: 0, 2: 0}*, text: String*, value: String}*
+            name       : propertyNames[0],                                                                         // --> String
+            names      : propertyNames,                                                                            // --> String[]
+            origin     : property,                                                                                 // --> this
+            priors     : [],                                                                                       // --> this[]
+            rule       : {containerQueries: [], specificity: null},                                                // --> {specificity: {0: Number(Uint32), 1: Number(Uint32), 2: Number(Uint32)}, containerQueries: {applicable: Boolean[], delimiter: "and"|"or", negate: Boolean, prior: this, value: String}[]}
+            ruleIndex  : 0,                                                                                        // --> Number(Uint32)
+            style      : style,                                                                                    // --> CSSStyleDeclaration
+            unlayered  : [],                                                                                       // --> String[] {applicable: [], delimiter: "", negate: false, prior: null, value: styleRule.container.query}
+            unset      : false                                                                                     // --> Boolean
           }), properties)
         }
 
@@ -1131,7 +1124,6 @@
           var TAB   = "  ".repeat(properties.length - 1);
           var ATTRS = (function(attrs) { var attributes = ""; for (var index = 0; index !== attrs.length; ++index) { attributes += ' ' + attrs[index].name + (attrs[index].value ? "=\"" + attrs[index].value + '"' : "") } return attributes })(properties[properties.length - 1].element.attributes);
 
-          var reverted      = false;
           var property      = properties[properties.length - 1];
           var parentElement = null !== property.element.parentNode && property.element.parentNode.nodeType === 0x1 ? property.element.parentNode : null;
           var cascaded      = null;
@@ -1139,10 +1131,16 @@
 
           // ...
           while (property.names.length) {
+            var reverted     = false;
             var propertyName = property.names[property.names.length - 1];
+            var composited   = null;
 
             // ...
+            for (var index = SHORTHANDS.length; !composited && index--; )
+            composited = SHORTHANDS[index].name === propertyName ? SHORTHANDS[index].composition : null;
+
             console.log(TAB + "%c[BEGIN (" + properties.length + ")]%c " + propertyName + ($.unset || property.names.length > 1 ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: dodgerblue", "color: honeydew", "color: turquoise; padding-top: 10px");
+
             do {
               if (!(propertyName in property.style) || null === property.style[propertyName]) {
                 // ... --> .information = {…}
@@ -1490,7 +1488,7 @@
                       priority   : typeof styleRule.value.style.getPropertyPriority !== "function" ? "" : styleRule.value.style.getPropertyPriority(propertyName),
                       specificity: null,
                       text       : styleRule.value.cssText ? styleRule.value.cssText + "" : null,
-                      value      : typeof styleRule.value.style.getPropertyValue !== "function" ? styleRule.value.style[propertyName] || styleRule.value.style[propertyName.alternate] : styleRule.value.style.getPropertyValue(propertyName)
+                      value      : typeof styleRule.value.style.getPropertyValue !== "function" ? styleRule.value.style[propertyName] || styleRule.value.style[alt(propertyName)] : styleRule.value.style.getPropertyValue(propertyName)
                     };
 
                     // ...
@@ -1506,7 +1504,7 @@
                     }
 
                     information.specificity = property.rule.specificity;
-                    applicable              = information.matches && null !== information.specificity && (information.value !== "" || propertyName == "anchor-name" || propertyName == "animation" || propertyName == "animation-name" || propertyName == "content" || propertyName == "font-family" || propertyName == "hyphenate-character" || propertyName == "quotes" || propertyName == "timeline-scope" || propertyName == "view-timeline-name" || propertyName == "view-transition-name");
+                    applicable              = information.matches && null !== information.specificity && (information.value !== "" || propertyName === "anchor-name" || propertyName === "animation" || propertyName === "animation-name" || propertyName === "content" || propertyName === "font-family" || propertyName === "hyphenate-character" || propertyName === "quotes" || propertyName === "timeline-scope" || propertyName === "view-timeline-name" || propertyName === "view-transition-name");
 
                     for (var index = applicable ? property.unlayered.length : 0; index--; )
                     if (information.layer === property.unlayered[index]) {
@@ -1544,65 +1542,37 @@
                   }
                 }
 
-                if (cascaded)
-                break; // --> continue cascade
-
-                // ... --> .animation = {…}
+                // ... --> .animation = {…} --- TODO (Lapys) -> `KeyframeEffect::composite|iterationComposite` (with `auto` from `GroupEffect`) unsupported
                 if (UNDEFINED_FRAME === property.animation.frame) {
-                  $.probeElement          = probe();
-                  if (null !== property.information)
-                  $.probeElement.cssText += ' ' + property.information.name + ": " + property.information.value;
-                  // TODO (Lapys) -> Test `padding-top` and `padding`
-
-                  // ... --> .next|.previous = […]
-                  for (var index = 0; index !== animations.length; ++index) {
+                  // ...
+                  for (var index = 0; index !== animations.length; ++index) /* --> .next|.previous = […] */ {
                     var animation = animations[index];
-                    var frame     = (
-                      typeof CSSTransition === "function" && animation instanceof CSSTransition ? CSS_TRANSITION_FRAME :
-                      typeof CSSAnimation  === "function" && animation instanceof CSSAnimation  ? CSS_ANIMATION_FRAME  :
-                      typeof Animation     === "function" && animation instanceof Animation     ? ANIMATION_FRAME      :
-                      UNDEFINED_FRAME
-                    );
+                    var frame     = typeof CSSTransition === "function" && animation instanceof CSSTransition ? CSS_TRANSITION_FRAME : typeof CSSAnimation === "function" && animation instanceof CSSAnimation ? CSS_ANIMATION_FRAME : typeof Animation === "function" && animation instanceof Animation ? ANIMATION_FRAME : UNDEFINED_FRAME;
 
                     // ...
-                    if (typeof animation.effect === "object" /* --> … instanceof KeyframeEffect */ && typeof animation.effect.getComputedTiming === "function" && typeof animation.effect.getKeyframes === "function" && animation.effect.target === property.element && UNDEFINED_FRAME !== frame) {
-                      var keyframes = animation.effect.getKeyframes();               // --> {composite: String, computedOffset: Number, easing: String, offset: Number*, [property.name…]: String{…}}[]
-                      var next      = [];                                            // --> {frame: CSS_ANIMATION_FRAME | CSS_TRANSITION_FRAME | …, keyframe: null, order: Number(Uint32), progress: Number, properties: {name: String, value: String}[]}[]
-                      var previous  = [];                                            //       ^^^
-                      var progress  = animation.effect.getComputedTiming().progress; // --> Number*
-                      // TODO (Lapys)
-                      // apply it onto probe to make more consistent
-                      // animation.effect.getComputedTiming().currentIteration ---> end = 1.0 ?? base ?? initial
-                      // effect.composite === "accumulate" | "add" | "replace" == "auto" --> GroupEffect nonsense
-                      // effect.iterationComposite === "accumulate" | "replace"
+                    if (UNDEFINED_FRAME !== frame && typeof animation.effect === "object" && typeof animation.effect.getComputedTiming === "function" && typeof animation.effect.getKeyframes === "function" && animation.effect.target === property.element)
+                    for (var keyframes = animation.effect.getKeyframes(), timing = animation.effect.getComputedTiming(); keyframes.length && null !== timing.currentIteraton || null !== timing.progress; ) {
+                      var keyframe    = keyframes.pop();
+                      var information = {frame: frame, keyframe: keyframe, order: index, progress: timing.progress, properties: []}; // --> {frame: enum …, keyframe: Object, order: Number(Uint32), progress: Number, properties: {name: String, value: String}[]}
 
                       // ...
-                      if (null !== progress)
-                      for (var subindex = 0; subindex !== keyframes.length; ++subindex) {
-                        var keyframe    = keyframes[subindex];
-                        var information = {frame: frame, keyframe: keyframe, order: index, progress: progress, properties: []};
+                      for (var propertyNames = [propertyName]; propertyNames.length; ) {
+                        var name = propertyNames.pop();
 
-                        // ... ->> Acknowledge shorthand properties replaced by their constituent longhand counterparts
-                        if       (typeof keyframe[propertyName]           === "string") void information.properties.push({name: propertyName, value: keyframe[propertyName]});
-                        else if  (typeof keyframe[propertyName.alternate] === "string") void information.properties.push({name: propertyName, value: keyframe[propertyName.alternate]});
-                        else for (var shorthandIndex = SHORTHANDS.length; shorthandIndex --> 0; ) {
-                          if (SHORTHANDS[shorthandIndex].name == propertyName)
-                          for (var composition = SHORTHANDS[shorthandIndex].composition, shorthandIndex = composition.length; shorthandIndex--; ) {
-                            var name = composition[shorthandIndex].value;
+                        // ...
+                        if (typeof keyframe[name]      === "string") { void information.properties.push({name: name, value: keyframe[name]});      continue }
+                        if (typeof keyframe[alt(name)] === "string") { void information.properties.push({name: name, value: keyframe[alt(name)]}); continue }
 
-                            if (typeof keyframe[name]      === "string") { void information.properties.unshift({name: name, value: keyframe[name]});      continue }
-                            if (typeof keyframe[alt(name)] === "string") { void information.properties.unshift({name: name, value: keyframe[alt(name)]}); continue }
-                          }
-                        }
-
-                        if (0 !== information.properties.length) {
-                          if (keyframe.computedOffset >= progress) void next    .unshift(information);
-                          if (keyframe.computedOffset <= progress) void previous.push   (information)
-                        }
+                        if (composited && name === propertyName) { for (var compositionIndex = composited.length; compositionIndex--; ) void propertyNames.unshift(composited[compositionIndex].value) }
                       }
 
-                      for (var subindex = 0; subindex !== next    .length; ++subindex) void property.animation.next    .push(next    [subindex])
-                      for (var subindex = 0; subindex !== previous.length; ++subindex) void property.animation.previous.push(previous[subindex])
+                      if (0 !== information.properties.length) {
+                        if (keyframe.computedOffset >= timing.progress) void property.animation.next    .push   (information);
+                        if (keyframe.computedOffset <= timing.progress) void property.animation.previous.unshift(information)
+                      }
+
+                      if (null === property.animation.end)
+                      property.animation.end = information
                     }
                   }
 
@@ -1611,11 +1581,17 @@
                     case property.animation.previous.length: property.animation.previous = property.animation.next
                   }
 
-                  // ...
                   if (property.animation.next.length || property.animation.previous.length) {
                     var names    = [];
                     var next     = null;
                     var previous = null;
+
+                    // TODO (Lapys) -> don’t forget to give the code a good finish after
+                    // PROPERTY     [v] ANIMATION
+                    // padding-left ==> padding-left                                             ✅
+                    // padding-left ==> padding                                                  ✅ expand(…)
+                    // padding      ==> padding                                                  ✅
+                    // padding      ==> padding-bottom padding-left padding-right padding-bottom ✅ cascade(…)
 
                     // ... ->> Collate `.animation.next|.previous` keyframes into their resolved `next|previous` properties e.g. `@keyframe { 0% { color: red } 42% { color: blue } }` will resolve to a previous `color: blue` at `50%` progress
                     for (var animationProperties = [
@@ -1638,8 +1614,8 @@
                         for (var index = animationPropertyInformation.length; index--; ) {
                           for (var subindex = animationPropertyInformation[index].properties.length; subindex--; )
                           if  (
-                            name      == animationPropertyInformation[index].properties[subindex].name ||
-                            alt(name) == animationPropertyInformation[index].properties[subindex].name
+                            name      === animationPropertyInformation[index].properties[subindex].name ||
+                            alt(name) === animationPropertyInformation[index].properties[subindex].name
                           ) {
                             animationDetail.information = animationPropertyInformation[index];
                             animationDetail.name        = animationPropertyInformation[index].properties[subindex].name;
@@ -1658,7 +1634,7 @@
 
                         if (evaluated) void animationDetails.push(animationDetail);
                         else for (var shorthandIndex = SHORTHANDS.length; shorthandIndex --> 0; )
-                          if (SHORTHANDS[shorthandIndex].name == name) {
+                          if (SHORTHANDS[shorthandIndex].name === name) {
                             for (var composition = SHORTHANDS[shorthandIndex].composition, shorthandIndex = composition.length; shorthandIndex--; )
                             void animationProperty.values.push({delimiter: composition[shorthandIndex].delimiter, value: composition[shorthandIndex].value}) // ->> Expanded in reverse
                           }
@@ -1940,7 +1916,7 @@
                             else if (MEASUREMENTS["frequency"] .test(valueA.value) && MEASUREMENTS["frequency"] .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/Hz$/,   ""), valueB.value.replace(/Hz$/,   ""))  + "Hz";
                             else if (MEASUREMENTS["length"]    .test(valueA.value) && MEASUREMENTS["length"]    .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/px$/,   ""), valueB.value.replace(/px$/,   ""))  + "px";
                             else if (MEASUREMENTS["resolution"].test(valueA.value) && MEASUREMENTS["resolution"].test(valueB.value)) interpolation =            lerp(valueA.value.replace(/dppx$/, ""), valueB.value.replace(/dppx$/, ""))  + "dppx";
-                            else switch (name + "") {
+                            else switch (name) {
                               case "aspect-ratio":
                               case "fill-opacity": case "flex-grow": case "flex-shrink": case "flood-opacity": case "font-size-adjust": case "font-variation-settings":
                               case "opacity":
@@ -1995,17 +1971,17 @@
               if      (property.unset)                                                          { property.unset = false; property.information = property.priors[0].information }
               else if (null === property.information && ($.unset || property.names.length > 1)) { property.unset = true;  property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "unset"} }
 
-              for (var propertyValue = [property.information.value]; null !== property.information && propertyValue.length; )
-              switch (propertyValue.pop()) {
+              for (var propertyValues = [property.information.value]; null !== property.information && propertyValues.length; )
+              switch (propertyValues.pop()) {
                 case "inherit": {
                   if (null === parentElement) {
-                    void propertyValue.push("initial");
+                    void propertyValues.push("initial");
                     continue
                   }
 
-                  if (property.priors.length === 1 && property.priors[0].name == propertyName + "") /* --> getCSSPropertyValue(parentElement, propertyName) */ {
+                  if (property.priors.length === 1 && property.priors[0].name === propertyName) /* --> getCSSPropertyValue(parentElement, propertyName) */ {
                     if (null !== property.priors[0].information)
-                    void propertyValue.push(property.priors[0].information.value);
+                    void propertyValues.push(property.priors[0].information.value);
 
                     continue
                   }
@@ -2013,7 +1989,7 @@
                   cascaded = cascade(parentElement, propertyName, property, properties)
                 } break;
 
-                case "initial": switch (propertyName + "") {
+                case "initial": switch (propertyName) {
                   case "align-content":         case "align-items": case "animation-direction": case "animation-range-end": case "animation-range-start":
                   case "background-blend-mode": case "box-direction":
                   case "column-gap":            case "container-type": case "content":
@@ -2023,7 +1999,7 @@
                   case "scroll-snap-stop":
                   case "text-box": case "transition-behavior":
                   case "unicode-bidi":
-                    void propertyValue.push("normal");
+                    void propertyValues.push("normal");
                     break;
 
                   case "align-self":  case "animation-timeline": case "aspect-ratio":
@@ -2044,12 +2020,12 @@
                   case "view-timeline-inset":
                   case "width": case "will-change":
                   case "z-index":
-                    void propertyValue.push("auto");
+                    void propertyValues.push("auto");
                     break;
 
                   case "alignment-baseline":
                   case "vertical-align":
-                    void propertyValue.push("baseline");
+                    void propertyValues.push("baseline");
                     break;
 
                   case "anchor-name":     case "animation":        case "animation-fill-mode":    case "animation-name":           case "appearance":
@@ -2066,50 +2042,50 @@
                   case "scale":         case "scroll-marker-group":  case "scroll-snap-align":     case "scroll-snap-type":     case "scroll-timeline-name": case "shape-outside":
                   case "text-box-trim": case "text-combine-upright": case "text-decoration":       case "text-decoration-line": case "text-emphasis-style":  case "timeline-scope": case "transform": case "transition": case "translate":
                   case "vector-effect": case "view-timeline-name":   case "view-transition-class": case "view-transition-name":
-                    void propertyValue.push("none");
+                    void propertyValues.push("none");
                     break;
 
                   case "animation-delay":  case "animation-duration":
                   case "transition-delay": case "transition-duration":
-                    void propertyValue.push("0s");
+                    void propertyValues.push("0s");
                     break;
 
                   case "animation-iteration-count":
                   case "border-image-width": case "box-flex-group": case "box-ordinal-group":
                   case "flex-shrink":        case "flood-opacity":
                   case "opacity":            case "stop-opacity": case "zoom":
-                    void propertyValue.push('1');
+                    void propertyValues.push('1');
                     break;
 
                   case "animation-timing-function":
                   case "transition-timing-function":
-                    void propertyValue.push("ease");
+                    void propertyValues.push("ease");
                     break;
 
                   case "backface-visibility": case "content-visibility":
                   case "overflow":            case "overflow-block": case "overflow-inline": case "overflow-x": case "overflow-y":
-                    void propertyValue.push("visible");
+                    void propertyValues.push("visible");
                     break;
 
                   case "background-clip":
                   case "mask-clip": case "mask-origin":
-                    void propertyValue.push("border-box");
+                    void propertyValues.push("border-box");
                     break;
 
                   case "border": case "border-block": case "border-block-end": case "border-block-start": case "border-bottom": case "border-inline": case "border-inline-end": case "border-inline-start": case "border-left": case "border-right": case "border-top":
                   case "column-rule":
-                    void propertyValue.push("medium none currentColor");
+                    void propertyValues.push("medium none currentColor");
                     break;
 
                   case "border-block-color": case "border-block-end-color": case "border-block-start-color": case "border-bottom-color": case "border-color": case "border-inline-color": case "border-inline-end-color": case "border-inline-start-color": case "border-left-color": case "border-right-color": case "border-top-color":
                   case "column-rule-color":
                   case "text-decoration-color": case "text-emphasis-color":
-                    void propertyValue.push("currentColor");
+                    void propertyValues.push("currentColor");
                     break;
 
                   case "border-block-end-width": case "border-block-start-width": case "border-block-width": case "border-bottom-width": case "border-inline-end-width": case "border-inline-start-width": case "border-inline-width": case "border-left-width": case "border-right-width": case "border-top-width": case "border-width":
                   case "column-rule-width":      case "outline-width":
-                    void propertyValue.push("medium");
+                    void propertyValues.push("medium");
                     break;
 
                   case "border-bottom-left-radius": case "border-bottom-right-radius": case "border-end-end-radius": case "border-end-start-radius": case "border-image-outset": case "border-start-end-radius": case "border-start-start-radius": case "border-top-left-radius": case "border-top-right-radius": case "box-flex":
@@ -2121,80 +2097,80 @@
                   case 'r':               case "reading-order":           case "rx":                        case "ry":
                   case "scroll-margin":   case "scroll-margin-block-end": case "scroll-margin-block-start": case "scroll-margin-bottom": case "scroll-margin-inline-end": case "scroll-margin-inline-start": case "scroll-margin-left": case "scroll-margin-right": case "scroll-margin-top": case "shape-image-threshold": case "shape-margin":
                   case 'x':               case 'y':
-                    void propertyValue.push('0');
+                    void propertyValues.push('0');
                     break;
 
                   case "background-size":      case "columns":
                   case "scroll-padding-block": case "scroll-padding-inline":
-                    void propertyValue.push("auto auto");
+                    void propertyValues.push("auto auto");
                     break;
 
-                  case "background-position-x": case "background-position-y": void propertyValue.push("0%");      break;
-                  case "background-repeat":     case "mask-repeat":           void propertyValue.push("repeat");  break;
-                  case "border-radius":         case "scroll-padding":        void propertyValue.push("0 0 0 0"); break;
-                  case "box-align":             case "mask-border-repeat":    void propertyValue.push("stretch"); break;
-                  case "flex-direction":        case "grid-auto-flow":        void propertyValue.push("row");     break;
-                  case "flood-color":           case "stop-color":            void propertyValue.push("black");   break;
-                  case "object-position":       case "perspective-origin":    void propertyValue.push("50% 50%"); break;
-                  case "scroll-margin-block":   case "scroll-margin-inline":  void propertyValue.push("0 0");     break;
-                  case "scroll-timeline-axis":  case "view-timeline-axis":    void propertyValue.push("block");   break;
+                  case "background-position-x": case "background-position-y": void propertyValues.push("0%");      break;
+                  case "background-repeat":     case "mask-repeat":           void propertyValues.push("repeat");  break;
+                  case "border-radius":         case "scroll-padding":        void propertyValues.push("0 0 0 0"); break;
+                  case "box-align":             case "mask-border-repeat":    void propertyValues.push("stretch"); break;
+                  case "flex-direction":        case "grid-auto-flow":        void propertyValues.push("row");     break;
+                  case "flood-color":           case "stop-color":            void propertyValues.push("black");   break;
+                  case "object-position":       case "perspective-origin":    void propertyValues.push("50% 50%"); break;
+                  case "scroll-margin-block":   case "scroll-margin-inline":  void propertyValues.push("0 0");     break;
+                  case "scroll-timeline-axis":  case "view-timeline-axis":    void propertyValues.push("block");   break;
 
-                  case "animation-composition":       void propertyValue.push("replace");                                                               break;
-                  case "animation-play-state":        void propertyValue.push("running");                                                               break;
-                  case "animation-range":             void propertyValue.push("normal normal");                                                         break;
-                  case "background":                  void propertyValue.push("none 0% 0%/auto auto repeat scroll border-box padding-box transparent"); break;
-                  case "background-attachment":       void propertyValue.push("scroll");                                                                break;
-                  case "background-color":            void propertyValue.push("transparent");                                                           break;
-                  case "background-origin":           void propertyValue.push("padding-box");                                                           break;
-                  case "background-position":         void propertyValue.push("0% 0%");                                                                 break;
-                  case "border-image-repeat":         void propertyValue.push("stretch stretch");                                                       break;
-                  case "border-image-slice":          void propertyValue.push("100%");                                                                  break;
-                  case "box-decoration-break":        void propertyValue.push("slice");                                                                 break;
-                  case "box-lines":                   void propertyValue.push("single");                                                                break;
-                  case "box-orient":                  void propertyValue.push("inline-axis");                                                           break;
-                  case "box-pack":                    void propertyValue.push("start");                                                                 break;
-                  case "box-sizing":                  void propertyValue.push("content-box");                                                           break;
-                  case "color-interpolation":         void propertyValue.push("sRGB");                                                                  break;
-                  case "color-interpolation-filters": void propertyValue.push("linearRGB");                                                             break;
-                  case "column-fill":                 void propertyValue.push("balance");                                                               break;
-                  case "container":                   void propertyValue.push("none/normal");                                                           break;
-                  case "display":                     void propertyValue.push("inline");                                                                break;
-                  case "field-sizing":                void propertyValue.push("fixed");                                                                 break;
-                  case "flex":                        void propertyValue.push("0 1 auto");                                                              break;
-                  case "flex-flow":                   void propertyValue.push("row nowrap");                                                            break;
-                  case "flex-wrap":                   void propertyValue.push("nowrap");                                                                break;
-                  case "justify-items":               void propertyValue.push("legacy");                                                                break;
-                  case "lighting-color":              void propertyValue.push("white");                                                                 break;
-                  case "mask-border":                 void propertyValue.push("none 0/auto/0 stretch alpha");                                           break;
-                  case "mask-border-mode":            void propertyValue.push("alpha");                                                                 break;
-                  case "mask-composite":              void propertyValue.push("end");                                                                   break;
-                  case "mask-mode":                   void propertyValue.push("match-source");                                                          break;
-                  case "mask-position":               void propertyValue.push("center");                                                                break;
-                  case "mask-type":                   void propertyValue.push("luminance");                                                             break;
-                  case "object-fit":                  void propertyValue.push("fill");                                                                  break;
-                  case "offset":                      void propertyValue.push("normal none 0/auto");                                                    break;
-                  case "outline":                     void propertyValue.push("medium none invert");                                                    break; // ->> CSS 2.1 specified `invert` instead
-                  case "outline-color":               void propertyValue.push("currentColor");                                                          break;
-                  case "overflow-clip-margin":        void propertyValue.push("0px");                                                                   break;
-                  case "place-items":                 void propertyValue.push("normal legacy");                                                         break;
-                  case "position":                    void propertyValue.push("static");                                                                break;
-                  case "position-try":                void propertyValue.push("normal none");                                                           break;
-                  case "position-visibility":         void propertyValue.push("anchors-visible");                                                       break;
-                  case "scroll-timeline":             void propertyValue.push("none block");                                                            break;
-                  case "text-decoration-style":       void propertyValue.push("solid");                                                                 break;
-                  case "text-emphasis":               void propertyValue.push("none currentColor");                                                     break;
-                  case "text-overflow":               void propertyValue.push("clip");                                                                  break;
-                  case "transform-box":               void propertyValue.push("view-box");                                                              break;
-                  case "transform-origin":            void propertyValue.push("50% 50% 0");                                                             break;
-                  case "transform-style":             void propertyValue.push("flat");                                                                  break;
-                  case "transition-property":         void propertyValue.push("all");                                                                   break;
-                  case "user-modify":                 void propertyValue.push("read-only");                                                             break;
-                  case "view-timeline":               void propertyValue.push("none block auto");                                                       break;
-                  case "writing-mode":                void propertyValue.push("horizontal-tb")
+                  case "animation-composition":       void propertyValues.push("replace");                                                               break;
+                  case "animation-play-state":        void propertyValues.push("running");                                                               break;
+                  case "animation-range":             void propertyValues.push("normal normal");                                                         break;
+                  case "background":                  void propertyValues.push("none 0% 0%/auto auto repeat scroll border-box padding-box transparent"); break;
+                  case "background-attachment":       void propertyValues.push("scroll");                                                                break;
+                  case "background-color":            void propertyValues.push("transparent");                                                           break;
+                  case "background-origin":           void propertyValues.push("padding-box");                                                           break;
+                  case "background-position":         void propertyValues.push("0% 0%");                                                                 break;
+                  case "border-image-repeat":         void propertyValues.push("stretch stretch");                                                       break;
+                  case "border-image-slice":          void propertyValues.push("100%");                                                                  break;
+                  case "box-decoration-break":        void propertyValues.push("slice");                                                                 break;
+                  case "box-lines":                   void propertyValues.push("single");                                                                break;
+                  case "box-orient":                  void propertyValues.push("inline-axis");                                                           break;
+                  case "box-pack":                    void propertyValues.push("start");                                                                 break;
+                  case "box-sizing":                  void propertyValues.push("content-box");                                                           break;
+                  case "color-interpolation":         void propertyValues.push("sRGB");                                                                  break;
+                  case "color-interpolation-filters": void propertyValues.push("linearRGB");                                                             break;
+                  case "column-fill":                 void propertyValues.push("balance");                                                               break;
+                  case "container":                   void propertyValues.push("none/normal");                                                           break;
+                  case "display":                     void propertyValues.push("inline");                                                                break;
+                  case "field-sizing":                void propertyValues.push("fixed");                                                                 break;
+                  case "flex":                        void propertyValues.push("0 1 auto");                                                              break;
+                  case "flex-flow":                   void propertyValues.push("row nowrap");                                                            break;
+                  case "flex-wrap":                   void propertyValues.push("nowrap");                                                                break;
+                  case "justify-items":               void propertyValues.push("legacy");                                                                break;
+                  case "lighting-color":              void propertyValues.push("white");                                                                 break;
+                  case "mask-border":                 void propertyValues.push("none 0/auto/0 stretch alpha");                                           break;
+                  case "mask-border-mode":            void propertyValues.push("alpha");                                                                 break;
+                  case "mask-composite":              void propertyValues.push("end");                                                                   break;
+                  case "mask-mode":                   void propertyValues.push("match-source");                                                          break;
+                  case "mask-position":               void propertyValues.push("center");                                                                break;
+                  case "mask-type":                   void propertyValues.push("luminance");                                                             break;
+                  case "object-fit":                  void propertyValues.push("fill");                                                                  break;
+                  case "offset":                      void propertyValues.push("normal none 0/auto");                                                    break;
+                  case "outline":                     void propertyValues.push("medium none invert");                                                    break; // ->> CSS 2.1 specified `invert` instead
+                  case "outline-color":               void propertyValues.push("currentColor");                                                          break;
+                  case "overflow-clip-margin":        void propertyValues.push("0px");                                                                   break;
+                  case "place-items":                 void propertyValues.push("normal legacy");                                                         break;
+                  case "position":                    void propertyValues.push("static");                                                                break;
+                  case "position-try":                void propertyValues.push("normal none");                                                           break;
+                  case "position-visibility":         void propertyValues.push("anchors-visible");                                                       break;
+                  case "scroll-timeline":             void propertyValues.push("none block");                                                            break;
+                  case "text-decoration-style":       void propertyValues.push("solid");                                                                 break;
+                  case "text-emphasis":               void propertyValues.push("none currentColor");                                                     break;
+                  case "text-overflow":               void propertyValues.push("clip");                                                                  break;
+                  case "transform-box":               void propertyValues.push("view-box");                                                              break;
+                  case "transform-origin":            void propertyValues.push("50% 50% 0");                                                             break;
+                  case "transform-style":             void propertyValues.push("flat");                                                                  break;
+                  case "transition-property":         void propertyValues.push("all");                                                                   break;
+                  case "user-modify":                 void propertyValues.push("read-only");                                                             break;
+                  case "view-timeline":               void propertyValues.push("none block auto");                                                       break;
+                  case "writing-mode":                void propertyValues.push("horizontal-tb")
                 } break;
 
                 case "revert": {
-                  void propertyValue.push("unset");
+                  void propertyValues.push("unset");
                   if (strict) return null // ->> CSSOM prohibits user agent and user stylesheets access, so unable to rollback cascade layer from author origin
                 } break;
 
@@ -2205,7 +2181,7 @@
                   reverted             = true
                 } break;
 
-                case "unset": switch (propertyName + "") {
+                case "unset": switch (propertyName) {
                   case "accent-color":
                   case "border-collapse": case "border-spacing":
                   case "caption-side":    case "caret-color": case "clip-rule": case "color": case "color-scheme": case "cursor":
@@ -2224,31 +2200,31 @@
                   case "tab-size":        case "text-align":      case "text-align-last": case "text-anchor": case "text-decoration-skip": case "text-decoration-skip-ink": case "text-emphasis-position": case "text-indent":       case "text-justify":   case "text-orientation": case "text-rendering":    case "text-shadow":    case "text-size-adjust": case "text-spacing-trim": case "text-transform": case "text-underline-offset": case "text-underline-position": case "text-wrap": case "text-wrap-mode": case "text-wrap-style":
                   case "visibility":
                   case "white-space": case "white-space-collapse": case "widows": case "word-break": case "word-spacing": case "writing-mode":
-                    void propertyValue.push("inherit");
+                    void propertyValues.push("inherit");
                     break;
 
                   default:
-                    void propertyValue.push("initial")
+                    void propertyValues.push("initial")
                 } break;
 
                 default: if (null !== property.information) /* ->> Account for CSS quirks */ {
-                  switch (propertyName + "") {
+                  switch (propertyName) {
                     // --> getCSSPropertyValue(element, "…") === …
-                    case "border-bottom-width": if (property.priors.length === 1 && property.priors[0].name == "border-bottom-style") property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-bottom-style", property, properties); break;
-                    case "border-left-width":   if (property.priors.length === 1 && property.priors[0].name == "border-left-style")   property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-left-style",   property, properties); break;
-                    case "border-right-width":  if (property.priors.length === 1 && property.priors[0].name == "border-right-style")  property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-right-style",  property, properties); break;
-                    case "border-top-width":    if (property.priors.length === 1 && property.priors[0].name == "border-top-style")    property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-top-style",    property, properties); break;
-                    case "border-width":        if (property.priors.length === 1 && property.priors[0].name == "border-style")        property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-style",        property, properties); break;
-                    case "column-rule-width":   if (property.priors.length === 1 && property.priors[0].name == "column-rule-style")   property.information.value = null === property.priors[0].information ||                                                      property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "column-rule-style",   property, properties); break;
-                    case "outline-width":       if (property.priors.length === 1 && property.priors[0].name == "outline-style")       property.information.value = null === property.priors[0].information ||                                                      property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "outline-style",       property, properties); break;
-                    case "writing-mode":        if (property.priors.length === 1 && property.priors[0].name == "display") switch (null !== property.priors[0].information ? property.priors[0].information.value : null) {
+                    case "border-bottom-width": if (property.priors.length === 1 && property.priors[0].name === "border-bottom-style") property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-bottom-style", property, properties); break;
+                    case "border-left-width":   if (property.priors.length === 1 && property.priors[0].name === "border-left-style")   property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-left-style",   property, properties); break;
+                    case "border-right-width":  if (property.priors.length === 1 && property.priors[0].name === "border-right-style")  property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-right-style",  property, properties); break;
+                    case "border-top-width":    if (property.priors.length === 1 && property.priors[0].name === "border-top-style")    property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-top-style",    property, properties); break;
+                    case "border-width":        if (property.priors.length === 1 && property.priors[0].name === "border-style")        property.information.value = null === property.priors[0].information || property.priors[0].information.value === "hidden" || property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "border-style",        property, properties); break;
+                    case "column-rule-width":   if (property.priors.length === 1 && property.priors[0].name === "column-rule-style")   property.information.value = null === property.priors[0].information ||                                                      property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "column-rule-style",   property, properties); break;
+                    case "outline-width":       if (property.priors.length === 1 && property.priors[0].name === "outline-style")       property.information.value = null === property.priors[0].information ||                                                      property.priors[0].information.value === "none" ? "0px" : property.information.value; else cascaded = cascade(property.element, "outline-style",       property, properties); break;
+                    case "writing-mode":        if (property.priors.length === 1 && property.priors[0].name === "display") switch (null !== property.priors[0].information ? property.priors[0].information.value : null) {
                       case "ruby-annotation-container": case "ruby-base-container":
                       case "table-column":              case "table-column-group":
                       case "table-footer-group":        case "table-header-group":
                       case "table-row":                 case "table-row-group":
-                        void propertyValue.push("unset");
+                        void propertyValues.push("unset");
                         property.unset = true
-                    } else if (0 === property.priors.length || property.priors[0].name != "writing-mode") cascaded = cascade(property.element, "display", property, properties)
+                    } else if (0 === property.priors.length || property.priors[0].name !== "writing-mode") cascaded = cascade(property.element, "display", property, properties)
                   }
 
                   if (cascaded) continue; // --> continue cascade
@@ -2265,7 +2241,7 @@
 
             // ... --> .style = {…}
             if (null !== property.information)
-            switch (propertyName + "") {
+            switch (propertyName) {
               case "font-size": case "line-height":        property.style[propertyName] = canonicalize(property.element, propertyName, property.information.value, UNDEFINED_AXIS, styleRules, groupingPredicates).replace(CANON_MATCH, CANON_VALUE); break;
               default: if (propertyName in property.style) property.style[propertyName] = property.information.value
             }
