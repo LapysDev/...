@@ -80,7 +80,7 @@ Vendor Meta Tags
     • <meta content="World Cup, Brazil 2014, Spain vs Netherlands, soccer, football" name="news_keywords"/>
 
   Internet Explorer
-    • <link href=icon.ico rel="shortcut icon" sizes="any"/>
+    • <link href=icon.ico rel="shortcut icon" sizes="any" type="image/png"/>
 
     • <meta content=RevealTrans(Duration=2.0,Transition=2)  http-equiv="Page-Enter"/>
     • <meta content=RevealTrans(Duration=3.0,Transition=12) http-equiv="Page-Exit"/>
