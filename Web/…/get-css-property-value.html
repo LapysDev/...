@@ -75,7 +75,7 @@
         return element.getBoundingClientRect()
       }
 
-      function getCSSStyleRules(document, strict = false) {
+      function getCSSStyleRules(document, strict /* = false */) {
         var layers = [""]; // --> String[]
         var rules  = [];   // --> {container: {name: String, query: String}*, layer: String, layers: String[], order: Number(Uint32), scope: {end: String, start: String}*, value: CSSStyleRule}[]
         var sheets = [];   // --> {containers: {name: String, query: String}[], layer: String, rules: CSSRuleList | DOMCSSRuleList, scopes: {end: String, start: String}[]}[]
@@ -170,7 +170,7 @@
         return rules
       }
 
-      function getCSSPropertyValue(element, propertyName, /* in */ styleRules = null, /* out */ groupingPredicates = null, strict = false) /* ->> Non-standards consistent; doesn’t acknowledge vendor extensions */ {
+      function getCSSPropertyValue(element, propertyName, /* in */ styleRules /* = null */, /* out */ groupingPredicates /* = null */, strict /* = false */) /* ->> Non-standards consistent; doesn’t acknowledge vendor extensions */ {
         var ACTUAL_BOUNDING_BOX_ASCENT_METRIC = 0x01, WIDTH_METRIC             = 0x02,                                                                      NO_METRIC     = 0x00;
         var ANIMATION_DESCRIPTOR              = 0x01, CSS_ANIMATION_DESCRIPTOR = 0x03, CSS_TRANSITION_DESCRIPTOR = 0x02, VIEW_TRANSITION_DESCRIPTOR = 0x04, NO_DESCRIPTOR = 0x00;
         var DEPTH_AXIS                        = 0x03, HORIZONTAL_AXIS          = 0x01, VERTICAL_AXIS             = 0x02,                                    NO_AXIS       = 0x00;
@@ -866,7 +866,7 @@
           }
 
           return (void properties.push({
-            animation  : {descriptor: NO_DESCRIPTOR, end: null, next: null, previous: null, properties: [], value: null}, // --> {descriptor: enum, end: Object*, names: String[], next: Object*, previous: Object*, properties: {name: String, value: String*}[], value: String*}
+            animation  : {descriptor: NO_DESCRIPTOR, end: null, next: null, previous: null, properties: [], value: null}, // --> {descriptor: enum, end: Object*, names: String[], next: Object*, previous: Object*, properties: {animated: Boolean, name: delimiter: String, String, value: String*}[], value: String*}
             element    : element,                                                                                         // --> HTMLElement
             information: null,                                                                                            // --> {layer: String*, matches: Boolean, order: Number(Uint32) {< 0}, priority: "important" | …, specificity: {0: 0, 1: 0, 2: 0}*, text: String*, value: String}*
             name       : propertyNames[0],                                                                                // --> String
@@ -1106,12 +1106,12 @@
         }
 
         // ...
-        var REMOVE_THIS_BREAK = 20;
+        var REMOVE_THIS_BREAK = 30;
         console.log("%c[...]", "padding-bottom: 5px; padding-top: 5px");
         $ = $ ? {
           probeElement           : $.probeElement            || null,
           probeTextMetricsContext: $.probeTextMetricsContext || null,
-          unset                  : $.unset                   || true // ->> Recursed invocations inherit automatically
+          unset                  : $.unset                   || true // ->> Recursed `getCSSPropertyValue(…)` inherits automatically
         } : {probeElement: null, probeTextMetricsContext: null, unset: false};
 
         cascade:
@@ -1130,9 +1130,10 @@
             var reverted     = false;
             var propertyName = property.names[property.names.length - 1];
             var composited   = null;
+            var unset        = $.unset || properties.length > 1 || property.names.length > 1;
 
             // ...
-            console.log(TAB + "%c[BEGIN (" + properties.length + ")]%c " + propertyName + ($.unset || property.names.length > 1 ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: dodgerblue", "color: honeydew", "color: turquoise; padding-top: 10px");
+            console.log(TAB + "%c[BEGIN (" + properties.length + ")]%c " + propertyName + (unset ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: dodgerblue", "color: honeydew", "color: turquoise; padding-top: 10px");
 
             for (var index = SHORTHANDS.length; !composited && index--; )
             composited = SHORTHANDS[index].name === propertyName ? SHORTHANDS[index].composition : null;
@@ -1324,11 +1325,12 @@
                                   }
                                 } break;
 
-                                case "stuck": switch (property.priors.length === 1 ? property.priors[0].name : null) {
-                                  case "bottom": case "left": case "right": case "top": /* --> getCSSPropertyValue(containerElement, "bottom" | "left" | "right" | "top") ? … */ {
-                                    var value = canonicalize(containerElement, property.priors[0].name, property.priors[0].information.value, NO_AXIS, styleRules, groupingPredicates);
+                                case "stuck": switch (property.priors.length === 1 && null !== property.priors[0].information ? property.priors[0].name : null) {
+                                  case "bottom": case "left": case "right": case "top": {
+                                    var prior = property.priors.pop();
+                                    var value = canonicalize(containerElement, prior.name, prior.information.value, NO_AXIS, styleRules, groupingPredicates);
 
-                                    if (null !== property.priors[0].information && CANON_MATCH.test(value))
+                                    if (CANON_MATCH.test(value)) // --> getCSSPropertyValue(containerElement, "bottom" | "left" | "right" | "top") ? …
                                     switch (functions["scroll-state"][2]) {
                                       case "bottom": containerApplicable.value = getElementBounds(containerElement).bottom >= innerHeight - value.replace(CANON_MATCH, CANON_VALUE); break;
                                       case "left":   containerApplicable.value = getElementBounds(containerElement).left   <= 0           + value.replace(CANON_MATCH, CANON_VALUE); break;
@@ -1338,7 +1340,7 @@
                                     }
                                   } break;
 
-                                  case "position": if (null !== property.priors[0].information && property.priors[0].information.value === "sticky") {
+                                  case "position": if (property.priors.pop().information.value === "sticky") {
                                     switch (functions["scroll-state"][2]) /* --> getCSSPropertyValue(containerElement, "position") === "sticky" */ {
                                       case "bottom": cascaded = cascade(containerElement, "bottom", property, properties); break;
                                       case "left":   cascaded = cascade(containerElement, "left",   property, properties); break;
@@ -1354,7 +1356,7 @@
                               }
 
                               else if (functions["style"] = containerQuery.value.match(/^style\s*\(\s*([\-\w]+)\s*:\s*(.+)\s*\)$/)) /* --> getCSSPropertyValue(containerElement, functions["style"][1]) === functions["style"][2] */ {
-                                if (property.priors.length === 1 && property.priors[0].name === functions["style"][1]) containerApplicable.value = null !== property.priors[0].information && canonicalize(containerElement, functions["style"][1], functions["style"][2], NO_AXIS, styleRules, groupingPredicates) === canonicalize(containerElement, functions["style"][1], property.priors[0].information.value, NO_AXIS, styleRules, groupingPredicates);
+                                if (property.priors.length === 1 && property.priors[0].name === functions["style"][1]) containerApplicable.value = canonicalize(containerElement, functions["style"][1], functions["style"][2], NO_AXIS, styleRules, groupingPredicates) === canonicalize(containerElement, functions["style"][1], (property.priors.pop().information || {value: ""}).value, NO_AXIS, styleRules, groupingPredicates);
                                 else                                                                                   cascaded                  = cascade(containerElement, functions["style"][1], property, properties)
                               }
 
@@ -1603,7 +1605,7 @@
                       {frames: frames.next,     values: delimit(propertyName, /(?!)/)},
                       {frames: frames.previous, values: delimit(propertyName, /(?!)/)},
                     ]; keyframes.length; ) {
-                      var details  = []; // --> {delimiter: String*, information: Object*, name: String*, value: String*}[]
+                      var details  = []; // --> {delimiter: String, information: Object*, name: String*, value: String*}[]
                       var keyframe = keyframes.pop();
 
                       // ...
@@ -1611,10 +1613,17 @@
                         var value     = keyframe.values.pop();
                         var name      = value.value;
                         var evaluated = false;
-                        var detail    = {delimiter: value.delimiter, information: /* --> frames.next|.previous[…] === keyframes.frames[…] */ null, name: name, value: null};
+                        var detail    = {information: /* --> frames.next|.previous[…] === keyframes.frames[…] */ null, name: name, value: null};
 
                         // ... --> details = […]
-                        for (var index = keyframe.frames.length; index--; ) {
+                        for (var index = keyframe.frames.length; ; ) {
+                          if (--index === -1) {
+                            if (!composited && name !== propertyName)
+                            detail.information = {descriptor: NO_DESCRIPTOR, keyframe: null, order: 0, progress: 0.00, properties: null};
+
+                            break
+                          }
+
                           for (var subindex = keyframe.frames[index].properties.length; subindex--; )
                           if (detail.name === keyframe.frames[index].properties[subindex].name && (null === detail.information || detail.information.order <= keyframe.frames[index].order)) {
                             detail.information = keyframe.frames[index];
@@ -1622,9 +1631,6 @@
 
                             break
                           }
-
-                          if (0 === index && name !== propertyName)
-                          detail.information = {descriptor: NO_DESCRIPTOR, keyframe: null, order: 0, progress: 0.00, properties: null}
                         }
 
                         if (null !== detail.information)
@@ -1638,78 +1644,91 @@
                         }
 
                         // ... --> .properties = […]
-                        for (var subindex = property.animation.properties.length; subindex--; ) {
-                          if (name === property.animation.properties[subindex].name) break;
-                          if (0 === subindex) void property.animation.properties.push({name: name, value: null})
+                        for (var index = property.animation.properties.length; ; ) {
+                          if (--index === -1) { void property.animation.properties.push({animated: null !== detail.value, delimiter: value.delimiter, name: detail.name, value: null}); break }
+                          if (name === property.animation.properties[index].name) { property.animation.properties[index].animated = property.animation.properties[index].animated || null !== detail.value; break }
                         }
                       }
 
-                      // ... --> .next|.previous = […]
+                      // ... --> .next = .previous = […]
                       switch (keyframe.frames) {
                         case frames.next:     property.animation.next     = details; break;
                         case frames.previous: property.animation.previous = details
                       }
                     }
 
-                    // cascade here
+                    for (var index = property.animation.properties.length; index--; ) {
+                      if (!property.animation.properties[index].animated)
+                      cascaded = cascade(property.element, property.animation.properties[index].name, property, properties)
+                    }
+
                     if (cascaded)
                     break // --> continue cascade
                   }
 
-                  // ... --> .next = .previous = …
-                  // TODO (Lapys) -> don’t forget to give the code a good finish after — and inline `expand(…)`
-                  // PROPERTY     [v] ANIMATION
-                  // padding-left ==> padding-left                                             ✅ padding-left ==>        padding
-                  // padding-left ==> padding                                                  ✅ padding-left ==> expand(padding)["padding-left"]
-                  // padding      ==> padding                                                  ✅ padding      ==>        padding
-                  // padding      ==> padding-bottom padding-left padding-right padding-bottom ✅ cascade(…)
+                  if (cascaded)
+                  break; // --> continue cascade
 
-                  // ... ->> Interpolate `next|previous` into `.animation.properties`
-                  while (property.animation.properties.length)
-                  break;
-
-                  if (false)
-                  while (names.length) {
-                    var DUMMY_DETAILS           = {delimiter: "", information: {descriptor: NO_DESCRIPTOR, keyframe: null, order: 0, progress: 0.00, properties: []}, name: null, value: null};
-                    var name                    = names.pop();
-                    var animationProperty       = {name: name, value: ""};
-                    var nextAnimationDetail     = null;
-                    var previousAnimationDetail = null;
-
-                    // ... --> nextAnimationDetail|previousAnimationDetail = …
-                    for (var index = next    .length; index--; ) if (name === next    [index].name) { nextAnimationDetail     = next    [index]; break }
-                    for (var index = previous.length; index--; ) if (name === previous[index].name) { previousAnimationDetail = previous[index]; break }
-
-                    nextAnimationDetail     = null === nextAnimationDetail     ? DUMMY_DETAILS : nextAnimationDetail;
-                    previousAnimationDetail = null === previousAnimationDetail ? DUMMY_DETAILS : previousAnimationDetail;
-
-                    switch (true) {
-                      case nextAnimationDetail.information.order < previousAnimationDetail.information.order: nextAnimationDetail     = DUMMY_DETAILS; break;
-                      case nextAnimationDetail.information.order > previousAnimationDetail.information.order: previousAnimationDetail = DUMMY_DETAILS
+                  // ... --> .descriptor = enum; .value = "…"
+                  for (var index = property.animation.properties.length; index--; )
+                  if (!property.animation.properties[index].animated) {
+                    for (var subindex = property.priors.length; subindex--; ) {
+                      if (null !== property.priors[subindex].information && property.priors[subindex].name === property.animation.properties[index].name)
+                      property.animation.properties[index].value = property.priors[subindex].information.value
                     }
 
-                    // ... --> animation.descriptor = …; .animation.properties = […]
-                    property.animation.descriptor = (
-                      ANIMATION_DESCRIPTOR      === nextAnimationDetail.information.descriptor || ANIMATION_DESCRIPTOR      === previousAnimationDetail.information.descriptor ? ANIMATION_DESCRIPTOR      :
-                      CSS_ANIMATION_DESCRIPTOR  === nextAnimationDetail.information.descriptor || CSS_ANIMATION_DESCRIPTOR  === previousAnimationDetail.information.descriptor ? CSS_ANIMATION_DESCRIPTOR  :
-                      CSS_TRANSITION_DESCRIPTOR === nextAnimationDetail.information.descriptor || CSS_TRANSITION_DESCRIPTOR === previousAnimationDetail.information.descriptor ? CSS_TRANSITION_DESCRIPTOR :
-                      NO_DESCRIPTOR
-                    );
+                    if (null === property.animation.properties[index].value)
+                    void property.animation.properties.splice(index, 1)
+                  }
 
-                    if      (null === nextAnimationDetail.value && null === previousAnimationDetail.value) animationProperty.value = null;
-                    else if (null !== nextAnimationDetail.value && null === previousAnimationDetail.value) animationProperty.value = nextAnimationDetail    .value;
-                    else if (null === nextAnimationDetail.value && null !== previousAnimationDetail.value) animationProperty.value = previousAnimationDetail.value;
-                    else /* ->> Does not interpolate standards-wise e.g. what would `background-position-x: left 20px` to `background-position-x: right 20px` result in? */ {
-                      var nextAnimationValue     = delimit(nextAnimationDetail    .value, /[,\/\s]+/g);
-                      var previousAnimationValue = delimit(previousAnimationDetail.value, /[,\/\s]+/g);
+                  if (null === property.animation.value)
+                  while (property.animation.properties.length) {
+                    var animationProperty = property.animation.properties.pop();
+
+                    // ...
+                    if (null === animationProperty.value) {
+                      var detail            = {information: {descriptor: NO_DESCRIPTOR, keyframe: null, order: 0, progress: 0.00, properties: null}, name: null, value: null};
+                      var next              = null;
+                      var previous          = null;
+
+                      // ... --> next = previous = …
+                      for (var index = property.animation.next    .length; index--; ) if (animationProperty.name === property.animation.next    [index].name) { next     = property.animation.next    [index]; break }
+                      for (var index = property.animation.previous.length; index--; ) if (animationProperty.name === property.animation.previous[index].name) { previous = property.animation.previous[index]; break }
+
+                      next     = null === next     ? detail : next;
+                      previous = null === previous ? detail : previous;
+
+                      switch (true) {
+                        case next.information.order < previous.information.order: next     = detail; break;
+                        case next.information.order > previous.information.order: previous = detail
+                      }
 
                       // ...
-                      if (nextAnimationValue.length === previousAnimationValue.length) {
-                        var easing      = previousAnimationDetail.information.keyframe.easing;
-                        var offsetDelta = nextAnimationDetail.information.keyframe.computedOffset - previousAnimationDetail.information.keyframe.computedOffset;
-                        var progress    = offsetDelta > 0.00 ? (previousAnimationDetail.information.progress - previousAnimationDetail.information.keyframe.computedOffset) / offsetDelta : 1.00;
+                      animationProperty.value       = "";
+                      property.animation.descriptor = (
+                        ANIMATION_DESCRIPTOR      === next.information.descriptor || ANIMATION_DESCRIPTOR      === previous.information.descriptor ? ANIMATION_DESCRIPTOR      :
+                        CSS_ANIMATION_DESCRIPTOR  === next.information.descriptor || CSS_ANIMATION_DESCRIPTOR  === previous.information.descriptor ? CSS_ANIMATION_DESCRIPTOR  :
+                        CSS_TRANSITION_DESCRIPTOR === next.information.descriptor || CSS_TRANSITION_DESCRIPTOR === previous.information.descriptor ? CSS_TRANSITION_DESCRIPTOR :
+                        NO_DESCRIPTOR
+                      );
 
-                        // ...
+                      /* =================================================================================================================================== */
+                      // TODO (Lapys) -> check if base value (not inherited) is `!important`
+                      // TODO (Lapys) -> don’t forget to give the code a good finish after — and inline `expand(…)`, and `writing-mode` is still scoffed 😭
+                      /* =================================================================================================================================== */
+                      console.log("BRUH", animationProperty, previous, next);
+
+                      if      (null === next.value && null === previous.value) animationProperty.value = null;
+                      else if (null !== next.value && null === previous.value) animationProperty.value = next    .value;
+                      else if (null === next.value && null !== previous.value) animationProperty.value = previous.value;
+                      else /* ->> Non-standard interpolation e.g. what would `background-position-x: left 20px` to `background-position-x: right 20px` evaluate to?  */ {
+                        var delta         = next.information.keyframe.computedOffset - previous.information.keyframe.computedOffset;
+                        var easing        = previous.information.keyframe.easing;
+                        var nextValue     = delimit(next    .value, /[,\/\s]+/g);
+                        var previousValue = delimit(previous.value, /[,\/\s]+/g);
+                        var progress      = delta > 0.00 ? (previous.information.progress - previous.information.keyframe.computedOffset) / delta : 1.00;
+
+                        // ... --> progress = …
                         switch (easing) {
                           case "ease":        progress = bézier(0.25, 0.10, 0.25, 1.00, progress); break;
                           case "ease-in":     progress = bézier(0.42, 0.00, 1.00, 1.00, progress); break;
@@ -1719,92 +1738,87 @@
                           case "step-end":    progress = progress <  1.00 ? 0.00 : 1.00;           break;
                           case "step-start":  progress = progress <= 0.00 ? 0.00 : 1.00;           break;
                           default: {
-                            var functions = {
-                              "bézier": easing.match(/^cubic-bezier\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/),
-                              "linear": easing.match(/^linear\((.+)\)$/),
-                              "step"  : easing.match(/^steps\(\s*(\d+)\s*(?:,\s*([\w-]+))?\s*\)$/)
-                            };
+                            var functions = {"bézier": null, "linear": null, "step": null};
 
                             // ...
-                            if (null !== functions["bézier"])
+                            if (functions["bézier"] = easing.match(/^cubic-bezier\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/))
                               progress = bézier(+functions["bézier"][1], +functions["bézier"][2], +functions["bézier"][3], +functions["bézier"][4], progress);
 
-                            else if (null !== functions["linear"]) /* NOTE (Lapys) -> No idea how this works, to be honest…; See `https://developer.mozilla.org/docs/Web/CSS/Reference/Values/easing-function/linear` */ {
+                            else if (functions["step"] = easing.match(/^steps\(\s*(\d+)\s*(?:,\s*([\w-]+))?\s*\)$/)) // --> intervalCount = functions["step"][1], position = functions["step"][2]
+                              switch (functions["step"][2]) {
+                                case "both":  case "jump-both":         progress = Math.min((Math.floor(progress * functions["step"][1]) + 1) / (functions["step"][1] + 1), 1.00); break;
+                                case "start": case "jump-start":        progress = Math.min((Math.ceil (progress * functions["step"][1]) + 0) / (functions["step"][1] + 0), 1.00); break;
+                                case "none":  case "jump-none":         progress = Math.floor((progress * (functions["step"][1] - 1)) + 0.50) / (functions["step"][1] - 1);        break;
+                                case "end":   case "jump-end": default: progress = Math.floor((progress * (functions["step"][1] - 0)) + 0.00) / (functions["step"][1] - 0)
+                              }
+
+                            else if (functions["linear"] = easing.match(/^linear\((.+)\)$/)) /* CITE (Lapys) -> https://developer.mozilla.org/docs/Web/CSS/Reference/Values/easing-function/linear */ {
                               var points = [];
                               var tokens = functions["linear"].split(/\s*,\s*/);
 
-                              // ...
-                              for (var subindex = 0; subindex !== tokens.length; ++subindex) {
+                              // ... --> points = […]
+                              for (var index = 0; index !== tokens.length; ++index) {
                                 var positions = [];
-                                var subtokens = tokens[subindex].split(/\s+/);
+                                var subtokens = tokens[index].split(/\s+/);
 
                                 // ...
-                                for (var subsubindex = 1; subsubindex !== subtokens.length; ++subsubindex)
-                                void positions.push(+subtokens[subsubindex] / 100.00);
+                                for (var subindex = 1; subindex !== subtokens.length; ++subindex)
+                                void positions.push(+subtokens[subindex] / 100.00);
 
                                 if (0 === positions.length)
-                                void positions.push(null);
+                                positions = [null];
 
-                                for (var subsubindex = 0; subsubindex !== positions.length; ++subsubindex)
-                                void points.push({input: positions[subsubindex], output: +subtokens[0]})
+                                for (var subindex = 0; subindex !== positions.length; ++subindex)
+                                void points.push({input: positions[subindex], output: +subtokens[0]})
                               }
 
-                              points[0]                .input = null !== points[0]                .input ? points[0]                .input : 0;
-                              points[points.length - 1].input = null !== points[points.length - 1].input ? points[points.length - 1].input : 1;
+                              points[0]                .input = null !== points[0]                .input ? points[0]                .input : 0.00;
+                              points[points.length - 1].input = null !== points[points.length - 1].input ? points[points.length - 1].input : 1.00;
 
-                              for (var subindex = 1; subindex < points.length; ++subindex)
-                              if (null === points[subindex].input) {
+                              for (var index = 1; index < points.length; ++index)
+                              if (null === points[index].input) {
                                 var inputEnd = 0, inputStart = 0; // --> points[rangeEnd, rangeStart].input
-                                var rangeEnd = 0, rangeStart = subindex - 1;
+                                var rangeEnd = 0, rangeStart = index - 1;
 
                                 // ...
-                                while (null !== pointers[subindex].input)
-                                  ++subindex;
+                                while (null !== points[index].input && index !== points.length)
+                                  ++index;
 
-                                rangeEnd   = subindex;
+                                rangeEnd   = index;
                                 inputEnd   = points[rangeEnd]  .input;
                                 inputStart = points[rangeStart].input;
 
-                                for (var count = rangeEnd - rangeStart, subsubindex = 1; count !== subsubindex; ++subsubindex)
-                                points[rangeStart + subsubindex].input = inputStart + ((inputEnd - inputStart) * (subsubindex / count))
+                                for (var count = rangeEnd - rangeStart, subindex = 1; count !== subindex; ++subindex)
+                                points[rangeStart + subindex].input = inputStart + ((inputEnd - inputStart) * (subindex / count))
                               }
 
-                              // ...
+                              // ... --> progress = …
                               if      (progress <= points[0]                .input) progress = points[0]                .output;
                               else if (progress >= points[points.length - 1].input) progress = points[points.length - 1].output;
-                              else {
-                                for (var subindex = 1; subindex !== points.length; ++subindex)
-                                if (progress <= points[subindex].input) {
-                                  var count = points[subindex - 0].input - points[subindex - 1].input;
-
-                                  progress = points[subindex - 1].output + ((points[subindex - 0].output - points[subindex - 1].output) * (count > 0 ? (t - points[subindex - 1].input) / count : 1));
+                              else
+                                for (var index = 1; index !== points.length; ++index)
+                                if (progress <= points[index].input) {
+                                  progress = points[index - 1].output + ((points[index - 0].output - points[index - 1].output) * (points[index - 0].input - points[index - 1].input > 0.00 ? (t - points[index - 1].input) / (points[index - 0].input - points[index - 1].input) : 1.00));
                                   break
                                 }
-                              }
-                            }
-
-                            else if (null !== functions["step"]) {
-                              var intervalCount = +functions["step"][1];
-                              switch (+functions["step"][2] || "end") {
-                                case "both":  case "jump-both":         progress = Math.min((Math.floor(progress * intervalCount) + 1) / (intervalCount + 1), 1.00); break;
-                                case "start": case "jump-start":        progress = Math.min((Math.ceil (progress * intervalCount) + 0) / (intervalCount + 0), 1.00); break;
-                                case "none":  case "jump-none":         progress = Math.floor((progress * (intervalCount - 1)) + 0.50) / (intervalCount - 1);        break;
-                                case "end":   case "jump-end": default: progress = Math.floor((progress * (intervalCount - 0)) + 0.00) / (intervalCount - 0)
-                              }
                             }
                           }
                         }
 
-                        for (var index = 0; index !== (nextAnimationValue || previousAnimationValue).length; ++index) {
-                          var valueB        = nextAnimationValue    [index];
-                          var valueA        = previousAnimationValue[index];
+                        // ...
+                        if (nextValue.length === previousValue.length)
+                        for (var index = 0; index !== (nextValue || previousValue).length; ++index) {
+                          var valueB        = nextValue    [index];
+                          var valueA        = previousValue[index];
                           var interpolation = progress < 0.50 ? valueA.value : valueB.value;
 
                           // ...
-                          if (valueA.delimiter !== valueB.delimiter)
-                          break;
+                          if (valueA.delimiter !== valueB.delimiter) {
+                            animationProperty.value = "";
+                            break;
+                          }
 
-                          // ... ->> Expect absolute lengths canonicalized/ computed to `px`, angles to `deg`, colors (not wide-gamut) to legacy `rgb(…)`/ `rgba(…)`, frequencies to `Hz`, durations to `ms`, resolutions to `dppx`, and ignores interpolating other units (e.g. `em`, `vmax`, …) except `%`
+                          // ... --> interpolation = … ->> Expects absolute lengths canonicalized/ computed to `px`, angles to `deg`, colors (not wide-gamut) to legacy `rgb(…)`/ `rgba(…)`, frequencies to `Hz`, durations to `ms`, resolutions to `dppx` — ignoring other units (e.g. `em`, `vmax`, …) except `%`
                           if (MEASUREMENTS["function-color"].test(valueA.value) && MEASUREMENTS["function-color"].test(valueB.value)) /* --> "rgb(…, …, …)" | "rgba(…, …, …, …)" */ {
                             valueA.value  = (valueA.value.replace(/^rgba?\(\s*|\s*\)$/g, "") + (valueA.value.indexOf('a') === -1 ? ", 1" : "")).split(/\s*,\s*/);
                             valueB.value  = (valueB.value.replace(/^rgba?\(\s*|\s*\)$/g, "") + (valueB.value.indexOf('a') === -1 ? ", 1" : "")).split(/\s*,\s*/);
@@ -1841,36 +1855,35 @@
 
                               // ...
                               if (0.00 !== matrix[3] || 0.00 !== matrix[7] || 0.00 !== matrix[11]) /* --> perspective ->> Bottom row at column-major indices `3`, `7`, `11`, and `15` */ {
-                                var submatrix = matrix.slice();
+                                var invertedSubmatrix = [];
+                                var subdeterminant    = 0.00;
+                                var submatrix         = matrix.slice();
 
                                 // ...
                                 submatrix[11] = submatrix[7] = submatrix[3] = 0.00;
                                 submatrix[15]                               = 1.00;
-                                submatrix                                   = (function() /* ->> Inversion (column-major) via cofactor expansion */ {
-                                  var inversion = [
-                                    +(submatrix[5] * submatrix[10] * submatrix[15]) - (submatrix[5] * submatrix[11] * submatrix[14]) - (submatrix[9] * submatrix[6] * submatrix[15]) + (submatrix[9] * submatrix[7] * submatrix[14]) + (submatrix[13] * submatrix[6] * submatrix[11]) - (submatrix[13] * submatrix[7] * submatrix[10]),
-                                    -(submatrix[1] * submatrix[10] * submatrix[15]) + (submatrix[1] * submatrix[11] * submatrix[14]) + (submatrix[9] * submatrix[2] * submatrix[15]) - (submatrix[9] * submatrix[3] * submatrix[14]) - (submatrix[13] * submatrix[2] * submatrix[11]) + (submatrix[13] * submatrix[3] * submatrix[10]),
-                                    +(submatrix[1] * submatrix[6]  * submatrix[15]) - (submatrix[1] * submatrix[7]  * submatrix[14]) - (submatrix[5] * submatrix[2] * submatrix[15]) + (submatrix[5] * submatrix[3] * submatrix[14]) + (submatrix[13] * submatrix[2] * submatrix[7])  - (submatrix[13] * submatrix[3] * submatrix[6]),
-                                    -(submatrix[1] * submatrix[6]  * submatrix[11]) + (submatrix[1] * submatrix[7]  * submatrix[10]) + (submatrix[5] * submatrix[2] * submatrix[11]) - (submatrix[5] * submatrix[3] * submatrix[10]) - (submatrix[9]  * submatrix[2] * submatrix[7])  + (submatrix[9]  * submatrix[3] * submatrix[6]),
-                                    -(submatrix[4] * submatrix[10] * submatrix[15]) + (submatrix[4] * submatrix[11] * submatrix[14]) + (submatrix[8] * submatrix[6] * submatrix[15]) - (submatrix[8] * submatrix[7] * submatrix[14]) - (submatrix[12] * submatrix[6] * submatrix[11]) + (submatrix[12] * submatrix[7] * submatrix[10]),
-                                    +(submatrix[0] * submatrix[10] * submatrix[15]) - (submatrix[0] * submatrix[11] * submatrix[14]) - (submatrix[8] * submatrix[2] * submatrix[15]) + (submatrix[8] * submatrix[3] * submatrix[14]) + (submatrix[12] * submatrix[2] * submatrix[11]) - (submatrix[12] * submatrix[3] * submatrix[10]),
-                                    -(submatrix[0] * submatrix[6]  * submatrix[15]) + (submatrix[0] * submatrix[7]  * submatrix[14]) + (submatrix[4] * submatrix[2] * submatrix[15]) - (submatrix[4] * submatrix[3] * submatrix[14]) - (submatrix[12] * submatrix[2] * submatrix[7])  + (submatrix[12] * submatrix[3] * submatrix[6]),
-                                    +(submatrix[0] * submatrix[6]  * submatrix[11]) - (submatrix[0] * submatrix[7]  * submatrix[10]) - (submatrix[4] * submatrix[2] * submatrix[11]) + (submatrix[4] * submatrix[3] * submatrix[10]) + (submatrix[8]  * submatrix[2] * submatrix[7])  - (submatrix[8]  * submatrix[3] * submatrix[6]),
-                                    +(submatrix[4] * submatrix[9]  * submatrix[15]) - (submatrix[4] * submatrix[11] * submatrix[13]) - (submatrix[8] * submatrix[5] * submatrix[15]) + (submatrix[8] * submatrix[7] * submatrix[13]) + (submatrix[12] * submatrix[5] * submatrix[11]) - (submatrix[12] * submatrix[7] * submatrix[9]),
-                                    -(submatrix[0] * submatrix[9]  * submatrix[15]) + (submatrix[0] * submatrix[11] * submatrix[13]) + (submatrix[8] * submatrix[1] * submatrix[15]) - (submatrix[8] * submatrix[3] * submatrix[13]) - (submatrix[12] * submatrix[1] * submatrix[11]) + (submatrix[12] * submatrix[3] * submatrix[9]),
-                                    +(submatrix[0] * submatrix[5]  * submatrix[15]) - (submatrix[0] * submatrix[7]  * submatrix[13]) - (submatrix[4] * submatrix[1] * submatrix[15]) + (submatrix[4] * submatrix[3] * submatrix[13]) + (submatrix[12] * submatrix[1] * submatrix[7])  - (submatrix[12] * submatrix[3] * submatrix[5]),
-                                    -(submatrix[0] * submatrix[5]  * submatrix[11]) + (submatrix[0] * submatrix[7]  * submatrix[9])  + (submatrix[4] * submatrix[1] * submatrix[11]) - (submatrix[4] * submatrix[3] * submatrix[9])  - (submatrix[8]  * submatrix[1] * submatrix[7])  + (submatrix[8]  * submatrix[3] * submatrix[5]),
-                                    -(submatrix[4] * submatrix[9]  * submatrix[14]) + (submatrix[4] * submatrix[10] * submatrix[13]) + (submatrix[8] * submatrix[5] * submatrix[14]) - (submatrix[8] * submatrix[6] * submatrix[13]) - (submatrix[12] * submatrix[5] * submatrix[10]) + (submatrix[12] * submatrix[6] * submatrix[9]),
-                                    +(submatrix[0] * submatrix[9]  * submatrix[14]) - (submatrix[0] * submatrix[10] * submatrix[13]) - (submatrix[8] * submatrix[1] * submatrix[14]) + (submatrix[8] * submatrix[2] * submatrix[13]) + (submatrix[12] * submatrix[1] * submatrix[10]) - (submatrix[12] * submatrix[2] * submatrix[9]),
-                                    -(submatrix[0] * submatrix[5]  * submatrix[14]) + (submatrix[0] * submatrix[6]  * submatrix[13]) + (submatrix[4] * submatrix[1] * submatrix[14]) - (submatrix[4] * submatrix[2] * submatrix[13]) - (submatrix[12] * submatrix[1] * submatrix[6])  + (submatrix[12] * submatrix[2] * submatrix[5]),
-                                    +(submatrix[0] * submatrix[5]  * submatrix[10]) - (submatrix[0] * submatrix[6]  * submatrix[9])  - (submatrix[4] * submatrix[1] * submatrix[10]) + (submatrix[4] * submatrix[2] * submatrix[9])  + (submatrix[8]  * submatrix[1] * submatrix[6])  - (submatrix[8]  * submatrix[2] * submatrix[5])
-                                  ], determinant = (inversion[0] * submatrix[0]) + (inversion[4] * submatrix[1]) + (inversion[8] * submatrix[2]) + (inversion[12] * submatrix[3]);
+                                invertedSubmatrix                           = /* ->> Inversion (column-major) via cofactor expansion */ [
+                                  +(submatrix[5] * submatrix[10] * submatrix[15]) - (submatrix[5] * submatrix[11] * submatrix[14]) - (submatrix[9] * submatrix[6] * submatrix[15]) + (submatrix[9] * submatrix[7] * submatrix[14]) + (submatrix[13] * submatrix[6] * submatrix[11]) - (submatrix[13] * submatrix[7] * submatrix[10]),
+                                  -(submatrix[1] * submatrix[10] * submatrix[15]) + (submatrix[1] * submatrix[11] * submatrix[14]) + (submatrix[9] * submatrix[2] * submatrix[15]) - (submatrix[9] * submatrix[3] * submatrix[14]) - (submatrix[13] * submatrix[2] * submatrix[11]) + (submatrix[13] * submatrix[3] * submatrix[10]),
+                                  +(submatrix[1] * submatrix[6]  * submatrix[15]) - (submatrix[1] * submatrix[7]  * submatrix[14]) - (submatrix[5] * submatrix[2] * submatrix[15]) + (submatrix[5] * submatrix[3] * submatrix[14]) + (submatrix[13] * submatrix[2] * submatrix[7])  - (submatrix[13] * submatrix[3] * submatrix[6]),
+                                  -(submatrix[1] * submatrix[6]  * submatrix[11]) + (submatrix[1] * submatrix[7]  * submatrix[10]) + (submatrix[5] * submatrix[2] * submatrix[11]) - (submatrix[5] * submatrix[3] * submatrix[10]) - (submatrix[9]  * submatrix[2] * submatrix[7])  + (submatrix[9]  * submatrix[3] * submatrix[6]),
+                                  -(submatrix[4] * submatrix[10] * submatrix[15]) + (submatrix[4] * submatrix[11] * submatrix[14]) + (submatrix[8] * submatrix[6] * submatrix[15]) - (submatrix[8] * submatrix[7] * submatrix[14]) - (submatrix[12] * submatrix[6] * submatrix[11]) + (submatrix[12] * submatrix[7] * submatrix[10]),
+                                  +(submatrix[0] * submatrix[10] * submatrix[15]) - (submatrix[0] * submatrix[11] * submatrix[14]) - (submatrix[8] * submatrix[2] * submatrix[15]) + (submatrix[8] * submatrix[3] * submatrix[14]) + (submatrix[12] * submatrix[2] * submatrix[11]) - (submatrix[12] * submatrix[3] * submatrix[10]),
+                                  -(submatrix[0] * submatrix[6]  * submatrix[15]) + (submatrix[0] * submatrix[7]  * submatrix[14]) + (submatrix[4] * submatrix[2] * submatrix[15]) - (submatrix[4] * submatrix[3] * submatrix[14]) - (submatrix[12] * submatrix[2] * submatrix[7])  + (submatrix[12] * submatrix[3] * submatrix[6]),
+                                  +(submatrix[0] * submatrix[6]  * submatrix[11]) - (submatrix[0] * submatrix[7]  * submatrix[10]) - (submatrix[4] * submatrix[2] * submatrix[11]) + (submatrix[4] * submatrix[3] * submatrix[10]) + (submatrix[8]  * submatrix[2] * submatrix[7])  - (submatrix[8]  * submatrix[3] * submatrix[6]),
+                                  +(submatrix[4] * submatrix[9]  * submatrix[15]) - (submatrix[4] * submatrix[11] * submatrix[13]) - (submatrix[8] * submatrix[5] * submatrix[15]) + (submatrix[8] * submatrix[7] * submatrix[13]) + (submatrix[12] * submatrix[5] * submatrix[11]) - (submatrix[12] * submatrix[7] * submatrix[9]),
+                                  -(submatrix[0] * submatrix[9]  * submatrix[15]) + (submatrix[0] * submatrix[11] * submatrix[13]) + (submatrix[8] * submatrix[1] * submatrix[15]) - (submatrix[8] * submatrix[3] * submatrix[13]) - (submatrix[12] * submatrix[1] * submatrix[11]) + (submatrix[12] * submatrix[3] * submatrix[9]),
+                                  +(submatrix[0] * submatrix[5]  * submatrix[15]) - (submatrix[0] * submatrix[7]  * submatrix[13]) - (submatrix[4] * submatrix[1] * submatrix[15]) + (submatrix[4] * submatrix[3] * submatrix[13]) + (submatrix[12] * submatrix[1] * submatrix[7])  - (submatrix[12] * submatrix[3] * submatrix[5]),
+                                  -(submatrix[0] * submatrix[5]  * submatrix[11]) + (submatrix[0] * submatrix[7]  * submatrix[9])  + (submatrix[4] * submatrix[1] * submatrix[11]) - (submatrix[4] * submatrix[3] * submatrix[9])  - (submatrix[8]  * submatrix[1] * submatrix[7])  + (submatrix[8]  * submatrix[3] * submatrix[5]),
+                                  -(submatrix[4] * submatrix[9]  * submatrix[14]) + (submatrix[4] * submatrix[10] * submatrix[13]) + (submatrix[8] * submatrix[5] * submatrix[14]) - (submatrix[8] * submatrix[6] * submatrix[13]) - (submatrix[12] * submatrix[5] * submatrix[10]) + (submatrix[12] * submatrix[6] * submatrix[9]),
+                                  +(submatrix[0] * submatrix[9]  * submatrix[14]) - (submatrix[0] * submatrix[10] * submatrix[13]) - (submatrix[8] * submatrix[1] * submatrix[14]) + (submatrix[8] * submatrix[2] * submatrix[13]) + (submatrix[12] * submatrix[1] * submatrix[10]) - (submatrix[12] * submatrix[2] * submatrix[9]),
+                                  -(submatrix[0] * submatrix[5]  * submatrix[14]) + (submatrix[0] * submatrix[6]  * submatrix[13]) + (submatrix[4] * submatrix[1] * submatrix[14]) - (submatrix[4] * submatrix[2] * submatrix[13]) - (submatrix[12] * submatrix[1] * submatrix[6])  + (submatrix[12] * submatrix[2] * submatrix[5]),
+                                  +(submatrix[0] * submatrix[5]  * submatrix[10]) - (submatrix[0] * submatrix[6]  * submatrix[9])  - (submatrix[4] * submatrix[1] * submatrix[10]) + (submatrix[4] * submatrix[2] * submatrix[9])  + (submatrix[8]  * submatrix[1] * submatrix[6])  - (submatrix[8]  * submatrix[2] * submatrix[5])
+                                ];
 
-                                  return 0.00 !== determinant ? [inversion[0] / determinant, inversion[1] / determinant, inversion[2] / determinant, inversion[3] / determinant, inversion[4] / determinant, inversion[5] / determinant, inversion[6] / determinant, inversion[7] / determinant, inversion[8] / determinant, inversion[9] / determinant, inversion[10] / determinant, inversion[11] / determinant, inversion[12] / determinant, inversion[13] / determinant, inversion[14] / determinant, inversion[15] / determinant] : null
-                                })();
-
-                                if (null === submatrix)
-                                break;
+                                subdeterminant = (invertedSubmatrix[0] * submatrix[0]) + (invertedSubmatrix[4] * submatrix[1]) + (invertedSubmatrix[8] * submatrix[2]) + (invertedSubmatrix[12] * submatrix[3]);
+                                if (0.00 === subdeterminant) break;
+                                submatrix = [invertedSubmatrix[0] / subdeterminant, invertedSubmatrix[1] / subdeterminant, invertedSubmatrix[2] / subdeterminant, invertedSubmatrix[3] / subdeterminant, invertedSubmatrix[4] / subdeterminant, invertedSubmatrix[5] / subdeterminant, invertedSubmatrix[6] / subdeterminant, invertedSubmatrix[7] / subdeterminant, invertedSubmatrix[8] / subdeterminant, invertedSubmatrix[9] / subdeterminant, invertedSubmatrix[10] / subdeterminant, invertedSubmatrix[11] / subdeterminant, invertedSubmatrix[12] / subdeterminant, inversion[13] / subdeterminant, inversion[14] / subdeterminant, inversion[15] / subdeterminant];
 
                                 // ... --> perspective = mulPointByMatrix(Point point, Matrix = transpose(submatrix))
                                 for (var index = perspective.length, point = [matrix[3], matrix[7], matrix[11], matrix[15]]; index--; ) {
@@ -1881,12 +1894,13 @@
                                 }
                               }
 
-                              scale.x       = length(columns[0]);             columns[0][0] /= scale.x;                 columns[0][1] /= scale.x;                 columns[0][2] /= scale.x;
-                              skew.xy       = dot   (columns[0], columns[1]); columns[1][0] -= columns[0][0] * skew.xy; columns[1][1] -= columns[0][1] * skew.xy; columns[1][2] -= columns[0][2] * skew.xy;
-                              scale.y       = length(columns[1]);             columns[1][0] /= scale.y;                 columns[1][1] /= scale.y;                 columns[1][2] /= scale.y;
-                              skew.xz       = dot   (columns[0], columns[2]); columns[2][0] -= columns[0][0] * skew.xz; columns[2][1] -= columns[0][1] * skew.xz; columns[2][2] -= columns[0][2] * skew.xz;
-                              skew.yz       = dot   (columns[1], columns[2]); columns[2][0] -= columns[1][0] * skew.yz; columns[2][1] -= columns[1][1] * skew.yz; columns[2][2] -= columns[1][2] * skew.yz;
-                              scale.z       = length(columns[2]);             columns[2][0] /= scale.z;                 columns[2][1] /= scale.z;                 columns[2][2] /= scale.z;
+                              scale.x = length(columns[0]);             columns[0][0] /= scale.x;                 columns[0][1] /= scale.x;                 columns[0][2] /= scale.x;
+                              skew.xy = dot   (columns[0], columns[1]); columns[1][0] -= columns[0][0] * skew.xy; columns[1][1] -= columns[0][1] * skew.xy; columns[1][2] -= columns[0][2] * skew.xy;
+                              scale.y = length(columns[1]);             columns[1][0] /= scale.y;                 columns[1][1] /= scale.y;                 columns[1][2] /= scale.y;
+                              skew.xz = dot   (columns[0], columns[2]); columns[2][0] -= columns[0][0] * skew.xz; columns[2][1] -= columns[0][1] * skew.xz; columns[2][2] -= columns[0][2] * skew.xz;
+                              skew.yz = dot   (columns[1], columns[2]); columns[2][0] -= columns[1][0] * skew.yz; columns[2][1] -= columns[1][1] * skew.yz; columns[2][2] -= columns[1][2] * skew.yz;
+                              scale.z = length(columns[2]);             columns[2][0] /= scale.z;                 columns[2][1] /= scale.z;                 columns[2][2] /= scale.z;
+
                               skew.xy      /= scale.y;    skew.xz      /= scale.z;    skew.yz      /= scale.z;
                               translation.x = matrix[12]; translation.y = matrix[13]; translation.z = matrix[14];
 
@@ -1955,42 +1969,54 @@
 
                           animationProperty.value += interpolation.replace(/(\.\d{6})\d+/, "$1").replace(/\.0+([^\d]|$)/g, "$1") + (valueA.delimiter || valueB.delimiter).replace(/\s*([,])+\s*/, "$1 ")
                         }
+
+                        if (animationProperty.value === "")
+                        animationProperty.value = progress < 0.50 ? previous.value : next.value
                       }
 
-                      if (animationProperty.value === "")
-                      animationProperty.value = progress < 0.50 ? previousAnimationDetail.value : nextAnimationDetail.value
+                      // ...
+                      if (animationProperty.value === "" && (animationProperty.name === "font-family" || animationProperty.name === "font-size")) {
+                        property.animation.value = null;
+                        break
+                      }
                     }
 
-                    void property.animation.properties.push(animationProperty)
+                    property.animation.value = animationProperty.value + animationProperty.delimiter + (null !== property.animation.value ? property.animation.value : "")
                   }
                 }
 
                 // ... ->> Choose `.animation` versus `.information`
-                if (null === property.information) {
-                  if (NO_DESCRIPTOR !== property.animation.descriptor)
-                  property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: property.animation.value}
-                }
+                if (null !== property.animation.value) {
+                  if (null === property.information) {
+                    if (NO_DESCRIPTOR !== property.animation.descriptor)
+                    property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: property.animation.value}
+                  }
 
-                else if (CSS_TRANSITION_DESCRIPTOR === property.animation.descriptor || ((CSS_ANIMATION_DESCRIPTOR  === property.animation.descriptor || ANIMATION_DESCRIPTOR === property.animation.descriptor) && property.information.priority !== "important")) {
-                  property.information.layer = null;
-                  property.information.text  = null;
-                  property.information.value = property.animation.value
+                  // else if (CSS_TRANSITION_DESCRIPTOR === property.animation.descriptor || ((CSS_ANIMATION_DESCRIPTOR  === property.animation.descriptor || ANIMATION_DESCRIPTOR === property.animation.descriptor) && property.information.priority !== "important")) {
+                  //   property.information.layer = null;
+                  //   property.information.text  = null;
+                  //   property.information.value = property.animation.value
+                  // }
                 }
-              } else property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: property.style[propertyName]};
+              } else {
+                console.log(TAB + "%c[styl. (" + properties.length + ")]%c " + propertyName, "color: goldenrod", "color: honeydew");
+                property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: property.style[propertyName]};
+                property.unset       = unset = false
+              }
 
               // ...
               reverted = false;
 
-              if      (property.unset) { if (property.priors[0].name === propertyName)          { property.unset = false; property.information = property.priors[0].information } }
-              else if (null === property.information && ($.unset || property.names.length > 1)) { property.unset = true;  property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "unset"} }
+              console.log(TAB + "%c[iaps. (" + properties.length + ")]%c " + propertyName + (property.unset ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: greenyellow", "color: honeydew", "color: turquoise", {...property.information}, {...property.animation}, [...property.priors], JSON.stringify(property.style).replace(/"/g, "").replace(/(:|,)/g, "$& "));
 
-              console.log(TAB + "%c[iaps (" + properties.length + ")]%c  " + propertyName + (property.unset ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: greenyellow", "color: honeydew", "color: turquoise", property.information, property.animation, property.priors, JSON.stringify(property.style).replace(/"/g, "").replace(/(:|,)/g, "$& "));
+              if      (property.unset) { if (property.priors[0].name === propertyName) { property.unset = false; property.information = property.priors[0].information } }
+              else if (null === property.information && unset)                         { property.unset = true;  property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "unset"} }
 
               for (var propertyValue = null; null !== property.information && propertyValue !== property.information.value; )
               switch (propertyValue = property.information.value) {
                 case "inherit": {
                   if      (null === parentElement)                                                   property.information.value = "initial";
-                  else if (property.priors.length === 1 && property.priors[0].name === propertyName) property.information.value = null !== property.priors[0].information ? property.priors[0].information.value : property.information.value; // --> getCSSPropertyValue(parentElement, propertyName)
+                  else if (property.priors.length === 1 && property.priors[0].name === propertyName) property.information.value = (property.priors.pop().information || property.information).value; // --> getCSSPropertyValue(parentElement, propertyName)
                   else                                                                               cascaded                   = cascade(parentElement, propertyName, property, properties)
                 } break;
 
@@ -2214,14 +2240,14 @@
 
                 default: {
                   switch (propertyName) /* ->> Account for CSS quirks --> getCSSPropertyValue(element, "…") === … */ {
-                    case "border-bottom-width": if (property.priors.length === 1 && property.priors[0].name === "border-bottom-style") switch (null !== property.priors[0].information ? property.priors[0].information.value : null) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                 cascaded = cascade(property.element, "border-bottom-style", property, properties); break;
-                    case "border-left-width":   if (property.priors.length === 1 && property.priors[0].name === "border-left-style")   switch (null !== property.priors[0].information ? property.priors[0].information.value : null) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                 cascaded = cascade(property.element, "border-left-style",   property, properties); break;
-                    case "border-right-width":  if (property.priors.length === 1 && property.priors[0].name === "border-right-style")  switch (null !== property.priors[0].information ? property.priors[0].information.value : null) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                 cascaded = cascade(property.element, "border-right-style",  property, properties); break;
-                    case "border-top-width":    if (property.priors.length === 1 && property.priors[0].name === "border-top-style")    switch (null !== property.priors[0].information ? property.priors[0].information.value : null) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                 cascaded = cascade(property.element, "border-top-style",    property, properties); break;
-                    case "border-width":        if (property.priors.length === 1 && property.priors[0].name === "border-style")        switch (null !== property.priors[0].information ? property.priors[0].information.value : null) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                 cascaded = cascade(property.element, "border-style",        property, properties); break;
-                    case "column-rule-width":   if (property.priors.length === 1 && property.priors[0].name === "column-rule-style")   switch (null !== property.priors[0].information ? property.priors[0].information.value : null) { case null:                        case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                 cascaded = cascade(property.element, "column-rule-style",   property, properties); break;
-                    case "outline-width":       if (property.priors.length === 1 && property.priors[0].name === "outline-style")       switch (null !== property.priors[0].information ? property.priors[0].information.value : null) { case null:                        case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                 cascaded = cascade(property.element, "outline-style",       property, properties); break;
-                    case "writing-mode":        if (property.priors.length === 1 && property.priors[0].name === "display")             switch (null !== property.priors[0].information ? property.priors[0].information.value : null) { case "ruby-annotation-container": case "ruby-base-container": case "table-column": case "table-column-group": case "table-footer-group": case "table-header-group": case "table-row": case "table-row-group": property.information.value = "unset" } else if (0 === property.priors.length || property.priors[0].name !== "writing-mode") cascaded = cascade(property.element, "display",             property, properties)
+                    case "border-bottom-width": if (property.priors.length === 1 && property.priors[0].name === "border-bottom-style") switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                          cascaded = cascade(property.element, "border-bottom-style", property, properties); break;
+                    case "border-left-width":   if (property.priors.length === 1 && property.priors[0].name === "border-left-style")   switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                          cascaded = cascade(property.element, "border-left-style",   property, properties); break;
+                    case "border-right-width":  if (property.priors.length === 1 && property.priors[0].name === "border-right-style")  switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                          cascaded = cascade(property.element, "border-right-style",  property, properties); break;
+                    case "border-top-width":    if (property.priors.length === 1 && property.priors[0].name === "border-top-style")    switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                          cascaded = cascade(property.element, "border-top-style",    property, properties); break;
+                    case "border-width":        if (property.priors.length === 1 && property.priors[0].name === "border-style")        switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                          cascaded = cascade(property.element, "border-style",        property, properties); break;
+                    case "column-rule-width":   if (property.priors.length === 1 && property.priors[0].name === "column-rule-style")   switch ((property.priors.pop().information || {value: null}).value) { case null:                        case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                          cascaded = cascade(property.element, "column-rule-style",   property, properties); break;
+                    case "outline-width":       if (property.priors.length === 1 && property.priors[0].name === "outline-style")       switch ((property.priors.pop().information || {value: null}).value) { case null:                        case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                          cascaded = cascade(property.element, "outline-style",       property, properties); break;
+                    case "writing-mode":        if (property.priors.length === 1 && property.priors[0].name === "display")             switch ((property.priors.pop().information || {value: null}).value) { case "ruby-annotation-container": case "ruby-base-container": case "table-column": case "table-column-group": case "table-footer-group": case "table-header-group": case "table-row": case "table-row-group": property.information.value = "unset" } else if (0 === property.priors.length || property.priors.length !== 1 || property.priors[0].name !== "writing-mode") { property.unset = true; cascaded = cascade(property.element, "display",             property, properties) }
                   }
 
                   if (cascaded) continue; // --> continue cascade
@@ -2248,9 +2274,10 @@
             // ... ->> Discard additionally cascaded `.names`
             if (property.names.length > 1) {
               property.animation.descriptor = NO_DESCRIPTOR;
-              property.animation.next       = [];
-              property.animation.previous   = [];
+              property.animation.next       = null;
+              property.animation.previous   = null;
               property.animation.properties = [];
+              property.animation.value      = null;
               property.information          = null;
               property.ruleIndex            = 0
             }
