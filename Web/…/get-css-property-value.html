@@ -81,23 +81,27 @@
         var sheets = [];   // --> {containers: {name: String, query: String}[], layer: String, rules: CSSRuleList | DOMCSSRuleList, scopes: {end: String, start: String}[]}[]
 
         // ...
-        if (typeof document.adoptedStyleSheets === "object") // --> … instanceof CSSStyleSheet[]
-        for (var index = document.adoptedStyleSheets.length; index; ) {
-          var sheet = document.adoptedStyleSheets[--index];
+        if (typeof getMatchedCSSRules === "function")
+          sheets = [{containers: [], layer: layers[0], rules: getMatchedCSSRules(element, ""), scopes: []}]; // ->> WebKit-specific and non-canonicalized; Gecko-polyfill here: `mozGetMatchedCSSRules(…)` @ `https://gist.github.com/ydaniv/3033012`
 
-          if (typeof rule.cssRules === "object") { void sheets.push({containers: [], layer: layers[0], rules: sheet.cssRules, scopes: []}); continue }
-          if (typeof rule.rules    === "object") { void sheets.push({containers: [], layer: layers[0], rules: sheet.rules,    scopes: []}); continue }
+        else {
+          if (typeof document.adoptedStyleSheets === "object") // --> … instanceof CSSStyleSheet[]
+          for (var index = document.adoptedStyleSheets.length; index; ) {
+            var sheet = document.adoptedStyleSheets[--index];
+
+            if (typeof rule.cssRules === "object") { void sheets.push({containers: [], layer: layers[0], rules: sheet.cssRules, scopes: []}); continue }
+            if (typeof rule.rules    === "object") { void sheets.push({containers: [], layer: layers[0], rules: sheet.rules,    scopes: []}); continue }
+          }
+
+          if (true) // --> … instanceof StyleSheetList
+          for (var index = document.styleSheets.length; index; ) {
+            var sheet = document.styleSheets.item(--index);
+
+            try { void sheets.push({containers: [], layer: layers[0], rules: sheet.cssRules, scopes: []}) } catch (error) { // --> SecurityError
+            try { void sheets.push({containers: [], layer: layers[0], rules: sheet.rules,    scopes: []}) } catch (error) { /* --> SecurityError */ if (strict) return null } }
+          }
         }
 
-        if (true) // --> … instanceof StyleSheetList
-        for (var index = document.styleSheets.length; index; ) {
-          var sheet = document.styleSheets.item(--index);
-
-          try { void sheets.push({containers: [], layer: layers[0], rules: sheet.cssRules, scopes: []}) } catch (error) { // --> SecurityError
-          try { void sheets.push({containers: [], layer: layers[0], rules: sheet.rules,    scopes: []}) } catch (error) { /* --> SecurityError */ if (strict) return null } }
-        }
-
-        // ...
         for (var count = sheets.length, order = 0; count; count = sheets.length)
         for (var index = 0, sheet = sheets.pop(), length = sheet.rules.length; index !== length; ++index) {
           var rule = sheet.rules[index];
@@ -1263,22 +1267,25 @@
 
         if      (typeof getComputedStyle          === "function") try { return css(getComputedStyle(element, null), propertyName) } catch (error) { /* --> SecurityError | TypeError */ }
         else if (typeof element.computedStyleMap  === "function") return cssmap(element.computedStyleMap(), propertyName); // ->> Chromium-specific
-        else if (typeof element.currentStyle      === "object")   {
-          var composited = null;
+        else if (typeof element.currentStyle      === "object") {
+          var value = css(element.currentStyle, propertyName); // ->> Internet Explorer-specific and non-canonicalized
 
           // ...
-          for (var index = SHORTHANDS.length; !composited && index--; )
-          composited = SHORTHANDS[index].name === propertyName ? SHORTHANDS[index].composition : null;
+          if (value === "") {
+            for (var shorthandIndex = SHORTHANDS.length; shorthandIndex --> 0; )
+            if (SHORTHANDS[shorthandIndex].name === propertyName) {
+              for (var composition = SHORTHANDS[shorthandIndex].composition, shorthandIndex = composition.length; shorthandIndex--; )
+              value = css(element.currentStyle, composition[shorthandIndex].value) + composition[shorthandIndex].delimiter + value
+            }
+          }
 
-          composited // "background: …" when "background-color: red"
-          // TODO
-          // for (var subindex = 0; subindex !== composited.length; ++subindex) {
-          //   if      (typeof information.keyframe[composited[subindex].value]      === "string") void information.properties.push({name: composited[subindex].value, value: information.keyframe[composited[subindex].value]});
-          //   else if (typeof information.keyframe[alt(composited[subindex].value)] === "string") void information.properties.push({name: composited[subindex].value, value: information.keyframe[alt(composited[subindex].value)]})
-          // }
-
-          return css   (element.currentStyle, propertyName); // ->> Internet Explorer-specific and non-canonicalized
+          return value
         }
+
+        // if (0x00 === cascaded && typeof element.attributeStyleMap === "object")   { styleMap = element.attributeStyleMap;       cascaded = true           ? UNCASCADED | 0x04 : 0x00 } // ->> Chromium-specific
+        // if (0x00 === cascaded && typeof element.style             === "object")   { style    = element.style;                   cascaded = true           ? UNCASCADED | 0x02 : 0x00 } //
+        // if (0x00 === cascaded && typeof getMatchedCSSRules        === "function") { rules    = getMatchedCSSRules(element, ""); cascaded = true           ? CASCADED   | 0x01 : 0x00 } // ->> WebKit-specific and non-canonicalized; Gecko-polyfill here: `mozGetMatchedCSSRules(…)` @ `https://gist.github.com/ydaniv/3033012`
+
         else {
           var cascaded           = null;
           var document           = element.ownerDocument || (function() { return this || globalThis })().document;
@@ -1661,7 +1668,7 @@
                         priority   : typeof styleRule.value.style.getPropertyPriority !== "function" ? "" : styleRule.value.style.getPropertyPriority(propertyName),
                         specificity: null,
                         text       : styleRule.value.cssText ? styleRule.value.cssText + "" : null,
-                        value      : typeof styleRule.value.style.getPropertyValue !== "function" ? styleRule.value.style[propertyName] || styleRule.value.style[alt(propertyName)] : styleRule.value.style.getPropertyValue(propertyName)
+                        value      : css(styleRule.value.style, propertyName)
                       };
 
                       // ...
@@ -1713,6 +1720,20 @@
                       if (precedes)
                       property.information = information
                     }
+
+                    /* TODO */
+                    // ⬟ User-agent       normal
+                    // ⬟ User             normal
+                    // ⬟ Author           normal
+                    // ⬟ Attribute inline normal
+                    // ⬟ Animations e.g. `Animation`, `CSSAnimation`, …
+                    // ⬟ Author           `!important`
+                    // ⬟ Attribute inline `!important`
+                    // ⬟ User             `!important`
+                    // ⬟ User-agent       `!important`
+                    // ⬟ Transitions e.g. `CSSTransition`, …
+                    // if (0x00 === cascaded && typeof element.attributeStyleMap === "object")   { styleMap = element.attributeStyleMap;       cascaded = true           ? UNCASCADED | 0x04 : 0x00 } // ->> Chromium-specific
+                    // if (0x00 === cascaded && typeof element.style             === "object")   { style    = element.style;                   cascaded = true           ? UNCASCADED | 0x02 : 0x00 } //
                   }
 
                   if (cascaded)
@@ -2179,7 +2200,7 @@
                 // ...
                 reverted = false;
 
-                console.log(TAB + "%c[iaps. (" + properties.length + ")]%c " + propertyName + (property.deferred ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: greenyellow", "color: honeydew", "color: turquoise", {...property.information}, {...property.animation}, [...property.priors], JSON.stringify(property.style).replace(/"/g, "").replace(/(:|,)/g, "$& "));
+                console.log(TAB + "%c[iaps. (" + properties.length + ")]%c " + propertyName + (property.deferred ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: greenyellow", "color: honeydew", "color: turquoise", property.information, property.animation, property.priors, JSON.stringify(property.style).replace(/"/g, "").replace(/(:|,)/g, "$& "));
 
                 if      (property.deferred) { if (property.priors[0].name === propertyName) { property.deferred = false; property.information = property.priors[0].information } }
                 else if (null === property.information && deferred)                         { property.deferred = true;  property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "unset"} }
