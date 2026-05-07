@@ -1,34 +1,42 @@
-#include <cstdio>
-#include <new>
-#include <typeinfo>
+#include <cstddef>
 
 /* ... */
-struct as final {
-  template <typename type>
+union as {
+  template <typename T>
   struct reinterpretation final {
-    type &&object;
-
-    template <typename subtype>
-    /* [[nodiscard]] */ constexpr subtype operator ->*(subtype* const) const noexcept(noexcept((subtype) static_cast<type&&>(this -> object))) {
-      return (subtype) static_cast<type&&>(this -> object);
-    }
+    T &&object;
   };
 
-  constexpr explicit as() /* = default */ {}
+  /* ... */
+  template <typename T, typename U> // ->> The second `->*` derefences the result to a non-allocating placement `new`
+  [[nodiscard]] constexpr friend U operator ->*(struct as::template reinterpretation<T>&& reinterpretation, U*) noexcept(noexcept((U) static_cast<T&&>(reinterpretation.object))) {
+    return (U) static_cast<T&&>(reinterpretation.object);
+  }
 
-  template <typename type>
-  constexpr friend as::template reinterpretation<type> operator ->*(type&& object, struct as const) noexcept {
-    return as::template reinterpretation<type>{static_cast<type&&>(object)};
+  template <typename T, typename U> // ->> The second `->*` derefences the result to a user-specified template `as::operator T() noexcept` member function
+  [[nodiscard]] constexpr friend U operator ->*(struct as::template reinterpretation<T>&& reinterpretation, U (as::*)() /* noexcept */) noexcept(noexcept((U) static_cast<T&&>(reinterpretation.object))) {
+    return (U) static_cast<T&&>(reinterpretation.object);
+  }
+
+  template <typename T> // ->> The first `->*` produces a `struct as::reinterpretation<T>` result
+  constexpr friend struct as::template reinterpretation<T> operator ->*(T&& object, union as) noexcept {
+    return {static_cast<T&&>(object)};
+  }
+
+  template <typename T>
+  operator T() noexcept {
+    return reinterpret_cast<T&&>(reinterpret_cast<unsigned char&&>(*this));
   }
 };
 
-constexpr void* operator new(std::size_t const, struct as const) noexcept {
-  return NULL;
-}
+constexpr void* operator new  (std::size_t, union as*) noexcept { return NULL; }
+constexpr void* operator new[](std::size_t, union as*) noexcept;
 
-#define as ->* ::as() ->* ::new(::as{})
+#define as ->* ::as() ->* &::as::operator                      // ->> Supported from C++98; Compile-time since C++11
+// #define as ->* ::as() ->* ::new (static_cast<union as*>(NULL)) // ->> Supported from C++98; Compile-time since C++26; Accepts `T[]` with second-class support i.e. `new T[]` decays to `T*` instead of `T (*)[]`
+// #define as ->* ::as() ->* ^^                                   // ->> Supported from C++26; Dereference the `std::meta::info` and splice it (i.e. `[:…:]`) back to a usable `T`
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::printf("%s{%i}" "\r\n", typeid(5.5 as int).name(), 5.5 as int);
+  static_assert(-42.0f as int == -42, "bruh");
 }
