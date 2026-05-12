@@ -7,7 +7,7 @@
       html { color-scheme: dark; display: table }
       body { display: table-row-group; overflow: hidden }
       body, html, #container, .child { height: 100.0%; width: 100.0% }
-      #container { border-width: 20px 20px 20px 20px; color: darkblue; display: table-row; font-size: 16px }
+      #container { border-width: 20px 20px 20px 20px; color: gray; display: table-row; font-size: 16px }
       .child {
         animation     : animateA 10.0s linear 0.0s 1 running forwards, animateB 10.0s ease 0.0s infinite running forwards;
         background    : rebeccapurple;
@@ -26,7 +26,7 @@
         vertical-align: middle
       } .child:hover { border-color: red }
 
-      @keyframes animateA { 0.0% { background-color: #696969; padding-top: 0px } 50.0% { padding-top: 10px } 100.0% { background: #306030; padding-top: 0px } }
+      @keyframes animateA { 0.0% { background-color: #696969; padding-top: 0px } 50.0% { padding-top: 10px } 100.0% { background: #30303F; padding-top: 0px } }
       @keyframes animateB { 0.0% { background-size: 100.0% } 100.0% { background-size: 200.0% } }
     </style>
   </head>
@@ -97,8 +97,8 @@
           for (var index = document.styleSheets.length; index; ) {
             var sheet = document.styleSheets.item(--index);
 
-            try { void sheets.push({containers: [], layer: layers[0], rules: sheet.cssRules, scopes: []}) } catch (error) { // --> SecurityError
-            try { void sheets.push({containers: [], layer: layers[0], rules: sheet.rules,    scopes: []}) } catch (error) { /* --> SecurityError */ if (strict) return null } }
+            try { void sheets.push({containers: [], layer: layers[0], rules: sheet.cssRules, scopes: []}) } catch (error) {console.warn("OMG!",error); // --> SecurityError
+            try { void sheets.push({containers: [], layer: layers[0], rules: sheet.rules,    scopes: []}) } catch (error) {console.warn("OMG!",error); /* --> SecurityError */ if (strict) return null } }
           }
         }
 
@@ -140,8 +140,8 @@
 
             // --> CSSRule.IMPORT_RULE === CSSImportRule::type --> @import
             case 0x03: if (typeof rule.sheet === "object") {
-              try { void sheets.splice(count, 0, {containers: sheet.containers, layer: sheet.layer, rules: rule.sheet.cssRules, scopes: sheet.scopes}) } catch (error) { // --> SecurityError
-              try { void sheets.splice(count, 0, {containers: sheet.containers, layer: sheet.layer, rules: rule.sheet.rules,    scopes: sheet.scopes}) } catch (error) { /* --> SecurityError */ if (strict) return null } }
+              try { void sheets.splice(count, 0, {containers: sheet.containers, layer: sheet.layer, rules: rule.sheet.cssRules, scopes: sheet.scopes}) } catch (error) {console.warn("OMG!",error); // --> SecurityError
+              try { void sheets.splice(count, 0, {containers: sheet.containers, layer: sheet.layer, rules: rule.sheet.rules,    scopes: sheet.scopes}) } catch (error) {console.warn("OMG!",error); /* --> SecurityError */ if (strict) return null } }
             } break;
 
             // --> CSSRule.MEDIA_RULE === CSSMediaRule::type --> @media
@@ -157,7 +157,7 @@
             case 0x0C: if (typeof rule.cssRules === "object" && typeof CSS === "object" && typeof CSS.supports === "function") try {
               if (CSS.supports(typeof rule.conditionText === "string" ? rule.conditionText : "display: block"))
               void sheets.splice(count, 0, {containers: sheet.containers, layer: sheet.layer, rules: rule.cssRules, scopes: sheet.scopes})
-            } catch (error) { if (strict) return null } break;
+            } catch (error) {console.warn("OMG!",error); if (strict) return null } break;
 
             case 0x05: // --> CSSRule.FONT_FACE_RULE           === CSSFontFaceRule         ::type                                                              --> @font-face
             case 0x06: // --> CSSRule.PAGE_RULE                === CSSPageRule             ::type                                                              --> @page
@@ -269,17 +269,17 @@
           {name: "white-space",            composition: delimit("white-space-collapse        text-wrap-mode"                                                                                                                                                                                                .replace(/\s+/g, ' '), /[,\/\s\0]+/g)}
         ], MEASUREMENTS = {
           // --> Values represented from functions such as `calc(…)` unsupported for non-`function` measurements
-          '%'                 : new RegExp("^(\\-?@)(<%>)$"    .replace(/@/g, "[e.+\\-\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               .replace(UNIT_MATCH, UNIT_VALUE), ""),
-          "angle"             : new RegExp("^(\\-?@)(<angle>)$".replace(/@/g, "[e.+\\-\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
-          "color"             : new RegExp("^(currentColor)|(transparent)|(AccentColor)|(AccentColorText)|(ActiveText)|(ButtonBorder)|(ButtonFace)|(ButtonText)|(Canvas)|(CanvasText)|(Field)|(FieldText)|(GrayText)|(Highlight)|(HighlightText)|(LinkText)|(Mark)|(MarkText)|(SelectedItem)|(SelectedItemText)|(VisitedText)|#([A-F\\d]{3,4}|[A-F\\d]{6}|[A-F\\d]{8})$"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
-          "duration"          : new RegExp("^(@)(<duration>)$" .replace(/@/g, "[e.+\\-\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
-          "frequency"         : new RegExp("^(@)(<frequency>)$".replace(/@/g, "[e.+\\-\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
-          "function-color"    : new RegExp("^(color|color\\-mix|contrast\\-color|device\\-cmyk|hdr\\-color|hsl|hsla|hwb|ictcp|jzazbz|jzczhz|lab|lch|light\\-dark|oklab|oklch|rgb|rgba)\\(\\s*(.+)\\s*\\)$"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
-          "function-transform": new RegExp("^(matrix(3d)?\\(\\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*(,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n\s*,\s*\\-?@n)?\s*\)|perspective\\(\\s*@n\\s*\\)|(rotate[XYZ]?\\(|rotate3d\\(\\s*@n,@n,@n,)\\s*(@0|\\-?@n(<angle>))\\s*\\)|scale\(\\s*\\-?@n\\s*(,\\s*\\-?@n)?\\s*\\)|(scale[XYZ]\\(|scale3d\\(\\s*\\-?@n\\s*,\\s*\\-?@n\\s*,)\s*\\-?@n\\s*\\)|(skew[XY]\\(|skew\\(\\s*(@0|\\-?@n(<angle>)),)\\s*([+\\-]@0|\\-?@n(<angle>))\\s*\\)|((translate[XYZ]\\(|translate\\(\\s*\\-?@n(<length>|%)\\s*,)\\s*\\-?@n(<length>|%)\\s*|translate3d\\(\\s*\\-?@n(<length>|%)\\s*,\\s*\\-?@n(<length>|%)\\s*,\\s*\\-?@n(<length>)\\s*)\\))$".replace(/@0/g, "[+\\-]?0?(\\.0+(e[+\\-]?\\d+)?)?").replace(/@n/g, "[e.+\\-\\d]+").replace(UNIT_MATCH, UNIT_VALUE), 'i'),
-          "function-value"    : new RegExp("^(atan2|calc\\-size|abs|acos|asin|atan|calc|clamp|cos|exp|hypot|log|max|min|mod|pow|progress|rem|round|sign|sin|sqrt|tan)\\(\\s*(.+)\\s*\\)$"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
-          "length"            : new RegExp("^(\\-?@)(<length>|%)$".replace(/@/g, "[e.+\\-\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
-          "resolution"        : new RegExp("^(@)(<resolution>)$"  .replace(/@/g, "[e.+\\-\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            .replace(UNIT_MATCH, UNIT_VALUE), 'i')
-        }, CANON_VALUE = function(match, $, $, $, $4) { return $4 ? $4 : match }, CANON_MATCH = /^([+\-]?0?(\.0+(e[+\-]?\d+)?)?|([e.+\-\d]+)(deg|dppx|Hz|px|s))$/;
+          '%'                 : new RegExp("^(-?@)(<%>)$"    .replace(/@/g, "[-+.e\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 .replace(UNIT_MATCH, UNIT_VALUE), ""),
+          "angle"             : new RegExp("^(-?@)(<angle>)$".replace(/@/g, "[-+.e\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
+          "color"             : new RegExp("^(currentColor)|(transparent)|(AccentColor)|(AccentColorText)|(ActiveText)|(ButtonBorder)|(ButtonFace)|(ButtonText)|(Canvas)|(CanvasText)|(Field)|(FieldText)|(GrayText)|(Highlight)|(HighlightText)|(LinkText)|(Mark)|(MarkText)|(SelectedItem)|(SelectedItemText)|(VisitedText)|#([A-F\\d]{3,4}|[A-F\\d]{6}|[A-F\\d]{8})$"                                                                                                                                                                                                                                                                                                                                                                                                                                  .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
+          "duration"          : new RegExp("^(@)(<duration>)$" .replace(/@/g, "[-+.e\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
+          "frequency"         : new RegExp("^(@)(<frequency>)$".replace(/@/g, "[-+.e\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
+          "function-color"    : new RegExp("^(color|color-mix|contrast-color|device-cmyk|hdr-color|hsl|hsla|hwb|ictcp|jzazbz|jzczhz|lab|lch|light-dark|oklab|oklch|rgb|rgba)\\(\\s*(.+)\\s*\\)$"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
+          "function-transform": new RegExp("^(matrix(3d)?\\(\\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*(,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n\s*,\s*-?@n)?\s*\)|perspective\\(\\s*@n\\s*\\)|(rotate[XYZ]?\\(|rotate3d\\(\\s*@n,@n,@n,)\\s*(@0|-?@n(<angle>))\\s*\\)|scale\(\\s*-?@n\\s*(,\\s*-?@n)?\\s*\\)|(scale[XYZ]\\(|scale3d\\(\\s*-?@n\\s*,\\s*-?@n\\s*,)\s*-?@n\\s*\\)|(skew[XY]\\(|skew\\(\\s*(@0|-?@n(<angle>)),)\\s*([-+]@0|-?@n(<angle>))\\s*\\)|((translate[XYZ]\\(|translate\\(\\s*-?@n(<length>|%)\\s*,)\\s*-?@n(<length>|%)\\s*|translate3d\\(\\s*-?@n(<length>|%)\\s*,\\s*-?@n(<length>|%)\\s*,\\s*-?@n(<length>)\\s*)\\))$".replace(/@0/g, "[-+]?0?(\\.0+(e[-+]?\\d+)?)?").replace(/@n/g, "[-+.e\\d]+").replace(UNIT_MATCH, UNIT_VALUE), 'i'),
+          "function-value"    : new RegExp("^(atan2|calc-size|abs|acos|asin|atan|calc|clamp|cos|exp|hypot|log|max|min|mod|pow|progress|rem|round|sign|sin|sqrt|tan)\\(\\s*(.+)\\s*\\)$"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
+          "length"            : new RegExp("^(-?@)(<length>|%)$".replace(/@/g, "[-+.e\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              .replace(UNIT_MATCH, UNIT_VALUE), 'i'),
+          "resolution"        : new RegExp("^(@)(<resolution>)$"  .replace(/@/g, "[-+.e\\d]+")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            .replace(UNIT_MATCH, UNIT_VALUE), 'i')
+        }, CANON_VALUE = function(match, $, $, $, $4) { return $4 ? $4 : match }, CANON_MATCH = /^([-+]?0?(\.0+(e[-+]?\d+)?)?|([-+.e\d]+)(deg|dppx|Hz|px|s))$/;
 
         /* ... */
         function alt(propertyName) {
@@ -390,7 +390,7 @@
                 case "scroll-padding-block": case "scroll-padding-block-end": case "scroll-padding-block-start": case "shape-margin":
                 case "text-indent": {
                   try { property.axis = block(getCSSPropertyValue(property.element, "writing-mode", styleRules, groupingPredicates, false, $)) }
-                  catch (error) { /* --> InternalError | RangeError */ }
+                  catch (error) {console.warn("OMG!",error); /* --> InternalError | RangeError */ }
                 } break;
 
                 case "border-image-width": case "border-width":
@@ -408,7 +408,7 @@
                 case "scroll-padding-inline": case "scroll-padding-inline-end": case "scroll-padding-inline-start":
                 case "tab-size":              case "word-spacing": {
                   try { property.axis = inline(getCSSPropertyValue(property.element, "writing-mode", styleRules, groupingPredicates, false, $)) }
-                  catch (error) { /* --> InternalError | RangeError */ }
+                  catch (error) {console.warn("OMG!",error); /* --> InternalError | RangeError */ }
                 } break;
 
                 case "contain-intrinsic-size":
@@ -421,7 +421,7 @@
                     case "column": case "column-reverse": void axis.names.push("block-size"); break;
                     case "row":    case "row-reverse":    void axis.names.push("inline-size")
                   }
-                } catch (error) { /* --> InternalError | RangeError */ } break;
+                } catch (error) {console.warn("OMG!",error); /* --> InternalError | RangeError */ } break;
 
                 case "grid": case "grid-template": {
                   var gridTemplate = GRID_TEMPLATE_ROWS;
@@ -743,12 +743,12 @@
                       font.style   = getCSSPropertyValue(fontElement, "font-style",   styleRules, groupingPredicates, false, $); if (null === font.style)   break;
                       font.variant = getCSSPropertyValue(fontElement, "font-variant", styleRules, groupingPredicates, false, $); if (null === font.variant) break;
                       font.weight  = getCSSPropertyValue(fontElement, "font-weight",  styleRules, groupingPredicates, false, $); if (null === font.weight)  break
-                    } catch (error) { /* --> InvalidError | RangeError */ }
+                    } catch (error) {console.warn("OMG!",error); /* --> InvalidError | RangeError */ }
 
                     try { if (null === $.probeTextMetricsContext) {
                       $.probeElement            = probe();
                       $.probeTextMetricsContext = typeof $.probeElement.getContext === "function" ? $.probeElement.getContext("2d", {"alpha": false, "colorSpace": "srgb", "colorType": "unorm8", "desynchronized": true, "willReadFrequently": false}) : null
-                    } } catch (error) { /* --> DOMException | InvalidStateError */ }
+                    } } catch (error) {console.warn("OMG!",error); /* --> DOMException | InvalidStateError */ }
 
                     if (null !== $.probeTextMetricsContext && typeof $.probeTextMetricsContext.font === "string" && typeof $.probeTextMetricsContext.measureText === "function") {
                       $.probeTextMetricsContext.font = font.style + ' ' + font.variant + ' ' + font.weight + ' ' + font.stretch + ' ' + font.size + ' ' + font.family;
@@ -827,7 +827,7 @@
                       case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * (containerSizes.width  / 100.00)) + "px"; break;
                       case VERTICAL_AXIS:   measurement.value = (measurements["length"][1] * (containerSizes.height / 100.00)) + "px"
                     }
-                  } catch (error) { /* --> InternalError | RangeError */ } break;
+                  } catch (error) {console.warn("OMG!",error); /* --> InternalError | RangeError */ } break;
 
                   case "cm":                                             measurement.value = (measurements["length"][1] * (96.00 / 2.54))                               + "px"; break;
                   case "dvh":   case "lvh":   case "svh":   case "vh":   measurement.value = (measurements["length"][1] * (innerWidth                        / 100.00)) + "px"; break; // ->> DOM/ window-resize snooping required to support dynamic (`d…`), large (`l…`), and small (`s…`) variants
@@ -841,13 +841,13 @@
                   case "pt":                                             measurement.value = (measurements["length"][1] * (96.00 / 72.00))                              + "px"; break;
                   case "px":                                             measurement.value = (measurements["length"][1])                                                + "px"; break;
 
-                  case "dvb": case "lvb": case "svb": case "vb": try { switch (block (getCSSPropertyValue(property.element, "writing-mode", styleRules, groupingPredicates, false, $))) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * (innerWidth / 100.00)) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * (innerHeight / 100.00)) + "px" } } catch (error) { /* --> InternalError | RangeError */ } break;
-                  case "dvi": case "lvi": case "svi": case "vi": try { switch (inline(getCSSPropertyValue(property.element, "writing-mode", styleRules, groupingPredicates, false, $))) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * (innerWidth / 100.00)) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * (innerHeight / 100.00)) + "px" } } catch (error) { /* --> InternalError | RangeError */ } break;
+                  case "dvb": case "lvb": case "svb": case "vb": try { switch (block (getCSSPropertyValue(property.element, "writing-mode", styleRules, groupingPredicates, false, $))) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * (innerWidth / 100.00)) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * (innerHeight / 100.00)) + "px" } } catch (error) {console.warn("OMG!",error); /* --> InternalError | RangeError */ } break;
+                  case "dvi": case "lvi": case "svi": case "vi": try { switch (inline(getCSSPropertyValue(property.element, "writing-mode", styleRules, groupingPredicates, false, $))) { case HORIZONTAL_AXIS: measurement.value = (measurements["length"][1] * (innerWidth / 100.00)) + "px"; break; case VERTICAL_AXIS: measurement.value = (measurements["length"][1] * (innerHeight / 100.00)) + "px" } } catch (error) {console.warn("OMG!",error); /* --> InternalError | RangeError */ } break;
 
                   case "em": case "rem":
                   case "lh": case "rlh": {
                     if (property.priors.length === 1) {
-                      if (CANON_MATCH.test(property.priors[0].canonValue) || /^[e.+\-\d]+$/.test(property.priors[0].canonValue))
+                      if (CANON_MATCH.test(property.priors[0].canonValue) || /^[-+.e\d]+$/.test(property.priors[0].canonValue))
                       measurement.value = (measurements["length"][1] * property.priors[0].canonValue.replace(CANON_MATCH, CANON_VALUE)) + "px"
                     }
 
@@ -920,7 +920,7 @@
                         if (null === fontElement) measurement.value = (measurements["length"][1] * fontPropertyValue.replace(CANON_MATCH, CANON_VALUE)) + "px";
                         else                      canonicalized     = canon(fontElement, fontPropertyName, fontPropertyValue, property.axis, property, properties)
                       }
-                    } catch (error) { /* --> InternalError | RangeError */ }
+                    } catch (error) {console.warn("OMG!",error); /* --> InternalError | RangeError */ }
                   } break;
 
                   case '%': switch (property.name) {
@@ -1046,16 +1046,19 @@
               if (null === value && !NO_PROPERTY.test(propertyName)      && typeof style[propertyName]      === "string") value = style[propertyName];
               if (null === value && !NO_PROPERTY.test(alt(propertyName)) && typeof style[alt(propertyName)] === "string") value = style[alt(propertyName)]
             }
-          } catch (error) { /* --> TypeError */ }
+          } catch (error) {console.warn("OMG!",error); /* --> TypeError */ }
 
-          return value
+          return value !== "" ? value : null
         }
 
         function cssmap(styleMap, propertyName) {
-          try { return styleMap.get(propertyName) + "" }
-          catch (error) { /* --> TypeError */ }
+          var value = null;
 
-          return null
+          // ...
+          try { value = styleMap.get(propertyName) }
+          catch (error) {console.warn("OMG!",error); /* --> TypeError */ }
+
+          return null !== value ? value + "" : null
         }
 
         function delimit(string, delimiter) /* ->> Ignore parenthesized and quoted content when `string.split(…)`-ing */ {
@@ -1129,7 +1132,7 @@
             else if (typeof element.msMatchesSelector     === "function") return element.msMatchesSelector    (selector);
             else if (typeof element.oMatchesSelector      === "function") return element.oMatchesSelector     (selector);
             else if (typeof element.webkitMatchesSelector === "function") return element.webkitMatchesSelector(selector)
-          } catch (error) { /* --> DOMException | SyntaxError */ }
+          } catch (error) {console.warn("OMG!",error); /* --> DOMException | SyntaxError */ }
 
           if (typeof document.querySelectorAll === "function") {
             var list = document.querySelectorAll(selector);
@@ -1175,7 +1178,7 @@
             for (var index = 0; index !== selectorList.length; ++index) {
               var selectorSpecificity = null;
 
-              try { selectorSpecificity = rank(selectorList[index]) } catch (error) { /* --> InternalError | RangeError */ }
+              try { selectorSpecificity = rank(selectorList[index]) } catch (error) {console.warn("OMG!",error); /* --> InternalError | RangeError */ }
               specificity = null !== selectorSpecificity && compare(selectorSpecificity, specificity) > 0 ? selectorSpecificity : specificity
             }
 
@@ -1265,29 +1268,25 @@
           probeTextMetricsContext: $.probeTextMetricsContext || null
         } : {deferred: false, probeElement: null, probeTextMetricsContext: null};
 
-        if      (typeof getComputedStyle          === "function") try { return css(getComputedStyle(element, null), propertyName) } catch (error) { /* --> SecurityError | TypeError */ }
-        else if (typeof element.computedStyleMap  === "function") return cssmap(element.computedStyleMap(), propertyName); // ->> Chromium-specific
-        else if (typeof element.currentStyle      === "object") {
-          var value = css(element.currentStyle, propertyName); // ->> Internet Explorer-specific and non-canonicalized
+        if (false) {}
+        // if      (typeof getComputedStyle          === "function") try { return css(getComputedStyle(element, null), propertyName) } catch (error) {console.warn("OMG!",error); /* --> SecurityError | TypeError */ }
+        // else if (typeof element.computedStyleMap  === "function") return cssmap(element.computedStyleMap(), propertyName); // ->> Chromium-specific
+        // else if (typeof element.currentStyle      === "object") {
+        //   var value = css(element.currentStyle, propertyName); // ->> Internet Explorer-specific and non-canonicalized
 
-          // ...
-          if (value === "") {
-            for (var shorthandIndex = SHORTHANDS.length; shorthandIndex --> 0; )
-            if (SHORTHANDS[shorthandIndex].name === propertyName) {
-              for (var composition = SHORTHANDS[shorthandIndex].composition, shorthandIndex = composition.length; shorthandIndex--; )
-              value = css(element.currentStyle, composition[shorthandIndex].value) + composition[shorthandIndex].delimiter + value
-            }
-          }
+        //   // ...
+        //   if (value === "") {
+        //     for (var shorthandIndex = SHORTHANDS.length; shorthandIndex --> 0; )
+        //     if (SHORTHANDS[shorthandIndex].name === propertyName) {
+        //       for (var composition = SHORTHANDS[shorthandIndex].composition, shorthandIndex = composition.length; shorthandIndex--; )
+        //       value = css(element.currentStyle, composition[shorthandIndex].value) + composition[shorthandIndex].delimiter + value
+        //     }
+        //   }
 
-          return value
-        }
-
-        // if (0x00 === cascaded && typeof element.attributeStyleMap === "object")   { styleMap = element.attributeStyleMap;       cascaded = true           ? UNCASCADED | 0x04 : 0x00 } // ->> Chromium-specific
-        // if (0x00 === cascaded && typeof element.style             === "object")   { style    = element.style;                   cascaded = true           ? UNCASCADED | 0x02 : 0x00 } //
-        // if (0x00 === cascaded && typeof getMatchedCSSRules        === "function") { rules    = getMatchedCSSRules(element, ""); cascaded = true           ? CASCADED   | 0x01 : 0x00 } // ->> WebKit-specific and non-canonicalized; Gecko-polyfill here: `mozGetMatchedCSSRules(…)` @ `https://gist.github.com/ydaniv/3033012`
+        //   return value
+        // }
 
         else {
-          var cascaded           = null;
           var document           = element.ownerDocument || (function() { return this || globalThis })().document;
           var groupingPredicates = null === groupingPredicates ? getCSSGroupingPredicates()         : groupingPredicates;
           var styleRules         = null === styleRules         ? getCSSStyleRules(document, strict) : styleRules;
@@ -1295,7 +1294,7 @@
 
           // ...
           var REMOVE_THIS_BREAK = 30;
-          console.log("%c[...]", "padding-bottom: 5px; padding-top: 5px");
+          console.log("%c[{{NEW INVOCATION HERE}}]", "font-size: 200%; padding-bottom: 5px; padding-top: 5px", [...properties]);
 
           cascade:
           while (properties.length && null !== styleRules) {
@@ -1306,6 +1305,7 @@
             var property      = properties[properties.length - 1];
             var parentElement = null !== property.element.parentNode && property.element.parentNode.nodeType === 0x1 ? property.element.parentNode : null;
             var animations    = typeof property.element.getAnimations === "function" ? property.element.getAnimations({subtree: false}) : typeof document.getAnimations === "function" ? document.getAnimations() : []; // --> Animation[]
+            var cascaded      = null;
 
             // ...
             while (property.names.length) {
@@ -1437,7 +1437,7 @@
                                 void conditions.push(containerQuery.value.slice(indexes.end + (containerQuery.value[indexes.end] === '('), containerQuery.value.length));
 
                                 for (var subindex = conditions.length; subindex--; ) // ->> Keep parentheses of stripped scroll-state descriptors and (computed) style queries
-                                if (/\s*(scroll\-state|style)\s*$/.test(conditions[subindex])) {
+                                if (/\s*(scroll-state|style)\s*$/.test(conditions[subindex])) {
                                   conditions[subindex + 1] = conditions[subindex + 0] + '(' + conditions[subindex + 1] + ')';
                                   void conditions.splice(subindex, 1)
                                 }
@@ -1485,7 +1485,7 @@
                               }
 
                               if (!precontained) {
-                                if (functions["scroll-state"] = containerQuery.value.match(/^scroll\-state\s*\(\s*([\-\w]+)\s*:\s*([\-\w]+)\s*\)$/))
+                                if (functions["scroll-state"] = containerQuery.value.match(/^scroll-state\s*\(\s*([-\w]+)\s*:\s*([-\w]+)\s*\)$/))
                                 switch (functions["scroll-state"][1]) {
                                   case "scrollable": switch (functions["scroll-state"][2]) {
                                     case "bottom":           containerApplicable.value = containerElement.clientHeight < containerElement.scrollHeight && containerElement.scrollHeight <= containerElement.clientHeight + containerElement.scrollTop; break;
@@ -1537,12 +1537,12 @@
                                   }
                                 }
 
-                                else if (functions["style"] = containerQuery.value.match(/^style\s*\(\s*([\-\w]+)\s*:\s*(.+)\s*\)$/)) /* --> getCSSPropertyValue(containerElement, functions["style"][1]) === functions["style"][2] */ {
+                                else if (functions["style"] = containerQuery.value.match(/^style\s*\(\s*([-\w]+)\s*:\s*(.+)\s*\)$/)) /* --> getCSSPropertyValue(containerElement, functions["style"][1]) === functions["style"][2] */ {
                                   if (property.priors.length === 1 && property.priors[0].name === functions["style"][1]) containerApplicable.value = canonicalize(containerElement, functions["style"][1], functions["style"][2], NO_AXIS, styleRules, groupingPredicates) === canonicalize(containerElement, functions["style"][1], (property.priors.pop().information || {value: ""}).value, NO_AXIS, styleRules, groupingPredicates);
                                   else                                                                                   cascaded                  = cascade(containerElement, functions["style"][1], property, properties)
                                 }
 
-                                else if (functions['@'] = containerQuery.value.match(/^(max\-|min\-)?(aspect\-ratio|block\-size|height|inline\-size|width)\s*([:<=>]+)\s*(.+)$/)) {
+                                else if (functions['@'] = containerQuery.value.match(/^(max-|min-)?(aspect-ratio|block-size|height|inline-size|width)\s*([:<=>]+)\s*(.+)$/)) {
                                   var containerAxis = NO_AXIS;
 
                                   // ...
@@ -1564,8 +1564,8 @@
                                       containerThreshold = +aspects[0] / (+aspects[1] || 1.00);
                                       containerSize      = containerElementBounds.width / containerElementBounds.height;
 
-                                      if      (/^max\-/i.test(functions['@'][1] || "")) containerApplicable.value = containerSize <= containerThreshold;
-                                      else if (/^min\-/i.test(functions['@'][1] || "")) containerApplicable.value = containerSize >= containerThreshold;
+                                      if      (/^max-/i.test(functions['@'][1] || "")) containerApplicable.value = containerSize <= containerThreshold;
+                                      else if (/^min-/i.test(functions['@'][1] || "")) containerApplicable.value = containerSize >= containerThreshold;
                                       else                                              containerApplicable.value = Math.abs(containerSize - containerThreshold) < 1.00e-3
                                     }
 
@@ -1579,8 +1579,8 @@
                                       if (CANON_MATCH.test(containerThreshold)) {
                                         containerThreshold = containerThreshold.replace(CANON_MATCH, CANON_VALUE);
 
-                                        if      (/^max\-/i.test(functions['@'][1] || "")) containerApplicable.value = containerSize <= containerThreshold;
-                                        else if (/^min\-/i.test(functions['@'][1] || "")) containerApplicable.value = containerSize >= containerThreshold;
+                                        if      (/^max-/i.test(functions['@'][1] || "")) containerApplicable.value = containerSize <= containerThreshold;
+                                        else if (/^min-/i.test(functions['@'][1] || "")) containerApplicable.value = containerSize >= containerThreshold;
                                         else switch (functions['@'][3] || ':') {
                                           case '<' :                    containerApplicable.value = containerSize <   containerThreshold; break;
                                           case '=' :                    containerApplicable.value = containerSize === containerThreshold; break;
@@ -1684,7 +1684,7 @@
                       }
 
                       information.specificity = property.rule.specificity;
-                      applicable              = information.matches && null !== information.specificity && (information.value !== "" || propertyName === "anchor-name" || propertyName === "animation" || propertyName === "animation-name" || propertyName === "content" || propertyName === "font-family" || propertyName === "hyphenate-character" || propertyName === "quotes" || propertyName === "timeline-scope" || propertyName === "view-timeline-name" || propertyName === "view-transition-name");
+                      applicable              = information.matches && null !== information.specificity && (null !== information.value || propertyName === "anchor-name" || propertyName === "animation" || propertyName === "animation-name" || propertyName === "content" || propertyName === "font-family" || propertyName === "hyphenate-character" || propertyName === "quotes" || propertyName === "timeline-scope" || propertyName === "view-timeline-name" || propertyName === "view-transition-name");
 
                       for (var index = applicable ? property.unlayered.length : 0; index--; )
                       if (information.layer === property.unlayered[index]) {
@@ -1695,6 +1695,7 @@
 
                     // ... --> .information = {…}
                     if (applicable) {
+                      // ... --> precedes = false|true
                       if (null === property.information || (information.priority === "important" && property.information.priority !== "important"))
                         precedes = true;
 
@@ -1720,20 +1721,6 @@
                       if (precedes)
                       property.information = information
                     }
-
-                    /* TODO */
-                    // ⬟ User-agent       normal
-                    // ⬟ User             normal
-                    // ⬟ Author           normal
-                    // ⬟ Attribute inline normal
-                    // ⬟ Animations e.g. `Animation`, `CSSAnimation`, …
-                    // ⬟ Author           `!important`
-                    // ⬟ Attribute inline `!important`
-                    // ⬟ User             `!important`
-                    // ⬟ User-agent       `!important`
-                    // ⬟ Transitions e.g. `CSSTransition`, …
-                    // if (0x00 === cascaded && typeof element.attributeStyleMap === "object")   { styleMap = element.attributeStyleMap;       cascaded = true           ? UNCASCADED | 0x04 : 0x00 } // ->> Chromium-specific
-                    // if (0x00 === cascaded && typeof element.style             === "object")   { style    = element.style;                   cascaded = true           ? UNCASCADED | 0x02 : 0x00 } //
                   }
 
                   if (cascaded)
@@ -1769,14 +1756,13 @@
                             for (var subindex = SHORTHANDS[shorthandIndex].composition.length; subindex--; )
                             if (SHORTHANDS[shorthandIndex].composition[subindex].value === propertyName) {
                               var style = probe().style;
+                              var value = null;
 
                               // ...
                               if      (typeof information.keyframe[SHORTHANDS[shorthandIndex].name]      === "string") style.cssText = SHORTHANDS[shorthandIndex].name + ": " + information.keyframe[SHORTHANDS[shorthandIndex].name];
                               else if (typeof information.keyframe[alt(SHORTHANDS[shorthandIndex].name)] === "string") style.cssText = SHORTHANDS[shorthandIndex].name + ": " + information.keyframe[alt(SHORTHANDS[shorthandIndex].name)];
 
-                              if      (typeof style[propertyName]      === "string") information.properties = [{name: propertyName, value: style[propertyName]}];
-                              else if (typeof style[alt(propertyName)] === "string") information.properties = [{name: propertyName, value: style[alt(propertyName)]}];
-
+                              information.properties = (value = css(style, propertyName)) ? [{name: propertyName, value: value}] : [];
                               break
                             }
                           }
@@ -1849,9 +1835,7 @@
                       for (var index = property.animation.properties.length; index--; )
                       for (var subindex = property.names.length; ; ) {
                         if (--subindex === -1) {
-                          cascaded                                      = cascade(property.element, property.animation.properties[index].name, property, properties);
-                          // property.animation.properties[index].animated = false;
-
+                          cascaded = cascade(property.element, property.animation.properties[index].name, property, properties);
                           break
                         }
 
@@ -1870,10 +1854,8 @@
                     for (var index = property.animation.properties.length; index--; ) {
                       for (var subindex = property.priors.length; subindex--; )
                       if (
-                        null !== property.priors[subindex].information &&
-                        CSS_TRANSITION_DESCRIPTOR !== property.animation.properties[index].information.descriptor &&
-                        property.animation.properties[index].name === property.priors[subindex].name &&
-                        (!property.animation.properties[index].animated || property.priors[subindex].information.priority === "important")
+                        null !== property.priors[subindex].information && property.animation.properties[index].name === property.priors[subindex].name &&
+                        CSS_TRANSITION_DESCRIPTOR !== property.animation.properties[index].information.descriptor && (!property.animation.properties[index].animated || property.priors[subindex].information.priority === "important")
                       ) property.animation.properties[index].value = property.priors[subindex].information.value;
 
                       if (!property.animation.properties[index].animated && null === property.animation.properties[index].value)
@@ -1886,9 +1868,9 @@
 
                       // ...
                       if (null === animationProperty.value) {
-                        var detail            = {information: {descriptor: NO_DESCRIPTOR, keyframe: null, order: 0, progress: 0.00, properties: null}, name: null, value: null};
-                        var next              = null;
-                        var previous          = null;
+                        var detail   = {information: {descriptor: NO_DESCRIPTOR, keyframe: null, order: 0, progress: 0.00, properties: null}, name: null, value: null};
+                        var next     = null;
+                        var previous = null;
 
                         // ... --> next = previous = …
                         for (var index = property.animation.next    .length; index--; ) if (animationProperty.name === property.animation.next    [index].name) { next     = property.animation.next    [index]; break }
@@ -2191,6 +2173,99 @@
                       property.information.value = property.animation.value
                     }
                   }
+
+                  // ... ->> Choose inline styling
+                  if (null === property.information) {
+                    var value = null;
+
+                    // ...
+                    if (null === value && typeof property.element.attributeStyleMap === "object") value = cssmap(property.element.attributeStyleMap, propertyName); // ->> Chromium-specific
+                    if (null === value)                                                           value = css   (property.element.style,             propertyName);
+
+                    property.information = null !== value ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value} : null
+                  }
+
+                  // ... ->> Choose standards-default styling
+                  if (null === property.information) {
+                    var value = null;
+
+                    // ... --- CITE (Lapys) -> https://html.spec.whatwg.org/multipage/rendering.html --- TODO (Lapys) -> Ignores `<body>`’s `alink`, `link`, and `vlink` attributes; Ignores `dialog::backdrop`, `dialog:modal`, `dialog:popover-open` presentation hints
+                    if      (/^background-color$/                              .test(propertyName) && /^(BODY|TABLE|T(BODY|FOOT|HEAD|[DHR]))$/         .test(property.element.tagName) && (value = (property.element.getAttribute("bgcolor")      || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^#[0-F]{6}$/.test(value)                          ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^background-image$/                              .test(propertyName) && /^(BODY)$/                                       .test(property.element.tagName) && (value = (property.element.getAttribute("background")   || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = true                                               ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "url(\"" + value + "\")"}                                                    : null;
+                    else if (/^border(-(block|bottom|inline|left|right|top))?$/.test(propertyName) && /^(TABLE|T[DH])$/                                .test(property.element.tagName) && (value = (property.element.getAttribute("border")       || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^[-+.e\d]+$/.test(value)                          ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value + "px " + (property.element.tagName === "TABLE" ? "outset" : "inset")} : null;
+                    else if (/^border-collapse$/                               .test(propertyName) && /^(T[DH])$/                                      .test(property.element.tagName) && (value = (property.element.getAttribute("cellspacing")  || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = true                                               ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "collapse"}                                                                  : null;
+                    else if (/^border-collapse$/                               .test(propertyName) && /^(TABLE|T[DH])$/                                .test(property.element.tagName) && (value = (property.element.getAttribute("border")       || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = true                                               ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "collapse"}                                                                  : null;
+                    else if (/^border-spacing$/                                .test(propertyName) && /^(T[DH])$/                                      .test(property.element.tagName) && (value = (property.element.getAttribute("cellspacing")  || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^[-+.e\d]+$/.test(value)                          ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value + "px"}                                                                : null;
+                    else if (/^border.*-style$/                                .test(propertyName) && /^(HR)$/                                         .test(property.element.tagName) && (value = (property.element.getAttribute("color")        || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = true                                               ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "solid"}                                                                     : null;
+                    else if (/^border.*-style$/                                .test(propertyName) && /^(HR)$/                                         .test(property.element.tagName) && (value = (property.element.getAttribute("noshade")      || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = true                                               ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "solid"}                                                                     : null;
+                    else if (/^border.*-style$/                                .test(propertyName) && /^(TABLE|T[DH])$/                                .test(property.element.tagName) && (value = (property.element.getAttribute("border")       || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = true                                               ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: property.element.tagName === "TABLE" ? "outset" : "inset"}                   : null;
+                    else if (/^border.*-width$/                                .test(propertyName) && /^(TABLE|T[DH])$/                                .test(property.element.tagName) && (value = (property.element.getAttribute("border")       || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^[-+.e\d]+$/.test(value)                          ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value + "px"}                                                                : null;
+                    else if (/^color$/                                         .test(propertyName) && /^(BODY)$/                                       .test(property.element.tagName) && (value = (property.element.getAttribute("text")         || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^#[0-F]{6}$/.test(value)                          ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^color$/                                         .test(propertyName) && /^(FONT)$/                                       .test(property.element.tagName) && (value = (property.element.getAttribute("color")        || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^#[0-F]{6}$/.test(value)                          ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^color$/                                         .test(propertyName) && /^(HR)$/                                         .test(property.element.tagName) && (value = (property.element.getAttribute("color")        || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = true                                               ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^float$/                                         .test(propertyName) && /^(TABLE)$/                                      .test(property.element.tagName) && (value = (property.element.getAttribute("align")        || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^(left|right)$/.test(value)                       ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^font-family$/                                   .test(propertyName) && /^(FONT)$/                                       .test(property.element.tagName) && (value = (property.element.getAttribute("face")         || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = true                                               ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^margin-(bottom|top)$/                           .test(propertyName) && /^(BODY)$/                                       .test(property.element.tagName) && (value = (property.element.getAttribute("marginheight") || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^[-+.e\d]+$/                         .test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^margin-(bottom|top)$/                           .test(propertyName) && /^(BODY)$/                                       .test(property.element.tagName) && (value = (property.element.getAttribute("topmargin")    || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^[-+.e\d]+$/                         .test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^margin-(left|right)$/                           .test(propertyName) && /^(BODY)$/                                       .test(property.element.tagName) && (value = (property.element.getAttribute("leftmargin")   || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^[-+.e\d]+$/                         .test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^margin-(left|right)$/                           .test(propertyName) && /^(BODY)$/                                       .test(property.element.tagName) && (value = (property.element.getAttribute("marginwidth")  || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^[-+.e\d]+$/                         .test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value}                                                                       : null;
+                    else if (/^margin-inline$/                                 .test(propertyName) && /^(TABLE)$/                                      .test(property.element.tagName) && (value = (property.element.getAttribute("align")        || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^(center)$/                          .test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "auto"}                                                                      : null;
+                    else if (/^margin-left$/                                   .test(propertyName) && /^(HR)$/                                         .test(property.element.tagName) && (value = (property.element.getAttribute("align")        || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^(center|left|right)$/               .test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value === "left"  ? '0' : "auto"}                                            : null;
+                    else if (/^margin-right$/                                  .test(propertyName) && /^(HR)$/                                         .test(property.element.tagName) && (value = (property.element.getAttribute("align")        || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^(center|left|right)$/               .test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value === "right" ? '0' : "auto"}                                            : null;
+                    else if (/^padding-?/                                      .test(propertyName) && /^(T[DH])$/                                      .test(property.element.tagName) && (value = (property.element.getAttribute("cellpadding")  || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^[-+.e\d]+$/                         .test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value + "px"}                                                                : null;
+                    else if (/^text-align$/                                    .test(propertyName) && /^(CENTER|DIV|H[1-6]|P|T(BODY|FOOT|HEAD|[DHR]))$/.test(property.element.tagName) && (value = (property.element.getAttribute("align")        || "")/* --> .trim() */.replace(/^\s+|\s+$/g, ""))) property.information = /^(center|justify|left|middle|right)$/.test(value) ? {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: value.replace("middle", "center")}                                           : null;
+
+                    else if (/^(ADDRESS)$/                                                                                                                               .test(property.element.tagName) && /^font-style$/                 .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "italic"};
+                    else if (/^(ADDRESS|BLOCKQUOTE|BODY||CENTER|DIALOG|DIV|FIGURE|FIGCAPTION|FOOTER|FORM|HEADER|HR|HTML|LEGEND|LISTING|MAIN|P|PLAINTEXT|PRE|SEARCH|XMP)$/.test(property.element.tagName) && /^display$/                    .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "block"};
+                    else if (/^(AREA|BASE|BASEFONT|DATALIST|HEAD|LINK|META|NOEMBED|NOFRAMES|PARAM|RP|SCRIPT|STYLE|TEMPLATE|TITLE)$/                                      .test(property.element.tagName) && /^display$/                    .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "none"}; // TODO (Lapys) -> Ignores `dialog:not([open])`
+                    else if (/^(BLOCKQUOTE|FIGURE)$/                                                                                                                     .test(property.element.tagName) && /^margin-inline-?/             .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "40px"};
+                    else if (/^(BLOCKQUOTE|FIGURE|LISTING|P|PLAINTEXT|PRE|XMP)$/                                                                                         .test(property.element.tagName) && /^margin-block-?/              .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "1em"};
+                    else if (/^(CENTER)$/                                                                                                                                .test(property.element.tagName) && /^text-align$/                 .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "center"};
+                    else if (/^(DIALOG)$/                                                                                                                                .test(property.element.tagName) && /^(height|width)$/             .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "fit-content"};
+                    else if (/^(DIALOG)$/                                                                                                                                .test(property.element.tagName) && /^background-color$/           .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "Canvas"};
+                    else if (/^(DIALOG)$/                                                                                                                                .test(property.element.tagName) && /^border$/                     .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "solid"};
+                    else if (/^(DIALOG)$/                                                                                                                                .test(property.element.tagName) && /^color$/                      .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "CanvasText"};
+                    else if (/^(DIALOG)$/                                                                                                                                .test(property.element.tagName) && /^inset-inline(-(end|start))?$/.test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: '0'};
+                    else if (/^(DIALOG)$/                                                                                                                                .test(property.element.tagName) && /^margin-?/                    .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "auto"};
+                    else if (/^(DIALOG)$/                                                                                                                                .test(property.element.tagName) && /^padding-?/                   .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "1em"};
+                    else if (/^(DIALOG)$/                                                                                                                                .test(property.element.tagName) && /^position$/                   .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "absolute"};
+                    else if (/^(HR)$/                                                                                                                                    .test(property.element.tagName) && /^border.*-style$/             .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "inset"};
+                    else if (/^(HR)$/                                                                                                                                    .test(property.element.tagName) && /^border.*-width$/             .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "1px"};
+                    else if (/^(HR)$/                                                                                                                                    .test(property.element.tagName) && /^color$/                      .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "gray"};
+                    else if (/^(HR)$/                                                                                                                                    .test(property.element.tagName) && /^margin.*-block$/             .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "0.5em"};
+                    else if (/^(HR)$/                                                                                                                                    .test(property.element.tagName) && /^margin.*-inline$/            .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "auto"};
+                    else if (/^(LISTING|PLAINTEXT|PRE|XMP)$/                                                                                                             .test(property.element.tagName) && /^font-family$/                .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "monospace"};
+                    else if (/^(LISTING|PLAINTEXT|PRE|XMP)$/                                                                                                             .test(property.element.tagName) && /^white-space$/                .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "pre"};
+                    else if (null !== property.element.getAttribute("hidden")                                                                                                                            && /^display$/                    .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "none"}; // TODO (Lapys) -> Ignores `embed` and `[popover]` specifics
+                    else if (null !== property.element.getAttribute("popover")                                                                                                                           && /^position$/                   .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "fixed"};
+                    else if (null !== property.element.getAttribute("popover")                                                                                                                           && /^inset$/                      .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: '0'};
+                    else if (null !== property.element.getAttribute("popover")                                                                                                                           && /^(height|width)$/             .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "fit-content"};
+                    else if (null !== property.element.getAttribute("popover")                                                                                                                           && /^margin-?/                    .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "auto"};
+                    else if (null !== property.element.getAttribute("popover")                                                                                                                           && /^border.*-style$/             .test(propertyName)) property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "solid"};
+                  }
+
+                  // ... ->> Composite shorthands
+                  if (null === property.information && composited) {
+                    if (composited.length === property.priors.length) {
+                      property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: ""};
+
+                      for (var index = 0; index !== property.priors.length; ++index) {
+                        if (null !== property.priors[index].information)                          property.information.value += property.priors[index].information.value + composited[index].delimiter;
+                        else if (/^(font-family|font-size)$/.test(property.priors[index].name)) { property.information        = null; break }
+                      }
+
+                      property.information = property.information.value !== "" ? property.information : null;
+                      property.priors      = []
+                    }
+
+                    else {
+                      for (var index = composited.length; index--; )
+                      cascaded = cascade(property.element, composited[index].value, property, properties);
+
+                      for (var index = properties.length; properties[--index].origin === property; )
+                      properties[index].deferred = true // ->> Avoid resolving
+                    }
+                  }
                 } else {
                   console.log(TAB + "%c[styl. (" + properties.length + ")]%c " + propertyName, "color: goldenrod", "color: honeydew");
                   property.deferred    = deferred = false;
@@ -2199,11 +2274,10 @@
 
                 // ...
                 reverted = false;
+                console.log(TAB + "%c[iaps. (" + properties.length + ")]%c " + propertyName + (deferred || property.deferred ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: greenyellow", "color: honeydew", "color: turquoise", {...property.information}, {...property.animation}, [...property.priors], JSON.stringify(property.style).replace(/"/g, "").replace(/(:|,)/g, "$& "));
 
-                console.log(TAB + "%c[iaps. (" + properties.length + ")]%c " + propertyName + (property.deferred ? "[↑]" : "") + "%c <" + property.element.tagName + ATTRS + '>', "color: greenyellow", "color: honeydew", "color: turquoise", property.information, property.animation, property.priors, JSON.stringify(property.style).replace(/"/g, "").replace(/(:|,)/g, "$& "));
-
-                if      (property.deferred) { if (property.priors[0].name === propertyName) { property.deferred = false; property.information = property.priors[0].information } }
-                else if (null === property.information && deferred)                         { property.deferred = true;  property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "unset"} }
+                if      (property.deferred) { if (property.priors.length && property.priors[0].name === propertyName) { property.deferred = false; property.information = property.priors[0].information } }
+                else if (null === property.information && deferred)                                                   { property.deferred = true;  property.information = {layer: null, matches: true, order: 0, priority: "", specificity: null, text: null, value: "unset"} }
 
                 for (var propertyValue = null; null !== property.information && propertyValue !== property.information.value; )
                 switch (propertyValue = property.information.value) {
@@ -2433,14 +2507,14 @@
 
                   default: {
                     switch (propertyName) /* ->> Account for CSS quirks --> getCSSPropertyValue(element, "…") === … */ {
-                      case "border-bottom-width": if (property.priors.length === 1 && property.priors[0].name === "border-bottom-style") switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-bottom-style", property, properties); break;
-                      case "border-left-width":   if (property.priors.length === 1 && property.priors[0].name === "border-left-style")   switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-left-style",   property, properties); break;
-                      case "border-right-width":  if (property.priors.length === 1 && property.priors[0].name === "border-right-style")  switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-right-style",  property, properties); break;
-                      case "border-top-width":    if (property.priors.length === 1 && property.priors[0].name === "border-top-style")    switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-top-style",    property, properties); break;
-                      case "border-width":        if (property.priors.length === 1 && property.priors[0].name === "border-style")        switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-style",        property, properties); break;
-                      case "column-rule-width":   if (property.priors.length === 1 && property.priors[0].name === "column-rule-style")   switch ((property.priors.pop().information || {value: null}).value) { case null:                        case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "column-rule-style",   property, properties); break;
-                      case "outline-width":       if (property.priors.length === 1 && property.priors[0].name === "outline-style")       switch ((property.priors.pop().information || {value: null}).value) { case null:                        case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "outline-style",       property, properties); break;
-                      case "writing-mode":        if (property.priors.length === 1 && property.priors[0].name === "display")             switch ((property.priors.pop().information || {value: null}).value) { case "ruby-annotation-container": case "ruby-base-container": case "table-column": case "table-column-group": case "table-footer-group": case "table-header-group": case "table-row": case "table-row-group": property.information.value = "unset" } else if (0 === property.priors.length || property.priors.length !== 1 || property.priors[0].name !== "writing-mode") { property.deferred = true; cascaded = cascade(property.element, "display",             property, properties) }
+                      case "border-bottom-width": if (property.priors.length === 1 && property.priors[0].name === "border-bottom-style") switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-bottom-style", property, properties);  break;
+                      case "border-left-width":   if (property.priors.length === 1 && property.priors[0].name === "border-left-style")   switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-left-style",   property, properties);  break;
+                      case "border-right-width":  if (property.priors.length === 1 && property.priors[0].name === "border-right-style")  switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-right-style",  property, properties);  break;
+                      case "border-top-width":    if (property.priors.length === 1 && property.priors[0].name === "border-top-style")    switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-top-style",    property, properties);  break;
+                      case "border-width":        if (property.priors.length === 1 && property.priors[0].name === "border-style")        switch ((property.priors.pop().information || {value: null}).value) { case null: case "hidden":         case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "border-style",        property, properties);  break;
+                      case "column-rule-width":   if (property.priors.length === 1 && property.priors[0].name === "column-rule-style")   switch ((property.priors.pop().information || {value: null}).value) { case null:                        case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "column-rule-style",   property, properties);  break;
+                      case "outline-width":       if (property.priors.length === 1 && property.priors[0].name === "outline-style")       switch ((property.priors.pop().information || {value: null}).value) { case null:                        case "none":                                                                                                                                                                property.information.value = "0px" }   else                                                                                                                                             cascaded = cascade(property.element, "outline-style",       property, properties);  break;
+                      case "writing-mode":        if (property.priors.length === 1 && property.priors[0].name === "display")             switch ((property.priors.pop().information || {value: null}).value) { case "ruby-annotation-container": case "ruby-base-container": case "table-column": case "table-column-group": case "table-footer-group": case "table-header-group": case "table-row": case "table-row-group": property.information.value = "unset" } else if (0 === property.priors.length || property.priors.length !== 1 || property.priors[0].name !== "writing-mode") { property.deferred = true; cascaded = cascade(property.element, "display",             property, properties) } break
                     }
 
                     if (cascaded) continue; // --> continue cascade

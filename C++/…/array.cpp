@@ -7,7 +7,7 @@
 /* ... ->> Constant-time initialization is the user’s responsibility i.e. `array<…, FIXED_SIZE_ONLY>` */
 // array<char, N> == struct {
 //   struct { char[N - (sizeof char* / sizeof char)]; uint; };
-//   union  { char[0 + (sizeof char* / sizeof char)]; char* = malloc(size_t + char[]); };
+//   union  { char[0 + (sizeof char* / sizeof char)]; char* = malloc(size_t + char[]) + sizeof(size_t); }; // ->> try make `printf(…)` compatible
 // };
 
 template <typename base, std::size_t initial>
