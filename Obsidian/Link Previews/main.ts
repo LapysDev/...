@@ -1,203 +1,174 @@
 var { MarkdownView, Notice,      Plugin }     = require("obsidian");
 var { EditorView,   PluginValue, ViewPlugin } = require("@codemirror/view");
-var { requestUrl }                            = require("obsidian");
+var { requestUrl }                            = require("obsidian"); // ->> `fetch(…)` without CORS restrictions
 
 /* CITE (Lapys) -> https://github.com/dhamaniasad/obsidian-rich-links; https://docs.obsidian.md */
-// --> npm i && npm audit fix --force & npm run dev
+/* CODE (Lapys) -> npm i && npm audit fix --force & npm run dev */
+class LinkPreviewRequest {
+  static DEFAULT_RESPONSE_HEADERS = {
+    "Access-Control-Allow-Headers": "Access-Control-Allow-Origin, Cache-Control, Content-Type, Referer, User-Agent",
+    "Access-Control-Allow-Origin" : location.href,
+    "Cache-Control"               : "no-cache",
+    "Content-Type"                : "text/plain",
+    "Referer"                     : '*',
+    "User-Agent"                  : navigator.userAgent
+  };
+
+  data = null; // --> …
+  headers;     // --> {…}
+  link;        // --> URL{…}
+  method;      // --> "reddit-search" | …
+  platform;    // --> "Reddit" | …
+
+  /* ... */
+  constructor(platform, method, link) {
+    this.headers  = LinkPreviewRequest.header({});
+    this.link     = link;
+    this.method   = method;
+    this.platform = platform
+  }
+
+  /* ... */
+  static header(header) { return Object.assign({}, LinkPreviewRequest.DEFAULT_RESPONSE_HEADERS, header) }
+};
+
 export default class LinkPreviewPlugin extends Plugin {
-  static SETTINGS  = {};
-  static CLICKABLE = ViewPlugin.fromClass(class ClickableButtonPlugin implements PluginValue {
-    handler;
-
-    /* ... */
-    constructor(public view: EditorView) {
-      this.handler = this.onClick.bind(this);
-      this.view.dom.addEventListener("click", this.handler)
-    }
-
-    /* ... */
-    destroy()           { this.view.dom.removeEventListener("click", this.handler) }
-    update (viewUpdate) {}
-
-    onClick(event) {
-      var preview           = LinkPreviewPlugin.getAncestorElementByClassName(event.target, "link-preview");
-      var previewForRemoval = LinkPreviewPlugin.getAncestorElementByClassName(LinkPreviewPlugin.getAncestorElementByClassName(event.target, "link-preview-close"), "link-preview");
-
-      // ...
-      if (LinkPreviewPlugin.removePreview(previewForRemoval, this.view)) {
-        event.preventDefault ();
-        event.stopPropagation()
-      } else LinkPreviewPlugin.copyPreviewURL(preview)
-    }
-  });
+  static ID      = "link-previews";
+  static NAME    = "Preview Link";
+  static TOOLTIP = "Preview a link";
 
   /* ... */
-  settings; // --> LinkPreviewPlugin
+  static getAncestorElementByClassName (element, className) { for (var ancestorElement = element; null !== ancestorElement && ancestorElement.nodeType === 0x1; ancestorElement = ancestorElement.parentNode) { if           ((ancestorElement instanceof HTMLElement ? ancestorElement.className : "").split(/\s+/).indexOf(className) !== -1) return ancestorElement } return null }
+  static getLastChildElementByClassName(element, className) { var children = element.childNodes; for (var index = children.length; index; ) { var childElement = children.item(--index); if (childElement.nodeType === 0x1 && (childElement    instanceof HTMLElement ? childElement   .className : "").split(/\s+/).indexOf(className) !== -1) return childElement }    return null }
+  static getPreviewTitle               (preview)            { return preview.querySelector("*.link-preview-title") }
+  static getPreviewURL                 (preview)            { return preview.querySelector("a.link-preview-url") }
 
-  /* ... */
-  static async copyPreviewURL(preview) {
-    if (null === preview) return false;
-    var previewTitle = LinkPreviewPlugin.formatText((LinkPreviewPlugin.getPreviewTitle(preview) || {innerText: null}).innerText);
-    var previewURL   = (LinkPreviewPlugin.getPreviewURL(preview) || {href: null}).href;
-    var renavigator  = null;
-
-    // ...
-    if (null === previewURL)
-    return false;
-
-    try { renavigator = app.dom.appContainerEl.win.navigator }
-    catch (error) { renavigator = typeof navigator !== "undefined" ? navigator : null }
-
-    // ...
-    if (null !== renavigator && "clipboard" in renavigator && typeof renavigator.clipboard.writeText === "function")
-      await renavigator.clipboard.writeText(previewURL);
-
-    else {
-      var textarea = document.createElement("textarea");
+  // ...
+  static async copy(preview) {
+    if (null !== preview && null !== preview.parentNode) {
+      var copied       = true;
+      var navigator    = app.dom.appContainerEl.win.navigator;
+      var previewTitle = LinkPreviewPlugin.format((LinkPreviewPlugin.getPreviewTitle(preview) || {innerText: null}).innerText);
+      var previewURL   = LinkPreviewPlugin.getPreviewURL(preview);
 
       // ...
-      textarea.style.position = "fixed";
-      textarea.value          = previewURL;
-
-      document.body.appendChild(textarea);
-      textarea.focus           ();
-      textarea.select          ();
-
-      try { document.execCommand("copy") }
-      catch (error) { return false }
-
-      document.body.removeChild(textarea)
-    }
-
-    new Notice  ("Copied preview" + previewTitle.replace(/.+/, " $&"));
-    console.info("Copied preview" + previewTitle.replace(/.+/, " $&"));
-
-    return true
-  }
-
-  static formatText(text) { return null !== text ? '“' + text.replace(/\s/g, ' ').replace(/[“”]/g, '"') + '”' : "" }
-
-  static getAncestorElementByClassName(element, className) {
-    for (var ancestorElement = element; null !== ancestorElement && ancestorElement.nodeType === 0x1; ancestorElement = ancestorElement.parentNode) {
-      if (ancestorElement.className.split(/\s+/).indexOf(className) !== -1)
-      return ancestorElement
-    }
-
-    return null
-  }
-
-  static getLastChildElementByClassName(element, className) {
-    var children = element.childNodes;
-
-    // ...
-    for (var index = children.length; index; ) {
-      var childElement = children.item(--index);
-
-      if (childElement.nodeType === 0x1 && childElement.className.split(/\s+/).indexOf(className) !== -1)
-      return childElement
-    }
-
-    return null
-  }
-
-  static getPreviewTitle(preview) { return preview.getElementsByClassName("link-preview-title").item(0) }
-  static getPreviewURL  (preview) { return preview.querySelector         ("a.link-preview-url") }
-  static isLink         (text)    { return /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[0-z@]+([\-.]{1}[0-z@]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/.test(text) }
-
-  async loadSettings() {
-    var plugin = this;
-    plugin.settings = Object.assign({}, LinkPreviewPlugin.SETTINGS, await plugin.loadData())
-  }
-
-  async onload() {
-    var plugin = this;
-
-    // ...
-    await plugin.loadSettings();
-
-    plugin.addCommand                   ({editorCheckCallback: function(checking, editor) { if (false === checking) { LinkPreviewPlugin.setPreviewByEditorSelectedLink(editor) } return true }, id: "preview-link", name: "Preview Link"});
-    plugin.addRibbonIcon                ("link", "Preview Link", function() { if (null !== plugin.app.workspace.getActiveViewOfType(MarkdownView)) LinkPreviewPlugin.setPreviewByEditorSelectedLink(plugin.app.workspace.activeLeaf?.view.editor) });
-    plugin.registerEditorExtension      (LinkPreviewPlugin.CLICKABLE);
-    plugin.registerMarkdownPostProcessor(function(element, context) {
-      var previews = element.getElementsByClassName("link-preview");
-
-      // ...
-      for (var index = previews.length; index; )
-      previews.item(--index).addEventListener("click", async function preview(event) {
-        var pluginLeaf        = plugin.app.workspace.activeLeaf;
-        var preview           = this;
-        var previewForRemoval = LinkPreviewPlugin.getAncestorElementByClassName(LinkPreviewPlugin.getAncestorElementByClassName(event.target, "link-preview-close"), "link-preview");
-
-        // ...
-        if (null !== pluginLeaf && null !== previewForRemoval) {
-          var pluginView      = plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor.cm;
-          var pluginViewState = pluginLeaf.getViewState();
+      if (null !== previewURL) {
+        if (null === navigator || !("clipboard" in navigator) || typeof navigator.clipboard.writeText !== "function") {
+          var textarea = document.createElement("textarea");
 
           // ...
-          pluginViewState.state.mode   = "source";
-          pluginViewState.state.source = false;
-          await pluginLeaf.setViewState(pluginViewState);
+          textarea.style.position = "fixed";
+          textarea.value          = previewURL.href;
+          textarea                = document.body.appendChild(textarea);
 
-          if (LinkPreviewPlugin.removePreview(plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor.cm.dom.querySelector(".link-preview[id=\"" + previewForRemoval.id + "\"]"), pluginView)) {
-            event.preventDefault ();
-            event.stopPropagation()
-          } else LinkPreviewPlugin.copyPreviewURL(preview);
+          textarea.focus ({"focusVisible": false, "preventScroll": true});
+          textarea.select();
 
-          pluginViewState.state.mode   = "preview";
-          pluginViewState.state.source = false;
-          await pluginLeaf.setViewState(pluginViewState)
-        } else LinkPreviewPlugin.copyPreviewURL(preview)
-      })
-    });
-  }
+          try { copied = document.execCommand("copy", false, "") }
+          catch (error) /* --> DOMException | SecurityError | TypeError */ { copied = false }
 
-  onunload() {}
+          document.body.removeChild(textarea)
+        } else await navigator.clipboard.writeText(previewURL.href);
 
-  static removePreview(preview, view) {
-    if (null !== preview) {
-      var previewBeginPosition = view.posAtDOM(preview, 0);
-      var previewEndPosition   = view.posAtDOM(LinkPreviewPlugin.getLastChildElementByClassName(preview, "link-preview-end") || preview, 0);
-      var previewTitle         = LinkPreviewPlugin.formatText((LinkPreviewPlugin.getPreviewTitle(preview) || {innerText: null}).innerText);
+        if (copied) {
+          new Notice  ("Copied preview" + previewTitle.replace(/.+/, " $&"));
+          console.info("Copied preview" + previewTitle.replace(/.+/, " $&"));
 
-      // ...
-      if (null !== previewBeginPosition && null !== previewEndPosition) {
-        previewBeginPosition = view.state.doc.lineAt(previewBeginPosition).from;
-        previewEndPosition   = view.state.doc.lineAt(previewEndPosition)  .to;
-
-        new Notice   ("Removed preview" + previewTitle.replace(/.+/, " $&"));
-        console.info ("Removed preview" + previewTitle.replace(/.+/, " $& ") + "at " + previewBeginPosition + "–" + previewEndPosition);
-        view.dispatch({changes: {from: previewBeginPosition, insert: "", to: previewEndPosition}, selection: {anchor: previewBeginPosition}, scrollIntoView: true});
-
-        return true
+          return true
+        }
       }
     }
 
     return false
   }
 
-  async saveSettings() {
-    var plugin = this;
-    await plugin.saveData(plugin.settings)
+  favicon(path) {
+    var path = (path + "").replace(/^[\/\s]+/g, "");
+
+    // ...
+    if (/^\s*images\s*\s*\/\s*bluesky(\.[a-z]+)?/      .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjUzMCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogPHBhdGggZD0ibTEzNS43MiA0NC4wM2M2Ni40OTYgNDkuOTIxIDEzOC4wMiAxNTEuMTQgMTY0LjI4IDIwNS40NiAyNi4yNjItNTQuMzE2IDk3Ljc4Mi0xNTUuNTQgMTY0LjI4LTIwNS40NiA0Ny45OC0zNi4wMjEgMTI1LjcyLTYzLjg5MiAxMjUuNzIgMjQuNzk1IDAgMTcuNzEyLTEwLjE1NSAxNDguNzktMTYuMTExIDE3MC4wNy0yMC43MDMgNzMuOTg0LTk2LjE0NCA5Mi44NTQtMTYzLjI1IDgxLjQzMyAxMTcuMyAxOS45NjQgMTQ3LjE0IDg2LjA5MiA4Mi42OTcgMTUyLjIyLTEyMi4zOSAxMjUuNTktMTc1LjkxLTMxLjUxMS0xODkuNjMtNzEuNzY2LTIuNTE0LTcuMzc5Ny0zLjY5MDQtMTAuODMyLTMuNzA3Ny03Ljg5NjQtMC4wMTc0LTIuOTM1Ny0xLjE5MzcgMC41MTY2OS0zLjcwNzcgNy44OTY0LTEzLjcxNCA0MC4yNTUtNjcuMjMzIDE5Ny4zNi0xODkuNjMgNzEuNzY2LTY0LjQ0NC02Ni4xMjgtMzQuNjA1LTEzMi4yNiA4Mi42OTctMTUyLjIyLTY3LjEwOCAxMS40MjEtMTQyLjU1LTcuNDQ5MS0xNjMuMjUtODEuNDMzLTUuOTU2Mi0yMS4yODItMTYuMTExLTE1Mi4zNi0xNi4xMTEtMTcwLjA3IDAtODguNjg3IDc3Ljc0Mi02MC44MTYgMTI1LjcyLTI0Ljc5NXoiIGZpbGw9IiMxMTg1ZmUiLz4KPC9zdmc+Cg==";
+    if (/^\s*images\s*\s*\/\s*discord(\.[a-z]+)?/      .test(path)) return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHNoYXBlLXJlbmRlcmluZz0iZ2VvbWV0cmljUHJlY2lzaW9uIiB0ZXh0LXJlbmRlcmluZz0iZ2VvbWV0cmljUHJlY2lzaW9uIiBpbWFnZS1yZW5kZXJpbmc9Im9wdGltaXplUXVhbGl0eSIgZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjNTg2NUYyIiBkPSJNMTA1IDBoMzAyYzU3LjkyOC4xNTUgMTA0Ljg0NSA0Ny4wNzIgMTA1IDEwNC45OTZWNDA3Yy0uMTU1IDU3LjkyNi00Ny4wNzIgMTA0Ljg0NC0xMDQuOTk2IDEwNC45OThMMTA1IDUxMkM0Ny4wNzQgNTExLjg0NC4xNTYgNDY0LjkyNi4wMDIgNDA3LjAwM0wwIDEwNUMuMTU2IDQ3LjA3MiA0Ny4wNzQuMTU1IDEwNC45OTcgMEgxMDV6Ii8+PGcgZGF0YS1uYW1lPSLDpcKbwr7DpcKxwoIgMiI+PGcgZGF0YS1uYW1lPSJEaXNjb3JkIExvZ29zIj48cGF0aCBmaWxsPSIjZmZmIiBmaWxsLXJ1bGU9Im5vbnplcm8iIGQ9Ik0zNjguODk2IDE1My4zODFhMjY5LjUwNiAyNjkuNTA2IDAgMDAtNjcuMTE4LTIwLjYzNyAxODYuODggMTg2Ljg4IDAgMDAtOC41NyAxNy40NzUgMjUwLjMzNyAyNTAuMzM3IDAgMDAtMzcuMjQ3LTIuOGMtMTIuNDQ3IDAtMjQuOTU1Ljk0Ni0zNy4yNSAyLjc3Ni0yLjUxMS01LjkyNy01LjQyNy0xMS44MDQtOC41OTItMTcuNDU0YTI3MS43MyAyNzEuNzMgMCAwMC02Ny4xMzMgMjAuNjgxYy00Mi40NzkgNjIuODQxLTUzLjk5MSAxMjQuMTEyLTQ4LjIzNSAxODQuNTEzYTI3MC42MjIgMjcwLjYyMiAwIDAwODIuMzA4IDQxLjMxMmM2LjYzNy04Ljk1OSAxMi41ODItMTguNDk3IDE3LjYzLTI4LjQyM2ExNzMuODA4IDE3My44MDggMCAwMS0yNy43NzItMTMuMjUzYzIuMzI4LTEuNjg4IDQuNjA1LTMuNDI3IDYuODA1LTUuMTE3IDI1LjcyNiAxMi4wODMgNTMuODM2IDE4LjM4NSA4Mi4yNzcgMTguMzg1IDI4LjQ0MiAwIDU2LjU1MS02LjMwMiA4Mi4yNzktMTguMzg3IDIuMjI2IDEuODE3IDQuNTAzIDMuNTU3IDYuODA1IDUuMTE3YTE3NS4wMDIgMTc1LjAwMiAwIDAxLTI3LjgyMyAxMy4yODkgMTk3Ljg0NyAxOTcuODQ3IDAgMDAxNy42MzEgMjguNCAyNjkuNTEzIDI2OS41MTMgMCAwMDgyLjM2My00MS4zMDVsLS4wMDcuMDA3YzYuNzU0LTcwLjA0NS0xMS41MzgtMTMwLjc1My00OC4zNTEtMTg0LjU3OXpNMjAxLjk2OCAzMDAuNzg5Yy0xNi4wNCAwLTI5LjI5Mi0xNC41NTctMjkuMjkyLTMyLjQ2NXMxMi43OTEtMzIuNTkyIDI5LjI0MS0zMi41OTIgMjkuNTk5IDE0LjY4NCAyOS4zMTggMzIuNTkyYy0uMjgyIDE3LjkwOC0xMi45MTkgMzIuNDY1LTI5LjI2NyAzMi40NjV6bTEwOC4wNjIgMGMtMTYuMDY2IDAtMjkuMjY3LTE0LjU1Ny0yOS4yNjctMzIuNDY1czEyLjc5MS0zMi41OTIgMjkuMjY3LTMyLjU5MmMxNi40NzUgMCAyOS41MjIgMTQuNjg0IDI5LjI0MSAzMi41OTItLjI4MSAxNy45MDgtMTIuODk0IDMyLjQ2NS0yOS4yNDEgMzIuNDY1eiIgZGF0YS1uYW1lPSJEaXNjb3JkIExvZ28gLSBMYXJnZSAtIFdoaXRlIi8+PC9nPjwvZz48L3N2Zz4=";
+    if (/^\s*images\s*\s*\/\s*facebook(\.[a-z]+)?/     .test(path)) return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbDpzcGFjZT0icHJlc2VydmUiIHZpZXdCb3g9IjAgMCA0MCA0MCI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJhIiB4MT0iLTI3Ny4zNzUiIHgyPSItMjc3LjM3NSIgeTE9IjQwNi42MDE4IiB5Mj0iNDA3LjU3MjYiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoNDAgMCAwIC0zOS43Nzc4IDExMTE1LjAwMSAxNjIxMi4zMzQpIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMwMDYyZTAiLz4KICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzE5YWZmZiIvPgogIDwvbGluZWFyR3JhZGllbnQ+CiAgPHBhdGggZmlsbD0idXJsKCNhKSIgZD0iTTE2LjcgMzkuOEM3LjIgMzguMSAwIDI5LjkgMCAyMCAwIDkgOSAwIDIwIDBzMjAgOSAyMCAyMGMwIDkuOS03LjIgMTguMS0xNi43IDE5LjhsLTEuMS0uOWgtNC40bC0xLjEuOXoiLz4KICA8cGF0aCBmaWxsPSIjZmZmIiBkPSJtMjcuOCAyNS42LjktNS42aC01LjN2LTMuOWMwLTEuNi42LTIuOCAzLTIuOEgyOVY4LjJjLTEuNC0uMi0zLS40LTQuNC0uNC00LjYgMC03LjggMi44LTcuOCA3LjhWMjBoLTV2NS42aDV2MTQuMWMxLjEuMiAyLjIuMyAzLjMuMyAxLjEgMCAyLjItLjEgMy4zLS4zVjI1LjZoNC40eiIvPgo8L3N2Zz4=";
+    if (/^\s*images\s*\s*\/\s*instagram(\.[a-z]+)?/    .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzIuMDA0IiBoZWlnaHQ9IjEzMiIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPgoJPGRlZnM+CgkJPGxpbmVhckdyYWRpZW50IGlkPSJiIj4KCQkJPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMzc3MWM4Ii8+CgkJCTxzdG9wIHN0b3AtY29sb3I9IiMzNzcxYzgiIG9mZnNldD0iLjEyOCIvPgoJCQk8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2MGYiIHN0b3Atb3BhY2l0eT0iMCIvPgoJCTwvbGluZWFyR3JhZGllbnQ+CgkJPGxpbmVhckdyYWRpZW50IGlkPSJhIj4KCQkJPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmQ1Ii8+CgkJCTxzdG9wIG9mZnNldD0iLjEiIHN0b3AtY29sb3I9IiNmZDUiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNSIgc3RvcC1jb2xvcj0iI2ZmNTQzZSIvPgoJCQk8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNjODM3YWIiLz4KCQk8L2xpbmVhckdyYWRpZW50PgoJCTxyYWRpYWxHcmFkaWVudCBpZD0iYyIgY3g9IjE1OC40MjkiIGN5PSI1NzguMDg4IiByPSI2NSIgeGxpbms6aHJlZj0iI2EiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KDAgLTEuOTgxOTggMS44NDM5IDAgLTEwMzEuNDAyIDQ1NC4wMDQpIiBmeD0iMTU4LjQyOSIgZnk9IjU3OC4wODgiLz4KCQk8cmFkaWFsR3JhZGllbnQgaWQ9ImQiIGN4PSIxNDcuNjk0IiBjeT0iNDczLjQ1NSIgcj0iNjUiIHhsaW5rOmhyZWY9IiNiIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCguMTczOTQgLjg2ODcyIC0zLjU4MTggLjcxNzE4IDE2NDguMzQ4IC00NTguNDkzKSIgZng9IjE0Ny42OTQiIGZ5PSI0NzMuNDU1Ii8+Cgk8L2RlZnM+Cgk8cGF0aCBmaWxsPSJ1cmwoI2MpIiBkPSJNNjUuMDMgMEMzNy44ODggMCAyOS45NS4wMjggMjguNDA3LjE1NmMtNS41Ny40NjMtOS4wMzYgMS4zNC0xMi44MTIgMy4yMi0yLjkxIDEuNDQ1LTUuMjA1IDMuMTItNy40NyA1LjQ2OEM0IDEzLjEyNiAxLjUgMTguMzk0LjU5NSAyNC42NTZjLS40NCAzLjA0LS41NjggMy42Ni0uNTk0IDE5LjE4OC0uMDEgNS4xNzYgMCAxMS45ODggMCAyMS4xMjUgMCAyNy4xMi4wMyAzNS4wNS4xNiAzNi41OS40NSA1LjQyIDEuMyA4LjgzIDMuMSAxMi41NiAzLjQ0IDcuMTQgMTAuMDEgMTIuNSAxNy43NSAxNC41IDIuNjguNjkgNS42NCAxLjA3IDkuNDQgMS4yNSAxLjYxLjA3IDE4LjAyLjEyIDM0LjQ0LjEyIDE2LjQyIDAgMzIuODQtLjAyIDM0LjQxLS4xIDQuNC0uMjA3IDYuOTU1LS41NSA5Ljc4LTEuMjggNy43OS0yLjAxIDE0LjI0LTcuMjkgMTcuNzUtMTQuNTMgMS43NjUtMy42NCAyLjY2LTcuMTggMy4wNjUtMTIuMzE3LjA4OC0xLjEyLjEyNS0xOC45NzcuMTI1LTM2LjgxIDAtMTcuODM2LS4wNC0zNS42Ni0uMTI4LTM2Ljc4LS40MS01LjIyLTEuMzA1LTguNzMtMy4xMjctMTIuNDQtMS40OTUtMy4wMzctMy4xNTUtNS4zMDUtNS41NjUtNy42MjRDMTE2LjkgNCAxMTEuNjQgMS41IDEwNS4zNzIuNTk2IDEwMi4zMzUuMTU3IDEwMS43My4wMjcgODYuMTkgMEg2NS4wM3oiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDEuMDA0IDEpIi8+Cgk8cGF0aCBmaWxsPSJ1cmwoI2QpIiBkPSJNNjUuMDMgMEMzNy44ODggMCAyOS45NS4wMjggMjguNDA3LjE1NmMtNS41Ny40NjMtOS4wMzYgMS4zNC0xMi44MTIgMy4yMi0yLjkxIDEuNDQ1LTUuMjA1IDMuMTItNy40NyA1LjQ2OEM0IDEzLjEyNiAxLjUgMTguMzk0LjU5NSAyNC42NTZjLS40NCAzLjA0LS41NjggMy42Ni0uNTk0IDE5LjE4OC0uMDEgNS4xNzYgMCAxMS45ODggMCAyMS4xMjUgMCAyNy4xMi4wMyAzNS4wNS4xNiAzNi41OS40NSA1LjQyIDEuMyA4LjgzIDMuMSAxMi41NiAzLjQ0IDcuMTQgMTAuMDEgMTIuNSAxNy43NSAxNC41IDIuNjguNjkgNS42NCAxLjA3IDkuNDQgMS4yNSAxLjYxLjA3IDE4LjAyLjEyIDM0LjQ0LjEyIDE2LjQyIDAgMzIuODQtLjAyIDM0LjQxLS4xIDQuNC0uMjA3IDYuOTU1LS41NSA5Ljc4LTEuMjggNy43OS0yLjAxIDE0LjI0LTcuMjkgMTcuNzUtMTQuNTMgMS43NjUtMy42NCAyLjY2LTcuMTggMy4wNjUtMTIuMzE3LjA4OC0xLjEyLjEyNS0xOC45NzcuMTI1LTM2LjgxIDAtMTcuODM2LS4wNC0zNS42Ni0uMTI4LTM2Ljc4LS40MS01LjIyLTEuMzA1LTguNzMtMy4xMjctMTIuNDQtMS40OTUtMy4wMzctMy4xNTUtNS4zMDUtNS41NjUtNy42MjRDMTE2LjkgNCAxMTEuNjQgMS41IDEwNS4zNzIuNTk2IDEwMi4zMzUuMTU3IDEwMS43My4wMjcgODYuMTkgMEg2NS4wM3oiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDEuMDA0IDEpIi8+Cgk8cGF0aCBmaWxsPSIjZmZmIiBkPSJNNjYuMDA0IDE4Yy0xMy4wMzYgMC0xNC42NzIuMDU3LTE5Ljc5Mi4yOS01LjExLjIzNC04LjU5OCAxLjA0My0xMS42NSAyLjIzLTMuMTU3IDEuMjI2LTUuODM1IDIuODY2LTguNTAzIDUuNTM1LTIuNjcgMi42NjgtNC4zMSA1LjM0Ni01LjU0IDguNTAyLTEuMTkgMy4wNTMtMiA2LjU0Mi0yLjIzIDExLjY1QzE4LjA2IDUxLjMyNyAxOCA1Mi45NjQgMTggNjZzLjA1OCAxNC42NjcuMjkgMTkuNzg3Yy4yMzUgNS4xMSAxLjA0NCA4LjU5OCAyLjIzIDExLjY1IDEuMjI3IDMuMTU3IDIuODY3IDUuODM1IDUuNTM2IDguNTAzIDIuNjY3IDIuNjcgNS4zNDUgNC4zMTQgOC41IDUuNTQgMy4wNTQgMS4xODcgNi41NDMgMS45OTYgMTEuNjUyIDIuMjMgNS4xMi4yMzMgNi43NTUuMjkgMTkuNzkuMjkgMTMuMDM3IDAgMTQuNjY4LS4wNTcgMTkuNzg4LS4yOSA1LjExLS4yMzQgOC42MDItMS4wNDMgMTEuNjU2LTIuMjMgMy4xNTYtMS4yMjYgNS44My0yLjg3IDguNDk3LTUuNTQgMi42Ny0yLjY2OCA0LjMxLTUuMzQ2IDUuNTQtOC41MDIgMS4xOC0zLjA1MyAxLjk5LTYuNTQyIDIuMjMtMTEuNjUuMjMtNS4xMi4yOS02Ljc1Mi4yOS0xOS43ODggMC0xMy4wMzYtLjA2LTE0LjY3Mi0uMjktMTkuNzkyLS4yNC01LjExLTEuMDUtOC41OTgtMi4yMy0xMS42NS0xLjIzLTMuMTU3LTIuODctNS44MzUtNS41NC04LjUwMy0yLjY3LTIuNjctNS4zNC00LjMxLTguNS01LjUzNS0zLjA2LTEuMTg3LTYuNTUtMS45OTYtMTEuNjYtMi4yMy01LjEyLS4yMzMtNi43NS0uMjktMTkuNzktLjI5em0tNC4zMDYgOC42NWMxLjI3OC0uMDAyIDIuNzA0IDAgNC4zMDYgMCAxMi44MTYgMCAxNC4zMzUuMDQ2IDE5LjM5Ni4yNzYgNC42OC4yMTQgNy4yMi45OTYgOC45MTIgMS42NTMgMi4yNC44NyAzLjgzNyAxLjkxIDUuNTE2IDMuNTkgMS42OCAxLjY4IDIuNzIgMy4yOCAzLjU5MiA1LjUyLjY1NyAxLjY5IDEuNDQgNC4yMyAxLjY1MyA4LjkxLjIzIDUuMDYuMjggNi41OC4yOCAxOS4zOXMtLjA1IDE0LjMzLS4yOCAxOS4zOWMtLjIxNCA0LjY4LS45OTYgNy4yMi0xLjY1MyA4LjkxLS44NyAyLjI0LTEuOTEyIDMuODM1LTMuNTkyIDUuNTE0LTEuNjggMS42OC0zLjI3NSAyLjcyLTUuNTE2IDMuNTktMS42OS42Ni00LjIzMiAxLjQ0LTguOTEyIDEuNjU0LTUuMDYuMjMtNi41OC4yOC0xOS4zOTYuMjgtMTIuODE3IDAtMTQuMzM2LS4wNS0xOS4zOTYtLjI4LTQuNjgtLjIxNi03LjIyLS45OTgtOC45MTMtMS42NTUtMi4yNC0uODctMy44NC0xLjkxLTUuNTItMy41OS0xLjY4LTEuNjgtMi43Mi0zLjI3Ni0zLjU5Mi01LjUxNy0uNjU3LTEuNjktMS40NC00LjIzLTEuNjUzLTguOTEtLjIzLTUuMDYtLjI3Ni02LjU4LS4yNzYtMTkuMzk4cy4wNDYtMTQuMzMuMjc2LTE5LjM5Yy4yMTQtNC42OC45OTYtNy4yMiAxLjY1My04LjkxMi44Ny0yLjI0IDEuOTEyLTMuODQgMy41OTItNS41MiAxLjY4LTEuNjggMy4yOC0yLjcyIDUuNTItMy41OTIgMS42OTItLjY2IDQuMjMzLTEuNDQgOC45MTMtMS42NTUgNC40MjgtLjIgNi4xNDQtLjI2IDE1LjA5LS4yN3ptMjkuOTI4IDcuOTdjLTMuMTggMC01Ljc2IDIuNTc3LTUuNzYgNS43NTggMCAzLjE4IDIuNTggNS43NiA1Ljc2IDUuNzYgMy4xOCAwIDUuNzYtMi41OCA1Ljc2LTUuNzYgMC0zLjE4LTIuNTgtNS43Ni01Ljc2LTUuNzZ6bS0yNS42MjIgNi43M2MtMTMuNjEzIDAtMjQuNjUgMTEuMDM3LTI0LjY1IDI0LjY1IDAgMTMuNjEzIDExLjAzNyAyNC42NDUgMjQuNjUgMjQuNjQ1Qzc5LjYxNyA5MC42NDUgOTAuNjUgNzkuNjEzIDkwLjY1IDY2Uzc5LjYxNiA0MS4zNSA2Ni4wMDMgNDEuMzV6bTAgOC42NWM4LjgzNiAwIDE2IDcuMTYzIDE2IDE2IDAgOC44MzYtNy4xNjQgMTYtMTYgMTYtOC44MzcgMC0xNi03LjE2NC0xNi0xNiAwLTguODM3IDcuMTYzLTE2IDE2LTE2eiIvPgo8L3N2Zz4=";
+    if (/^\s*images\s*\s*\/\s*linkedin(\.[a-z]+)?/     .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSI3MiIgdmlld0JveD0iMCAwIDcyIDcyIiB3aWR0aD0iNzIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj48cGF0aCBkPSJNOCw3MiBMNjQsNzIgQzY4LjQxODI3OCw3MiA3Miw2OC40MTgyNzggNzIsNjQgTDcyLDggQzcyLDMuNTgxNzIyIDY4LjQxODI3OCwtOC4xMTYyNDUwMWUtMTYgNjQsMCBMOCwwIEMzLjU4MTcyMiw4LjExNjI0NTAxZS0xNiAtNS40MTA4MzAwMWUtMTYsMy41ODE3MjIgMCw4IEwwLDY0IEM1LjQxMDgzMDAxZS0xNiw2OC40MTgyNzggMy41ODE3MjIsNzIgOCw3MiBaIiBmaWxsPSIjMDA3RUJCIi8+PHBhdGggZD0iTTYyLDYyIEw1MS4zMTU2MjUsNjIgTDUxLjMxNTYyNSw0My44MDIxMTQ5IEM1MS4zMTU2MjUsMzguODEyNzU0MiA0OS40MTk3OTE3LDM2LjAyNDUzMjMgNDUuNDcwNzAzMSwzNi4wMjQ1MzIzIEM0MS4xNzQ2MDk0LDM2LjAyNDUzMjMgMzguOTMwMDc4MSwzOC45MjYxMTAzIDM4LjkzMDA3ODEsNDMuODAyMTE0OSBMMzguOTMwMDc4MSw2MiBMMjguNjMzMzMzMyw2MiBMMjguNjMzMzMzMywyNy4zMzMzMzMzIEwzOC45MzAwNzgxLDI3LjMzMzMzMzMgTDM4LjkzMDA3ODEsMzIuMDAyOTI4MyBDMzguOTMwMDc4MSwzMi4wMDI5MjgzIDQyLjAyNjA0MTcsMjYuMjc0MjE1MSA0OS4zODI1NTIxLDI2LjI3NDIxNTEgQzU2LjczNTY3NzEsMjYuMjc0MjE1MSA2MiwzMC43NjQ0NzA1IDYyLDQwLjA1MTIxMiBMNjIsNjIgWiBNMTYuMzQ5MzQ5LDIyLjc5NDAxMzMgQzEyLjg0MjA1NzMsMjIuNzk0MDEzMyAxMCwxOS45Mjk2NTY3IDEwLDE2LjM5NzAwNjcgQzEwLDEyLjg2NDM1NjYgMTIuODQyMDU3MywxMCAxNi4zNDkzNDksMTAgQzE5Ljg1NjY0MDYsMTAgMjIuNjk3MDA1MiwxMi44NjQzNTY2IDIyLjY5NzAwNTIsMTYuMzk3MDA2NyBDMjIuNjk3MDA1MiwxOS45Mjk2NTY3IDE5Ljg1NjY0MDYsMjIuNzk0MDEzMyAxNi4zNDkzNDksMjIuNzk0MDEzMyBaIE0xMS4wMzI1NTIxLDYyIEwyMS43Njk0MDEsNjIgTDIxLjc2OTQwMSwyNy4zMzMzMzMzIEwxMS4wMzI1NTIxLDI3LjMzMzMzMzMgTDExLjAzMjU1MjEsNjIgWiIgZmlsbD0iI0ZGRiIvPjwvZz48L3N2Zz4=";
+    if (/^\s*images\s*\s*\/\s*mastodon(\.[a-z]+)?/     .test(path)) return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjUiIGhlaWdodD0iNjUiIHZpZXdCb3g9IjAgMCA2MSA2NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4NCjxwYXRoIGQ9Ik02MC43NTM5IDE0LjM5MDRDNTkuODE0MyA3LjQwNjQyIDUzLjcyNzMgMS45MDI1NyA0Ni41MTE3IDAuODM2MDY2QzQ1LjI5NDMgMC42NTU4NTQgNDAuNjgxOSAwIDI5Ljk5NzMgMEgyOS45MTc1QzE5LjIyOTkgMCAxNi45MzcgMC42NTU4NTQgMTUuNzE5NiAwLjgzNjA2NkM4LjcwNDg4IDEuODczMDIgMi4yOTg4NSA2LjgxODUyIDAuNzQ0NjE3IDEzLjg4NTJDLTAuMDAyOTQ5ODggMTcuMzY1NCAtMC4wODI3Mjk4IDIxLjIyMzcgMC4wNTYxNDY0IDI0Ljc2MjlDMC4yNTQxMTkgMjkuODM4NCAwLjI5MjUzMSAzNC45MDUgMC43NTM0ODIgMzkuOTU5OEMxLjA3MjE1IDQzLjMxNzUgMS42MjgwNiA0Ni42NDg0IDIuNDE3MDQgNDkuOTI3NkMzLjg5NDQ1IDU1Ljk4MzkgOS44NzQ5OSA2MS4wMjM5IDE1LjczNDQgNjMuMDgwMUMyMi4wMDc3IDY1LjIyNDQgMjguNzU0MiA2NS41ODA0IDM1LjIxODQgNjQuMTA4MkMzNS45Mjk1IDYzLjk0MjggMzYuNjMxOCA2My43NTA4IDM3LjMyNTIgNjMuNTMyMUMzOC44OTcxIDYzLjAzMjkgNDAuNzM4IDYyLjQ3NDUgNDIuMDkxMyA2MS40OTM3QzQyLjEwOTkgNjEuNDc5OSA0Mi4xMjUxIDYxLjQ2MjEgNDIuMTM1OCA2MS40NDE3QzQyLjE0NjYgNjEuNDIxMiA0Mi4xNTI2IDYxLjM5ODYgNDIuMTUzNCA2MS4zNzU1VjU2LjQ3NzNDNDIuMTUzIDU2LjQ1NTcgNDIuMTQ3OSA1Ni40MzQ1IDQyLjEzODMgNTYuNDE1MUM0Mi4xMjg3IDU2LjM5NTggNDIuMTE0OSA1Ni4zNzg4IDQyLjA5NzkgNTYuMzY1NUM0Mi4wODA5IDU2LjM1MjIgNDIuMDYxMSA1Ni4zNDI5IDQyLjA0IDU2LjMzODJDNDIuMDE5IDU2LjMzMzUgNDEuOTk3MSA1Ni4zMzM2IDQxLjk3NjEgNTYuMzM4NEMzNy44MzQ1IDU3LjMyNzYgMzMuNTkwNSA1Ny44MjM0IDI5LjMzMjQgNTcuODE1NkMyMi4wMDQ1IDU3LjgxNTYgMjAuMDMzNiA1NC4zMzg0IDE5LjQ2OTMgNTIuODkwOEMxOS4wMTU2IDUxLjYzOTcgMTguNzI3NSA1MC4zMzQ2IDE4LjYxMjQgNDkuMDA4OEMxOC42MTEyIDQ4Ljk4NjYgMTguNjE1MyA0OC45NjQzIDE4LjYyNDMgNDguOTQzOUMxOC42MzMzIDQ4LjkyMzYgMTguNjQ3IDQ4LjkwNTYgMTguNjY0MyA0OC44OTE1QzE4LjY4MTYgNDguODc3NCAxOC43MDE5IDQ4Ljg2NzUgMTguNzIzNyA0OC44NjI4QzE4Ljc0NTUgNDguODU4IDE4Ljc2ODEgNDguODU4NSAxOC43ODk3IDQ4Ljg2NDFDMjIuODYyMiA0OS44NDY1IDI3LjAzNyA1MC4zNDIzIDMxLjIyNjUgNTAuMzQxMkMzMi4yMzQgNTAuMzQxMiAzMy4yMzg3IDUwLjM0MTIgMzQuMjQ2MyA1MC4zMTQ2QzM4LjQ1OTggNTAuMTk2NCA0Mi45MDA5IDQ5Ljk4MDggNDcuMDQ2NSA0OS4xNzEzQzQ3LjE0OTkgNDkuMTUwNiA0Ny4yNTM0IDQ5LjEzMjkgNDcuMzQyIDQ5LjEwNjNDNTMuODgxIDQ3Ljg1MDcgNjAuMTAzOCA0My45MDk3IDYwLjczNjIgMzMuOTMwMUM2MC43NTk4IDMzLjUzNzIgNjAuODE4OSAyOS44MTQ4IDYwLjgxODkgMjkuNDA3MUM2MC44MjE4IDI4LjAyMTUgNjEuMjY1MSAxOS41NzgxIDYwLjc1MzkgMTQuMzkwNFoiIGZpbGw9InVybCgjcGFpbnQwX2xpbmVhcl84OV84KSIvPg0KPHBhdGggZD0iTTUwLjM5NDMgMjIuMjM3VjM5LjU4NzZINDMuNTE4NVYyMi43NDgxQzQzLjUxODUgMTkuMjAyOSA0Mi4wNDExIDE3LjM5NDkgMzkuMDM2IDE3LjM5NDlDMzUuNzMyNSAxNy4zOTQ5IDM0LjA3NzggMTkuNTMzOCAzNC4wNzc4IDIzLjc1ODVWMzIuOTc1OUgyNy4yNDM0VjIzLjc1ODVDMjcuMjQzNCAxOS41MzM4IDI1LjU4NTcgMTcuMzk0OSAyMi4yODIyIDE3LjM5NDlDMTkuMjk0OSAxNy4zOTQ5IDE3LjgwMjcgMTkuMjAyOSAxNy44MDI3IDIyLjc0ODFWMzkuNTg3NkgxMC45Mjk4VjIyLjIzN0MxMC45Mjk4IDE4LjY5MTggMTEuODM1IDE1Ljg3NTQgMTMuNjQ1MyAxMy43ODc3QzE1LjUxMjggMTEuNzA0OSAxNy45NjIzIDEwLjYzNTUgMjEuMDAyOCAxMC42MzU1QzI0LjUyMiAxMC42MzU1IDI3LjE4MTMgMTEuOTg4NSAyOC45NTQyIDE0LjY5MTdMMzAuNjY1IDE3LjU2MzNMMzIuMzc4OCAxNC42OTE3QzM0LjE1MTcgMTEuOTg4NSAzNi44MTEgMTAuNjM1NSA0MC4zMjQzIDEwLjYzNTVDNDMuMzYxOSAxMC42MzU1IDQ1LjgxMTQgMTEuNzA0OSA0Ny42ODQ3IDEzLjc4NzdDNDkuNDkzMSAxNS44NzM0IDUwLjM5NjMgMTguNjg5OSA1MC4zOTQzIDIyLjIzN1oiIGZpbGw9IndoaXRlIi8+DQo8ZGVmcz4NCjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQwX2xpbmVhcl84OV84IiB4MT0iMzAuNSIgeTE9IjAiIHgyPSIzMC41IiB5Mj0iNjUiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4NCjxzdG9wIHN0b3AtY29sb3I9IiM2MzY0RkYiLz4NCjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzU2M0FDQyIvPg0KPC9saW5lYXJHcmFkaWVudD4NCjwvZGVmcz4NCjwvc3ZnPg==";
+    if (/^\s*images\s*\s*\/\s*pinterest(\.[a-z]+)?/    .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxOC4xLjEsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+DQo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMTQ0IDE0NCIgZW5hYmxlLWJhY2tncm91bmQ9Im5ldyAwIDAgMTQ0IDE0NCIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8Zz4NCgk8Zz4NCgkJPHBhdGggZmlsbD0iI0JEMDgxQyIgZD0iTTcxLjksNS40QzM1LjEsNS40LDUuMywzNS4yLDUuMyw3MmMwLDI4LjIsMTcuNSw1Mi4zLDQyLjMsNjJjLTAuNi01LjMtMS4xLTEzLjMsMC4yLTE5LjENCgkJCWMxLjItNS4yLDcuOC0zMy4xLDcuOC0zMy4xcy0yLTQtMi05LjljMC05LjMsNS40LTE2LjIsMTItMTYuMmM1LjcsMCw4LjQsNC4zLDguNCw5LjRjMCw1LjctMy42LDE0LjMtNS41LDIyLjINCgkJCWMtMS42LDYuNiwzLjMsMTIsOS45LDEyYzExLjgsMCwyMC45LTEyLjUsMjAuOS0zMC41YzAtMTUuOS0xMS41LTI3LjEtMjcuOC0yNy4xYy0xOC45LDAtMzAuMSwxNC4yLTMwLjEsMjguOQ0KCQkJYzAsNS43LDIuMiwxMS45LDUsMTUuMmMwLjUsMC43LDAuNiwxLjIsMC41LDEuOWMtMC41LDIuMS0xLjYsNi42LTEuOCw3LjVjLTAuMywxLjItMSwxLjUtMi4yLDAuOWMtOC4zLTMuOS0xMy41LTE2LTEzLjUtMjUuOA0KCQkJYzAtMjEsMTUuMy00MC4zLDQ0LTQwLjNjMjMuMSwwLDQxLDE2LjUsNDEsMzguNGMwLDIyLjktMTQuNSw0MS40LTM0LjUsNDEuNGMtNi43LDAtMTMuMS0zLjUtMTUuMy03LjZjMCwwLTMuMywxMi43LTQuMSwxNS44DQoJCQljLTEuNSw1LjgtNS42LDEzLTguMywxNy41YzYuMiwxLjksMTIuOCwzLDE5LjcsM2MzNi44LDAsNjYuNi0yOS44LDY2LjYtNjYuNkMxMzguNSwzNS4yLDEwOC43LDUuNCw3MS45LDUuNHoiLz4NCgk8L2c+DQo8L2c+DQo8L3N2Zz4NCg==";
+    if (/^\s*images\s*\s*\/\s*quora(\.[a-z]+)?/        .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA1My41NTkyMDQgNTUuMzU1OTk5Ij4KICA8cGF0aCBkPSJtIDI4LjQ3Niw0My4xNjQgYyAtMS45MTgsLTMuNzc1IC00LjE2OCwtNy41ODggLTguNTU3LC03LjU4OCAtMC44MzksMCAtMS42NzcsMC4xMzkgLTIuNDQ2LDAuNDkgbCAtMS40OTEsLTIuOTg0IGMgMS44MTcsLTEuNTU5IDQuNzUzLC0yLjc5NSA4LjUyNywtMi43OTUgNS44NzEsMCA4Ljg4NCwyLjgyOCAxMS4yNzYsNi40MzggMS40MiwtMy4wODIgMi4wOTUsLTcuMjQ0IDIuMDk1LC0xMi40MDMgMCwtMTIuODgzIC00LjAyOSwtMTkuNDk4IC0xMy40NCwtMTkuNDk4IC05LjI3NCwwIC0xMy4yODEsNi42MTUgLTEzLjI4MSwxOS40OTggMCwxMi44MTUgNC4wMDcsMTkuMzYyIDEzLjI4MSwxOS4zNjIgMS40NzQsMCAyLjgwOSwtMC4xNjIgNC4wMzYsLTAuNTIgeiBtIDIuMjk5LDQuNDk2IEMgMjguNzQyLDQ4LjIwNSAyNi41ODIsNDguNTA2IDI0LjQ0LDQ4LjUwNiAxMi4wOTEsNDguNTA2IDAsMzguNjUyIDAsMjQuMzIyIDAsOS44NTYgMTIuMDkxLDAgMjQuNDQsMCBjIDEyLjU1NiwwIDI0LjUzMSw5Ljc4NSAyNC41MzEsMjQuMzIyIDAsOC4wODYgLTMuNzczLDE0LjY1NyAtOS4yNTcsMTguOTA0IDEuNzcyLDIuNjU1IDMuNTk2LDQuNDE4IDYuMTM2LDQuNDE4IDIuNzcyLDAgMy44OSwtMi4xNDIgNC4wNzcsLTMuODIyIGggMy42MSBjIDAuMjExLDIuMjM3IC0wLjkwOCwxMS41MzQgLTEwLjk5NywxMS41MzQgLTYuMTExLDAgLTkuMzQyLC0zLjU0MiAtMTEuNzY1LC03LjY5NiB6IiBzdHlsZT0iZmlsbDojYjkyYjI3Ii8+Cjwvc3ZnPgo=";
+    if (/^\s*images\s*\s*\/\s*reddit(\.[a-z]+)?/       .test(path)) return "data:image/svg+xml;base64,PHN2ZyBlbmFibGUtYmFja2dyb3VuZD0ibmV3IC0yNjkgMzYxIDcyIDcyIiBoZWlnaHQ9IjMxNi4yMjc3NjYiIHZpZXdCb3g9Ii0yNjkgMzYxIDcyIDcyIiB3aWR0aD0iMzE2LjIyNzc2NiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Zz48cGF0aCBkPSJtLTIzMyA0MzNjLTE5LjkgMC0zNi0xNi4xLTM2LTM2czE2LjEtMzYgMzYtMzYgMzYgMTYuMSAzNiAzNi0xNi4xIDM2LTM2IDM2eiIgZmlsbD0iI2ZmNDUwMCIvPjxwYXRoIGQ9Im0tMjI0LjggNDA0LjVjLTIuMSAwLTMuNy0xLjctMy43LTMuNyAwLTIuMSAxLjctMy44IDMuNy0zLjhzMy43IDEuNyAzLjcgMy44Yy4xIDItMS42IDMuNy0zLjcgMy43bS43IDYuMmMtMi42IDIuNi03LjUgMi44LTguOSAyLjhzLTYuMy0uMi04LjktMi44Yy0uNC0uNC0uNC0xIDAtMS40czEtLjQgMS40IDBjMS42IDEuNiA1LjEgMi4yIDcuNSAyLjIgMi41IDAgNS45LS42IDcuNS0yLjIuNC0uNCAxLS40IDEuNCAwcy40IDEgMCAxLjRtLTIwLjktOS45YzAtMi4xIDEuNy0zLjggMy44LTMuOHMzLjcgMS43IDMuNyAzLjgtMS43IDMuNy0zLjcgMy43Yy0yLjEgMC0zLjgtMS43LTMuOC0zLjdtMzYtMy44YzAtMi45LTIuNC01LjMtNS4zLTUuMy0xLjQgMC0yLjcuNi0zLjYgMS41LTMuNi0yLjYtOC41LTQuMy0xNC00LjVsMi40LTExLjMgNy44IDEuN2MuMSAyIDEuNyAzLjYgMy43IDMuNiAyLjEgMCAzLjctMS43IDMuNy0zLjcgMC0yLjEtMS43LTMuNy0zLjctMy43LTEuNSAwLTIuNy45LTMuMyAyLjFsLTguNy0xLjljLS4yLS4xLS41IDAtLjcuMXMtLjQuMy0uNC42bC0yLjYgMTIuM3YuMmMtNS42LjEtMTAuNiAxLjgtMTQuMyA0LjQtLjktLjktMi4yLTEuNS0zLjYtMS41LTIuOSAwLTUuMyAyLjQtNS4zIDUuMyAwIDIuMSAxLjMgNCAzLjEgNC44LS4xLjUtLjEgMS4xLS4xIDEuNiAwIDguMSA5LjQgMTQuNiAyMSAxNC42czIxLTYuNSAyMS0xNC42YzAtLjUgMC0xLjEtLjEtMS42IDEuNy0uNyAzLTIuNiAzLTQuNyIgZmlsbD0iI2ZmZiIvPjwvZz48L3N2Zz4=";
+    if (/^\s*images\s*\s*\/\s*spotify(\.[a-z]+)?/      .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgNDk2IDUxMiI+CiAgPHBhdGggZmlsbD0iIzFlZDc2MCIgZD0iTTI0OCA4QzExMS4xIDggMCAxMTkuMSAwIDI1NnMxMTEuMSAyNDggMjQ4IDI0OCAyNDgtMTExLjEgMjQ4LTI0OFMzODQuOSA4IDI0OCA4WiIvPgogIDxwYXRoIGQ9Ik00MDYuNiAyMzEuMWMtNS4yIDAtOC40LTEuMy0xMi45LTMuOS03MS4yLTQyLjUtMTk4LjUtNTIuNy0yODAuOS0yOS43LTMuNiAxLTguMSAyLjYtMTIuOSAyLjYtMTMuMiAwLTIzLjMtMTAuMy0yMy4zLTIzLjYgMC0xMy42IDguNC0yMS4zIDE3LjQtMjMuOSAzNS4yLTEwLjMgNzQuNi0xNS4yIDExNy41LTE1LjIgNzMgMCAxNDkuNSAxNS4yIDIwNS40IDQ3LjggNy44IDQuNSAxMi45IDEwLjcgMTIuOSAyMi42IDAgMTMuNi0xMSAyMy4zLTIzLjIgMjMuM3ptLTMxIDc2LjJjLTUuMiAwLTguNy0yLjMtMTIuMy00LjItNjIuNS0zNy0xNTUuNy01MS45LTIzOC42LTI5LjQtNC44IDEuMy03LjQgMi42LTExLjkgMi42LTEwLjcgMC0xOS40LTguNy0xOS40LTE5LjRzNS4yLTE3LjggMTUuNS0yMC43YzI3LjgtNy44IDU2LjItMTMuNiA5Ny44LTEzLjYgNjQuOSAwIDEyNy42IDE2LjEgMTc3IDQ1LjUgOC4xIDQuOCAxMS4zIDExIDExLjMgMTkuNy0uMSAxMC44LTguNSAxOS41LTE5LjQgMTkuNXptLTI2LjkgNjUuNmMtNC4yIDAtNi44LTEuMy0xMC43LTMuNi02Mi40LTM3LjYtMTM1LTM5LjItMjA2LjctMjQuNS0zLjkgMS05IDIuNi0xMS45IDIuNi05LjcgMC0xNS44LTcuNy0xNS44LTE1LjggMC0xMC4zIDYuMS0xNS4yIDEzLjYtMTYuOCA4MS45LTE4LjEgMTY1LjYtMTYuNSAyMzcgMjYuMiA2LjEgMy45IDkuNyA3LjQgOS43IDE2LjVzLTcuMSAxNS40LTE1LjIgMTUuNHoiLz4KPC9zdmc+";
+    if (/^\s*images\s*\s*\/\s*stackexchange(\.[a-z]+)?/.test(path)) return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48c3R5bGU+LnN0MHtmaWxsOiMzNzZkYjZ9LnN0MXtmaWxsOiM0Y2EyZGF9LnN0MntmaWxsOiM5MWQ4ZjR9LnN0M3tmaWxsOiMxZTUzOTd9PC9zdHlsZT48cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjIuNCA1Ny41aDc0Ljh2MTUuNEgyMi40eiIvPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0yMi40IDM3LjZoNzQuOFY1M0gyMi40eiIvPjxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik04NS41IDE3SDM0LjRjLTYuNiAwLTEyIDUuNS0xMiAxMi4zdjRoNzQuOHYtNEM5Ny4yIDIyLjUgOTIgMTcgODUuNSAxN3oiLz48cGF0aCBjbGFzcz0ic3QzIiBkPSJNMjIuNCA3Ny4zdjRjMCA2LjggNS40IDEyLjMgMTIgMTIuM2gzMnYxNi4zbDE1LjgtMTYuM2gzLjVjNi42IDAgMTItNS41IDEyLTEyLjN2LTRIMjIuNHoiLz48L3N2Zz4=";
+    if (/^\s*images\s*\s*\/\s*stackoverflow(\.[a-z]+)?/.test(path)) return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48c3R5bGU+LnN0MHtmaWxsOiNiY2JiYmJ9LnN0MXtmaWxsOiNmNDgwMjN9PC9zdHlsZT48cGF0aCBjbGFzcz0ic3QwIiBkPSJNODQuNCA5My44VjcwLjZoNy43djMwLjlIMjIuNlY3MC42aDcuN3YyMy4yeiIvPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0zOC44IDY4LjRsMzcuOCA3LjkgMS42LTcuNi0zNy44LTcuOS0xLjYgNy42em01LTE4bDM1IDE2LjMgMy4yLTctMzUtMTYuNC0zLjIgNy4xem05LjctMTcuMmwyOS43IDI0LjcgNC45LTUuOS0yOS43LTI0LjctNC45IDUuOXptMTkuMi0xOC4zbC02LjIgNC42IDIzIDMxIDYuMi00LjYtMjMtMzF6TTM4IDg2aDM4LjZ2LTcuN0gzOFY4NnoiLz48L3N2Zz4=";
+    if (/^\s*images\s*\s*\/\s*twitch(\.[a-z]+)?/       .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDIzLjAuNiwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAyNDAwIDI4MDAiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDI0MDAgMjgwMDsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNGRkZGRkY7fQoJLnN0MXtmaWxsOiM5MTQ2RkY7fQo8L3N0eWxlPgo8dGl0bGU+QXNzZXQgMjwvdGl0bGU+CjxnPgoJPHBvbHlnb24gY2xhc3M9InN0MCIgcG9pbnRzPSIyMjAwLDEzMDAgMTgwMCwxNzAwIDE0MDAsMTcwMCAxMDUwLDIwNTAgMTA1MCwxNzAwIDYwMCwxNzAwIDYwMCwyMDAgMjIwMCwyMDAgCSIvPgoJPGc+CgkJPGcgaWQ9IkxheWVyXzEtMiI+CgkJCTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik01MDAsMEwwLDUwMHYxODAwaDYwMHY1MDBsNTAwLTUwMGg0MDBsOTAwLTkwMFYwSDUwMHogTTIyMDAsMTMwMGwtNDAwLDQwMGgtNDAwbC0zNTAsMzUwdi0zNTBINjAwVjIwMGgxNjAwCgkJCQlWMTMwMHoiLz4KCQkJPHJlY3QgeD0iMTcwMCIgeT0iNTUwIiBjbGFzcz0ic3QxIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjYwMCIvPgoJCQk8cmVjdCB4PSIxMTUwIiB5PSI1NTAiIGNsYXNzPSJzdDEiIHdpZHRoPSIyMDAiIGhlaWdodD0iNjAwIi8+CgkJPC9nPgoJPC9nPgo8L2c+Cjwvc3ZnPgo=";
+    if (/^\s*images\s*\s*\/\s*twitter(\.[a-z]+)?/      .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbDpzcGFjZT0icHJlc2VydmUiIHZpZXdCb3g9IjAgMCAyNDggMjA0Ij4KICA8cGF0aCBmaWxsPSIjMWQ5YmYwIiBkPSJNMjIxLjk1IDUxLjI5Yy4xNSAyLjE3LjE1IDQuMzQuMTUgNi41MyAwIDY2LjczLTUwLjggMTQzLjY5LTE0My42OSAxNDMuNjl2LS4wNGMtMjcuNDQuMDQtNTQuMzEtNy44Mi03Ny40MS0yMi42NCAzLjk5LjQ4IDggLjcyIDEyLjAyLjczIDIyLjc0LjAyIDQ0LjgzLTcuNjEgNjIuNzItMjEuNjYtMjEuNjEtLjQxLTQwLjU2LTE0LjUtNDcuMTgtMzUuMDcgNy41NyAxLjQ2IDE1LjM3IDEuMTYgMjIuOC0uODctMjMuNTYtNC43Ni00MC41MS0yNS40Ni00MC41MS00OS41di0uNjRjNy4wMiAzLjkxIDE0Ljg4IDYuMDggMjIuOTIgNi4zMkMxMS41OCA2My4zMSA0Ljc0IDMzLjc5IDE4LjE0IDEwLjcxYzI1LjY0IDMxLjU1IDYzLjQ3IDUwLjczIDEwNC4wOCA1Mi43Ni00LjA3LTE3LjU0IDEuNDktMzUuOTIgMTQuNjEtNDguMjUgMjAuMzQtMTkuMTIgNTIuMzMtMTguMTQgNzEuNDUgMi4xOSAxMS4zMS0yLjIzIDIyLjE1LTYuMzggMzIuMDctMTIuMjYtMy43NyAxMS42OS0xMS42NiAyMS42Mi0yMi4yIDI3LjkzIDEwLjAxLTEuMTggMTkuNzktMy44NiAyOS03Ljk1LTYuNzggMTAuMTYtMTUuMzIgMTkuMDEtMjUuMiAyNi4xNnoiLz4KPC9zdmc+";
+    if (/^\s*images\s*\s*\/\s*wikipedia(\.[a-z]+)?/    .test(path)) return "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgo8c3ZnIGhlaWdodD0iNDgiIHdpZHRoPSI0OCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgPGRlZnM+CiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9InJhZGlhbEdyYWRpZW50NjcxOSIgY3g9IjYwNS43MTQyOSIgY3k9IjQ4Ni42NDc4OSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgtMi43NzQzODkgMCAwIDEuOTY5NzA2IDExMi43NjIzIC04NzIuODg1NCkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiByPSIxMTcuMTQyODYiIHhsaW5rOmhyZWY9IiNsaW5lYXJHcmFkaWVudDUwNjAiLz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyR3JhZGllbnQ1MDYwIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJyYWRpYWxHcmFkaWVudDY3MTciIGN4PSI2MDUuNzE0MjkiIGN5PSI0ODYuNjQ3ODkiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoMi43NzQzODkgMCAwIDEuOTY5NzA2IC0xODkxLjYzMyAtODcyLjg4NTQpIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgcj0iMTE3LjE0Mjg2IiB4bGluazpocmVmPSIjbGluZWFyR3JhZGllbnQ1MDYwIi8+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhckdyYWRpZW50NjcxNSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgyLjc3NDM4OSAwIDAgMS45Njk3MDYgLTE4OTIuMTc5IC04NzIuODg1NCkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiB4MT0iMzAyLjg1NzE1IiB4Mj0iMzAyLjg1NzE1IiB5MT0iMzY2LjY0Nzg5IiB5Mj0iNjA5LjUwNTA3Ij4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3Atb3BhY2l0eT0iMCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0icmFkaWFsR3JhZGllbnQxMzY2IiBjeD0iMjQuNDQ1Njg5NDAwMDIiIGN5PSIzNS44NzgxNjAwODM4NiIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIHI9IjQwLjk2MDQ1OTk4NTgiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZmYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZGNkY2RjIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogIDwvZGVmcz4KICA8Zz4KICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KC4wMjI0Mzc4OCAwIDAgLjAyMDg2NzU4IDQ0LjA2Nzk1IDQwLjU0NykiPgogICAgICA8cmVjdCBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50NjcxNSkiIGhlaWdodD0iNDc4LjM1NzE4IiBvcGFjaXR5PSIuNDAyMDYyIiB3aWR0aD0iMTMzOS42MzM1IiB4PSItMTU1OS4yNTIzIiB5PSItMTUwLjY5Njg1Ii8+CiAgICAgIDxwYXRoIGQ9Im0tMjE5LjYxODc2LTE1MC42ODAzOHY0NzguMzMwNzljMTQyLjg3NDE2Ni45MDA0NSAzNDUuNDAwMjItMTA3LjE2OTY2IDM0NS40MDAxNC0yMzkuMTk2MTc1IDAtMTMyLjAyNjUzNy0xNTkuNDM2ODE2LTIzOS4xMzQ1OTUtMzQ1LjQwMDE0LTIzOS4xMzQ2MTV6IiBmaWxsPSJ1cmwoI3JhZGlhbEdyYWRpZW50NjcxNykiIG9wYWNpdHk9Ii40MDIwNjIiLz4KICAgICAgPHBhdGggZD0ibS0xNTU5LjI1MjMtMTUwLjY4MDM4djQ3OC4zMzA3OWMtMTQyLjg3NDIuOTAwNDUtMzQ1LjQwMDItMTA3LjE2OTY2LTM0NS40MDAyLTIzOS4xOTYxNzUgMC0xMzIuMDI2NTM3IDE1OS40MzY4LTIzOS4xMzQ1OTUgMzQ1LjQwMDItMjM5LjEzNDYxNXoiIGZpbGw9InVybCgjcmFkaWFsR3JhZGllbnQ2NzE5KSIgb3BhY2l0eT0iLjQwMjA2MiIvPgogICAgPC9nPgogICAgPHJlY3QgZmlsbD0idXJsKCNyYWRpYWxHcmFkaWVudDEzNjYpIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGhlaWdodD0iNDAuMDYxOTI0IiByeD0iNS40NTQ4MjQiIHN0cm9rZT0iIzliOWI5YiIgc3Ryb2tlLWxpbmVqb2luPSJiZXZlbCIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiB3aWR0aD0iNDAuMDYxOTI0IiB4PSI0LjQxNDcyOCIgeT0iMy41MjMzNDUiLz4KICAgIDxyZWN0IGZpbGw9Im5vbmUiIGhlaWdodD0iMzcuNjk2NTg3IiByeD0iNC4yNDI2MzkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLWxpbmVqb2luPSJiZXZlbCIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiB3aWR0aD0iMzcuNjk2NTg3IiB4PSI1LjU5NzM4OSIgeT0iNC43MDYwMDciLz4KICAgIDxnIGZpbGw9IiMyZTM0MzYiIHRyYW5zZm9ybT0ibWF0cml4KDEuMDg3NzUyNyAwIDAgMS4wNTQ2OTE2IDUuODI0NDk1IDExLjgzNTkyNSkiPgogICAgICA8cGF0aCBkPSJtMjQuMzM3Nzc4IDN2LjUwNTg1OTNjLS43NDY2ODguMTE4NTA3NS0xLjMxMTg3NC4zMjgxNDI5LTEuNjk1NTU2LjYyODkwNTktLjU0OTY0OS40NDY2MzItMS4wMzcwNTYgMS4xMzAyMjUtMS40NjIyMjIgMi4wNTA3ODJsLTguMDc4MTEyIDE1Ljc3NzM0MjhoLS41NzU1NTVsLTcuMTgxODg4NS0xNS45ODI0MjA4Yy0uNDA0NDQ3Ny0uODIwMjk3LS42ODk2MzI3LTEuMzIxNTk4LS44NTU1NTU3LTEuNTAzOTA3LS4yNTkyNjE3LS4yODI1MzQtLjU4MDc0MjgtLjUwMTI4NC0uOTY0NDQ0NC0uNjU2MjUtLjM3MzMzNDgtLjE2NDA0NC0uODgxNDgyNC0uMjY4ODYyLTEuNTI0NDQ0NS0uMzE0NDUyOXYtLjUwNTg1OTNoOC42MTc3Nzgxdi41MDU4NTkzYy0uOTc0ODIzMi4wODIwNDkyLTEuNjA3NDE1MS4yMjc4ODI5LTEuODk3Nzc4MS40Mzc0OTk5LS4yOTAzNzcuMjA5NjUzLS40MzU1NjIuNDc4NTMzLS40MzU1NTU0LjgwNjY0MS0uMDAwMDA2Ni40NTU3NDUuMjM4NTExNyAxLjE2NjY4Mi43MTU1NTU1IDIuMTMyODEybDQuNjQ2MzMzIDEwLjg2OTE0MDggNS42OTgxMTItMTAuNzMyNDIxOGMuNDg3Mzg4LTEuMDU3Mjc2LjczMTA5Mi0xLjc5MDk5OS43MzExMTEtMi4yMDExNzItLjAwMDAxOS0uMjY0MzA2LS4xNTAzODgtLjUxNDk1Ny0uNDUxMTExLS43NTE5NTMtLjMwMDc1OS0uMjQ2MDc2LS44MDg5MDctLjQxOTI1My0xLjUyNDQ0NS0uNTE5NTMxMi0uMDUxODY4LS4wMDkwOTY2LS4xNDAwMTYtLjAyMjc2ODUtLjI2NDQ0NC0uMDQxMDE1N3YtLjUwNTg1OTN6Ii8+CiAgICAgIDxwYXRoIGQ9Im0zMi4zMzc3NzggM3YuNTA1ODU5M2MtLjc0NjY4OC4xMTg1MDc1LTEuMzExODc0LjMyODE0MjktMS42OTU1NTYuNjI4OTA1OS0uNTQ5NjQ5LjQ0NjYzMi0xLjAzNzA1NiAxLjEzMDIyNS0xLjQ2MjIyMiAyLjA1MDc4MmwtNy4zNTc3NzggMTUuNzc3MzQyOGgtLjU3NTU1NWwtNy45MDIyMjItMTUuOTgyNDIwOGMtLjQwNDQ0OC0uODIwMjk3LS42ODk2MzMtMS4zMjE1OTgtLjg1NTU1Ni0xLjUwMzkwNy0uMjU5MjYyLS4yODI1MzQtLjU4MDc0My0uNTAxMjg0LS45NjQ0NDUtLjY1NjI1LS4zNzMzMzQtLjE2NDA0NC0uODgxNDgyLS4yNjg4NjItMS41MjQ0NDQtLjMxNDQ1Mjl2LS41MDU4NTkzaDguNjE3Nzc4di41MDU4NTkzYy0uOTc0ODIzLjA4MjA0OTItMS42MDc0MTUuMjI3ODgyOS0xLjg5Nzc3OC40Mzc0OTk5LS4yOTAzNzcuMjA5NjUzLS40MzU1NjIuNDc4NTMzLS40MzU1NTUuODA2NjQxLS4wMDAwMDcuNDU1NzQ1LjIzODUxMSAxLjE2NjY4Mi43MTU1NTUgMi4xMzI4MTJsNS4zNjY2NjcgMTAuODY5MTQwOCA0Ljk3Nzc3OC0xMC43MzI0MjE4Yy40ODczODgtMS4wNTcyNzYuNzMxMDkyLTEuNzkwOTk5LjczMTExMS0yLjIwMTE3Mi0uMDAwMDE5LS4yNjQzMDYtLjE1MDM4OC0uNTE0OTU3LS40NTExMTEtLjc1MTk1My0uMzAwNzU5LS4yNDYwNzYtLjgwODkwNy0uNDE5MjUzLTEuNTI0NDQ1LS41MTk1MzEyLS4wNTE4NjgtLjAwOTA5NjYtLjE0MDAxNi0uMDIyNzY4NS0uMjY0NDQ0LS4wNDEwMTU3di0uNTA1ODU5M3oiLz4KICAgIDwvZz4KICA8L2c+Cjwvc3ZnPgo=";
+    if (/^\s*images\s*\s*\/\s*youtube(\.[a-z]+)?/      .test(path)) return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGNsYXNzPSJleHRlcm5hbC1pY29uIiB2aWV3Qm94PSIwIDAgMjguNTcgIDIwIiBmb2N1c2FibGU9ImZhbHNlIiBzdHlsZT0icG9pbnRlci1ldmVudHM6IG5vbmU7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogMTAwJTsgaGVpZ2h0OiAxMDAlOyI+DQogIDxzdmcgdmlld0JveD0iMCAwIDI4LjU3IDIwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KICAgIDxnPg0KICAgICAgPHBhdGggZD0iTTI3Ljk3MjcgMy4xMjMyNEMyNy42NDM1IDEuODkzMjMgMjYuNjc2OCAwLjkyNjYyMyAyNS40NDY4IDAuNTk3MzY2QzIzLjIxOTcgMi4yNDI4OGUtMDcgMTQuMjg1IDAgMTQuMjg1IDBDMTQuMjg1IDAgNS4zNTA0MiAyLjI0Mjg4ZS0wNyAzLjEyMzIzIDAuNTk3MzY2QzEuODkzMjMgMC45MjY2MjMgMC45MjY2MjMgMS44OTMyMyAwLjU5NzM2NiAzLjEyMzI0QzIuMjQyODhlLTA3IDUuMzUwNDIgMCAxMCAwIDEwQzAgMTAgMi4yNDI4OGUtMDcgMTQuNjQ5NiAwLjU5NzM2NiAxNi44NzY4QzAuOTI2NjIzIDE4LjEwNjggMS44OTMyMyAxOS4wNzM0IDMuMTIzMjMgMTkuNDAyNkM1LjM1MDQyIDIwIDE0LjI4NSAyMCAxNC4yODUgMjBDMTQuMjg1IDIwIDIzLjIxOTcgMjAgMjUuNDQ2OCAxOS40MDI2QzI2LjY3NjggMTkuMDczNCAyNy42NDM1IDE4LjEwNjggMjcuOTcyNyAxNi44NzY4QzI4LjU3MDEgMTQuNjQ5NiAyOC41NzAxIDEwIDI4LjU3MDEgMTBDMjguNTcwMSAxMCAyOC41Njc3IDUuMzUwNDIgMjcuOTcyNyAzLjEyMzI0WiIgZmlsbD0iI0ZGMDAwMCI+PC9wYXRoPg0KICAgICAgPHBhdGggZD0iTTExLjQyNTMgMTQuMjg1NEwxOC44NDc3IDEwLjAwMDRMMTEuNDI1MyA1LjcxNTMzVjE0LjI4NTRaIiBmaWxsPSJ3aGl0ZSI+PC9wYXRoPg0KICAgIDwvZz4NCiAgPC9zdmc+DQo8L3N2Zz4=";
+    if (/^\s*images\s*\s*\/\s*…(\.[a-z]+)?/            .test(path)) return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4My41NDEiIGhlaWdodD0iODUuNjcxIj48cGF0aCBkPSJNMTg5LjE1MSAyNzEuMDFjLTE2LjM2NCAyNS44MjQtNi4xMzEgNjcuNiAyNC43NDkgNzcuMDc0IiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojRkZGO3N0cm9rZS13aWR0aDo0O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjQ7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjEiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xNjMuODI1IC0yNjUuNDc0KSIvPjxwYXRoIGQ9Ik0xODkuMTUxIDI3MS41MWMzMi4wOTYgMi44NTIgNDguMzk3IDQwLjQ3NSA0MS4wMTIgNjguNzk2TTE4OC43OTggMjcxLjAxbDMzLjk0IDc0LjI0NSIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6I0ZGRjtzdHJva2Utd2lkdGg6NDtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTYzLjgyNSAtMjY1LjQ3NCkiLz48cGF0aCBkPSJNMTcxLjEyIDI4Ny45OGMxNi43NDcgOC44NTMgMzcuNzM1LTIuODI1IDQ0LjU0OC0xOS4wOTJNMTY2LjUyNCAzMDYuMDExYzI0LjYwMiA3Ljg5MiA1NC40NDktNC40MDggNjUuMDUzLTI4LjI4NE0xNjkuNzA2IDMyNS44MWMyNy42NTcgNi44MyA2MS41MDctNS41MzcgNzIuNDc4LTMzLjIzNCIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6I0ZGRjtzdHJva2Utd2lkdGg6NDtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTYzLjgyNSAtMjY1LjQ3NCkiLz48cGF0aCBkPSJNMjQxLjUzNCAzMTAuODI1YTM5Ljc2NiA0MC44MzYgMCAwIDEtMzkuNjU0IDQwLjgzNSAzOS43NjYgNDAuODM2IDAgMCAxLTM5Ljg3OC00MC42MDQgMzkuNzY2IDQwLjgzNiAwIDAgMSAzOS40MjktNDEuMDY1IDM5Ljc2NiA0MC44MzYgMCAwIDEgNDAuMSA0MC4zNzIiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiNGRkY7c3Ryb2tlLXdpZHRoOjQ7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIgdHJhbnNmb3JtPSJyb3RhdGUoLS43MDggLTIxNTc0LjU0NSAxMzEzMC40NTgpIi8+PHBhdGggZD0iTTE4MC42NjYgMzQwLjMwNmMyNC41NzggOC42NTIgNTUuNDM5LTQuMTUxIDY0LjctMjguOTkyIiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojRkZGO3N0cm9rZS13aWR0aDo0O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjQ7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjEiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xNjMuODI1IC0yNjUuNDc0KSIvPjxwYXRoIGQ9Ik0tMjQ4Ljc4MiAzMTEuMjg3YTM5Ljc2NiA0MC44MzYgMCAwIDEtLjMxMi03LjY5OSIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6I0ZGRjtzdHJva2Utd2lkdGg6NDtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIiB0cmFuc2Zvcm09InNjYWxlKC0xIDEpcm90YXRlKC0uNzA4IC0yMTQxMC43MjIgLTEzMzk1LjkzKSIvPjwvc3ZnPg=="
+
+    return this.url() + '/' + path
   }
 
-  static async setPreviewByEditorSelectedLink(editor) {
-    var DEFAULT_RESPONSE_HEADERS = {"Access-Control-Allow-Headers": "Access-Control-Allow-Origin, Cache-Control, Content-Type", "Access-Control-Allow-Origin": location.href, "Cache-Control": "no-cache", "Content-Type": "text/plain"};
+  static format(text) {
+    return null !== text ? '“' + text.replace(/\s/g, ' ').replace(/[“”]/g, '"') + '”' : ""
+  }
 
-    var cursorPosition                = editor.getCursor();
-    var documentCollections           = [];
-    var documentTitle                 = "";
-    var editorSelection               = editor.somethingSelected() ? editor.getSelection().trim() : "";
-    var editorSelectionCursorPosition = cursorPosition;
-    var link                          = null;
-    var metadata                      = {description: null, thumbnail: null, title: null};
-    var metadataLink                  = null;
-    var preview                       = null;
-    var ranks                         = {description: 1, thumbnail: 1.0, title: 1};
-    var response                      = null;
-    var responseHeaders               = Object.assign({}, DEFAULT_RESPONSE_HEADERS);
-    var special                       = {data: null, method: null, platform: ""};
+  async onload() {
+    var plugin = this;
 
-    /* ... */
+    // ...
+    void plugin.addCommand   ({editorCheckCallback: function(checked, editor) { if (!checked) { LinkPreviewPlugin.preview(plugin, editor) } return true }, id: LinkPreviewPlugin.ID, name: LinkPreviewPlugin.NAME});
+    void plugin.addRibbonIcon("globe", LinkPreviewPlugin.TOOLTIP, function() { if (null !== plugin.app.workspace.getActiveViewOfType(MarkdownView)) LinkPreviewPlugin.preview(plugin, plugin.app.workspace.activeLeaf?.view.editor) });
+    plugin.registerDomEvent(document, "click", function closePreview(event) { if (null !== LinkPreviewPlugin.getAncestorElementByClassName(LinkPreviewPlugin.getAncestorElementByClassName(event.target, "link-preview-close"), "link-preview")) { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation() } });
+
+    plugin.registerEditorExtension(ViewPlugin.fromClass(class ClickableButtonPlugin implements PluginValue {
+      handlers = {click: null, mousedown: null};
+
+      /* ... */
+      constructor(public view: EditorView) {
+        this.view.dom.addEventListener("click",     this.handlers.click     = this.onclick    .bind(this));
+        this.view.dom.addEventListener("mousedown", this.handlers.mousedown = this.onmousedown.bind(this))
+      }
+
+      /* ... */
+      destroy() {
+        this.view.dom.removeEventListener("click",     this.handlers.click);
+        this.view.dom.removeEventListener("mousedown", this.handlers.mousedown)
+      }
+
+      async onclick(event) { if (null === LinkPreviewPlugin.getAncestorElementByClassName(event.target, "link-preview-close")) void await LinkPreviewPlugin.copy(LinkPreviewPlugin.getAncestorElementByClassName(event.target, "link-preview")) }
+      onmousedown  (event) { void LinkPreviewPlugin.remove(LinkPreviewPlugin.getAncestorElementByClassName(LinkPreviewPlugin.getAncestorElementByClassName(event.target, "link-preview-close"), "link-preview"), this.view) }
+    }));
+
+    void plugin.registerMarkdownPostProcessor(function(element, context) {
+      for (var previews = element.getElementsByClassName("link-preview"), index = previews.length; index; )
+      previews.item(--index).addEventListener("click", async function copyPreview(event) {
+        if (null === LinkPreviewPlugin.getAncestorElementByClassName(event.target, "link-preview-close"))
+        void await LinkPreviewPlugin.copy(this)
+      });
+
+      for (var previews = element.getElementsByClassName("link-preview-close"), index = previews.length; index; )
+      previews.item(--index).addEventListener("mousedown", async function closePreview(event) {
+        var pluginLeaf      = plugin.app.workspace.activeLeaf;
+        var pluginView      = plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor.cm;
+        var pluginViewState = pluginLeaf.getViewState();
+
+        // ...
+        if (null === pluginLeaf)
+        return;
+
+        pluginViewState.state.mode   = "source";
+        pluginViewState.state.source = false;
+        await pluginLeaf.setViewState(pluginViewState);
+
+        void LinkPreviewPlugin.remove(plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor.cm.dom.querySelector(".link-preview[id=\"" + LinkPreviewPlugin.getAncestorElementByClassName(this, "link-preview").id + "\"]"), pluginView);
+
+        pluginViewState.state.mode   = "preview";
+        pluginViewState.state.source = false;
+        await pluginLeaf.setViewState(pluginViewState)
+      })
+    })
+  }
+
+  static async preview(plugin, editor) {
     function getMetadataSize(sizes) {
       var size = 0.0;
 
@@ -214,330 +185,525 @@ export default class LinkPreviewPlugin extends Plugin {
         size    = subsize > size ? subsize : size
       }
 
-      return size / 9007199254740991 // --> Number.MAX_SAFE_INTEGER
+      return size / /* --> Number.MAX_SAFE_INTEGER */ 9007199254740991
     }
 
-    function sanitizeLinkForCode             (link) { return link.replace(/\n/g, "%0A").replace(/```/g, "%60%60%60") }
-    function sanitizeLinkForMarkdown         (link) { return link.replace(/\n/g, "%0A").replace(/</g, "%3C").replace(/>/g, "%3E") }
-    function sanitizeLinkForMarkdownAttribute(link) { return link.replace(/\n/g, "%0A").replace(/"/g, "%22") }
-    function sanitizeTextForMarkdown         (text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") }
+    function sanitizeLinkForCode             (link)  { return link.replace(/\n/g, "%0A").replace(/```/g, "%60%60%60") }
+    function sanitizeLinkForMarkdown         (link)  { return link.replace(/\n/g, "%0A").replace(/</g, "%3C").replace(/>/g, "%3E") }
+    function sanitizeLinkForMarkdownAttribute(link)  { return link.replace(/\n/g, "%0A").replace(/"/g, "%22") }
+    function sanitizeTextForMarkdown         (text)  { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") }
+    function sanitizeTextForPlaintext        (text)  { return text.replace(/<\/?[^>]+(>|$)/g, "") }
 
     /* ... ->> Ensure the `editor` selection is a link */
-    if (false === LinkPreviewPlugin.isLink(editorSelection)) {
-      new Notice  ("Select a link to turn into a preview");
-      console.info((editor.somethingSelected() ? "Expected" : "Pending") + " link to preview");
+    try {
+      var cursorPosition                = editor.getCursor();
+      var documentTitle                 = "";
+      var editorSelected                = editor.somethingSelected();
+      var editorSelection               = editorSelected ? editor.getSelection().trim() : "";
+      var editorSelectionCursorPosition = cursorPosition;
+      var link                          = new URL(editorSelection);
+      var preview                       = {content: null, description: null, favicon: null, thumbnail: null, requests: [], title: null};
+      var response                      = null;
 
-      return
-    }
+      // ...
+      void new Notice("Previewing link `" + link.href.replace(/`/g, "%60") + "`…");
+      console.info   ("Previewing link `" + link.href.replace(/`/g, "%60") + "`…");
 
-    try { link = metadataLink = new URL(editorSelection) }
-    catch (error) {
-      new Notice   ("Make sure the link is correct?");
-      console.error("Unexpected link `" + editorSelection.replace(/`/g, "%60") + "` encountered");
+      LinkPreviewRequest.DEFAULT_RESPONSE_HEADERS["Referer"] = link.origin;
+      void preview.requests.push(new LinkPreviewRequest(null, null, link));
 
-      return
-    }
+      // ... ->> Get “special” `preview` about the `link`
+      special: {
+        if      (null !== link.hostname.match(/(^|\.)bsky\.app$/))                                      preview.favicon = plugin.favicon("images/bluesky.svg");   // ->> Bluesky
+        else if (null !== link.hostname.match(/(^|\.)(quora\.com|qr\.ae)/))                             preview.favicon = plugin.favicon("images/quora.svg");     // ->> Quora
+        else if (null !== link.hostname.match(/(^|\.)youtube\.com/))                                    preview.favicon = plugin.favicon("images/youtube.svg");   // ->> YouTube
+        else if (null !== link.hostname.match(/(^|\.)discord\.com/))                                    preview.favicon = plugin.favicon("images/discord.svg");   // ->> Discord
+        else if (null !== link.hostname.match(/(^|\.)facebook\.com/))                                   preview.favicon = plugin.favicon("images/facebook.svg");  // ->> Facebook
+        else if (null !== link.hostname.match(/(^|\.)instagram\.com/))                                  preview.favicon = plugin.favicon("images/instagram.svg"); // ->> Instagram
+        else if (null !== link.hostname.match(/(^|\.)mastodon\.com/))                                   preview.favicon = plugin.favicon("images/mastodon.svg");  // ->> Mastodon
+        else if (null !== link.hostname.match(/^(b\.thumbs\.redditmedia\.com|(i|preview)\.redd\.it)$/)) preview.favicon = plugin.favicon("images/reddit.png");    // ->> Reddit
 
-    // ... ->> Get “special” `metadata` about the `link`
-    new Notice  ("Previewing link `" + link.href.replace(/`/g, "%60") + "`…");
-    console.info("Previewing link `" + link.href.replace(/`/g, "%60") + "`…");
+        else if (null !== link.hostname.match(/^(|old\.|www\.)reddit\.com$/)) /* ->> Reddit */ {
+          var redditClientID     = "55ZvQLdL1v8Z6pBW8PCdBw";
+          var redditClientSecret = "y9jY69EgAo7caBu7_I1HJZGn6WdWPg";
+          var redditPassword     = "okru3)T4rD7ds{%1";
+          var redditPostID       = link.pathname.match(/\/comments\/([a-z0-9]+)(?:\/|$)/);
+          var redditUserAgent    = "LapysBot/1.0 by u/Lapys-Arts";
+          var redditUsername     = "Lapys-Arts";
 
-    // if (null !== metadataLink.hostname.match(/((i|preview)\.redd\.it|(|old\.|www\.)reddit\.com)/)) {
-    //   var redditPostID = (metadataLink.pathname.match(/\/comments\/([a-z0-9]+)(?:\/|$)/) || [, null])[1];
+          // ...
+          redditPostID = null !== redditPostID && redditPostID.length > 1 ? redditPostID[1] : null;
 
-    //   // ...
-    //   if (null !== redditPostID) {
-    //     var redditClientID     = "";
-    //     var redditClientSecret = "";
-    //     var redditPassword     = "";
-    //     var redditUserAgent    = "";
-    //     var redditUsername     = "";
-    //     var redditResponse     = await requestUrl({body: /* --> URLSearchParams */ "grant_type=password&username=" + encodeURIComponent(redditUsername) + "&password=" + encodeURIComponent(redditPassword), headers: {"Authorization": "Basic " + btoa(redditClientID + ':' + redditClientSecret), "Content-Type": "application/x-www-form-urlencoded", "User-Agent": redditUserAgent}, method: "POST", "throw": false, url: "https://www.reddit.com/api/v1/access_token"});
+https://www.uber.com/legal/en/document/?name=general-terms-of-use&country=great-britain&lang=en-gb&uclick_id=78511b0e-c0f5-42f5-9569-9e852098521b#kix.mtduqbdyefv1
+          if (null !== link.pathname.match(/\/media$/)) {
+            try { void preview.requests.splice(0, 0, new LinkPreviewRequest("Reddit", "reddit-search", new URL("https://reddit.com/search.json?q=url" + encodeURIComponent(":\"" + new URL(decodeURIComponent(link.searchParams.get("url"))).href + '"') + "&type=link"))) }
+            catch (error) /* --> TypeError */ {}
 
-    //     // ...
-    //     if (null !== redditPostID) {
-    //       special.data     = redditPostID;
-    //       special.platform = "Reddit";
+            preview.favicon = plugin.favicon("images/reddit.png")
+          }
 
-    //       if (redditResponse.status === 200 && typeof redditResponse.json.access_token === "string") /* ->> Avoid `.json == {error: "invalid_grant"}` */ {
-    //         metadataLink                                    = new URL(null !== redditPostID ? "https://oauth.reddit.com/comments/" + redditPostID + "/.json?raw_json=1" : "https://www.reddit.com/domain/i.redd.it.json?url=" + encodeURIComponent(metadataLink.href) + "&raw_json=1");
-    //         responseHeaders["Access-Control-Allow-Headers"] = (responseHeaders["Access-Control-Allow-Headers"] || []).split(/\s*,\s*/).concat(["Authorization", "User-Agent"]).join(", ");
-    //         responseHeaders["Authorization"]                = (redditResponse.json.token_type || "bearer ") + ' ' + redditResponse.json.access_token;
-    //         responseHeaders["User-Agent"]                   = redditUserAgent;
-    //         special.method                                  = "reddit-oauth"
-    //       }
+          else if (null !== redditPostID) {
+            response = await requestUrl({body: "grant_type=password&username=" + encodeURIComponent(redditUsername) + "&password=" + encodeURIComponent(redditPassword), headers: LinkPreviewRequest.header({"Authorization": "Basic " + btoa(redditClientID + ':' + redditClientSecret), "Content-Type": "application/x-www-form-urlencoded", "User-Agent": redditUserAgent}), method: "POST", "throw": false, url: "https://www.reddit.com/api/v1/access_token"});
 
-    //       else {
-    //         metadataLink   = new URL(metadataLink.href + ".json");
-    //         special.method = "reddit-json"
-    //       }
-    //     }
-    //   }
-    // }
+            if (response.status >= 200 && response.status < 300 && typeof response.json.access_token === "string") /* ->> Avoid `.json == {error: "invalid_grant"}` */ {
+              void preview.requests.splice(0, 0, new LinkPreviewRequest("Reddit", "reddit-oauth", new URL(null !== redditPostID ? "https://oauth.reddit.com/comments/" + redditPostID + "/.json?raw_json=1" : "https://www.reddit.com/domain/i.redd.it.json?url=" + encodeURIComponent(link.href) + "&raw_json=1")))
 
-    // ... ->> Get `metadata` about the `link`
-    for (var requesting = true; requesting; ) {
-      requesting = false;
-      response   = await requestUrl({contentType: "text/plain", headers: responseHeaders["Content-Type"], method: "GET", "throw": /* ->> Status code 400+ */ false, url: metadataLink.href}); // ->> `fetch(…)` without CORS restrictions
+              preview.requests[0].headers["Access-Control-Allow-Headers"] = (preview.requests[0].headers["Access-Control-Allow-Headers"] || []).split(/\s*,\s*/).concat(["Authorization", "User-Agent"]).join(", ");
+              preview.requests[0].headers["Authorization"]                = (response.json.token_type || "bearer ") + ' ' + response.json.access_token;
+              preview.requests[0].headers["User-Agent"]                   = redditUserAgent
+            } else void preview.requests.splice(0, 0, new LinkPreviewRequest("Reddit", "reddit-json", new URL(link.href + ".json")));
 
-      // ... ->> Failed to fetch `link`
-      if (null === response || response.status < 200 || response.status >= 300 || (function(special) {
-        switch (special.method) {
-          case "reddit-json":
-          case "reddit-oauth": try { void response.json[0].data.children[0].data; return false } catch (error) {} return true; // ->> Assert JSON layout
-          default:
+            preview.favicon          = plugin.favicon("images/reddit.png");
+            preview.requests[0].data = redditPostID
+          }
         }
 
-        return false
-      })(special)) {
-        console.error("Unable to " + (null !== special.method ? "(specially) " : "") + "preview link `" + metadataLink.href.replace(/`/g, "%60") + "`; Status " + response.status, response);
+        else if (null !== link.hostname.match(/(((askubuntu|mathoverflow|serverfault|stackapps|(?:\w+\.)*stackexchange|(?:\w+\.)*stackoverflow|superuser)\.com)|((mathoverflow)\.net))$/)) /* ->> Stack Exchange */ {
+          var stackExchangeID       = null;
+          var stackExchangePost     = link.href.match(/\/(a|answers|q|questions)\/(\d+)/);
+          var stackExchangePostKind = "questions";
+          var stackExchangeSite     = link.hostname.replace(/\.(com|net)$/, "");
 
-        // ...
-        if (link === metadataLink)
-          new Notice("Unable to " + (null !== special.method ? "(specially) " : "") + "preview link `" + metadataLink.href.replace(/`/g, "%60") + "`; Status " + response.status);
+          // ...
+          if (null !== stackExchangePost) {
+            stackExchangeID       = stackExchangePost[stackExchangePost.length - 1] || stackExchangeID;
+            stackExchangePostKind = stackExchangePost[1]                            || stackExchangePostKind;
+            stackExchangePostKind = (
+              stackExchangePostKind.startsWith('q') ? "questions" :
+              stackExchangePostKind.startsWith('a') ? "answers"   :
+              null
+            )
+          }
 
-        else {
-          metadataLink     = link;
-          requesting       = true; // --> continue
-          responseHeaders  = Object.assign({}, DEFAULT_RESPONSE_HEADERS);
-          special.method   = null
+          switch (stackExchangePostKind) {
+            case "answers": {
+              response = await requestUrl({contentType: "application/json", headers: LinkPreviewRequest.header({"Content-Type": "application/json"}), method: "GET", "throw": false, url: "https://api.stackexchange.com/2.3/answers/" + stackExchangeID + "?filter=withbody&site=" + stackExchangeSite});
+
+              if (response.status >= 200 && response.status < 300)
+              try {
+                var post = response.json.items[0];
+
+                // ...
+                preview.description   = sanitizeTextForPlaintext(post.body);
+                preview.thumbnail     = (post.owner || {profile_image: null}).profile_image || null;
+                stackExchangeID       = post.question_id;
+                stackExchangePostKind = "questions"
+              } catch (error) { stackExchangeID = null }
+            } break;
+
+            default:
+          }
+
+          // ...
+          if (null !== stackExchangeID) {
+            preview.favicon = plugin.favicon("images/" + (link.hostname.indexOf("stackoverflow") !== -1 ? "stackoverflow" : "stackexchange") + ".png");
+            void preview.requests.splice(0, 0, new LinkPreviewRequest("Stack Exchange", "stackexchange-" + stackExchangePostKind, new URL("https://api.stackexchange.com/2.3/" + stackExchangePostKind + '/' + stackExchangeID + "?filter=withbody&site=" + stackExchangeSite)))
+          }
+        }
+
+        else if (null !== link.hostname.match(/(^|\.)(twitter|x)\.com/)) /* ->> Twitter (currently known as X) */ {
+          var twitterBearerToken = "AAAAAAAAAAAAAAAAAAAAAJtJ4gEAAAAAk2MpkToRN82T0SlPz4VePJ4mWpA%3DV2CfwdL4l0OEkTYsBoqMt8f8nyDhJOm7TxRAbalLEKQTL4IVqD";
+          var twitterTweetID     = link.href.match(/(^|[\\\/]\s*)[0-9]{19,}($|[\\\/]\s*)/g);
+
+          // ...
+          preview.favicon = plugin.favicon("images/twitter.png");
+          void preview.requests.splice(0, 0, new LinkPreviewRequest("Twitter (X)", "twitter-x-open-embed", new URL("https://publish.twitter.com/oembed?url=" + encodeURIComponent(link.href))));
+
+          if (null !== twitterTweetID && 0 !== twitterTweetID.length) {
+            void preview.requests.splice(0, 0, new LinkPreviewRequest("Twitter (X)", "twitter-x", new URL("https://api.twitter.com/2/tweets/" + twitterTweetID[0].replace(/^[\\\/]|[\\\/]$/g, "") + "?expansions=attachments.media_keys,author_id&media.fields=alt_text,preview_image_url,url&tweet.fields=author_id,created_at,text&user.fields=name,username,profile_image_url")));
+            preview.requests[0].headers["Authorization"] = "Bearer " + twitterBearerToken
+          }
+        }
+
+        else if (null !== link.hostname.match(/^(|[a-z]{2,3}\.)wikipedia\.(com|org)$/)) /* ->> Wikipedia */ {
+          var wikipediaArticleTitle = link.pathname.match(/\/wiki\/.*$/);
+
+          // ...
+          wikipediaArticleTitle = null !== wikipediaArticleTitle ? wikipediaArticleTitle[0].slice("/wiki/".length) : null;
+
+          if (null !== wikipediaArticleTitle && null !== decodeURIComponent(wikipediaArticleTitle).match(/^File\:/)) {
+            preview.favicon = plugin.favicon("images/wikipedia.png");
+            void preview.requests.splice(0, 0, new LinkPreviewRequest("Wikipedia", "wikipedia-action-file", new URL("https://" + link.hostname + "/w/api.php?action=query&format=json&iiprop=canonicaltitle|comment|extmetadata|url|user&origin=*&prop=imageinfo&titles=" + wikipediaArticleTitle)));
+          }
+
+          else if (null !== wikipediaArticleTitle && null === decodeURIComponent(wikipediaArticleTitle).match(/^(Category|Help|Image|Special|Talk|Template|User|Wikipedia)\:/)) {
+            preview.favicon = plugin.favicon("images/wikipedia.png");
+
+            void preview.requests.splice(0, 0, new LinkPreviewRequest("Wikipedia", "wikipedia-action", new URL("https://" + link.hostname + "/w/api.php?action=query&exintro&explaintext&format=json&origin=*&prop=extracts&redirects=1&titles=" + wikipediaArticleTitle)));
+            void preview.requests.splice(0, 0, new LinkPreviewRequest("Wikipedia", "wikipedia-rest",   new URL("https://" + link.hostname + "/api/rest_v1/page/summary/"                                                                         + wikipediaArticleTitle)))
+          }
         }
       }
-    }
 
-    switch (special.method) {
-      case "reddit-json":
-      case "reddit-oauth": {
-        var post = response.json[0].data.children[0].data;
+      // ... ->> Get `response` data from the `link`
+      request:
+      while (0 !== preview.requests.length) {
+        response = await requestUrl({contentType: preview.requests[0].headers["Content-Type"], headers: preview.requests[0].headers, method: "GET", "throw": false, url: preview.requests[0].link.href});
 
-        // ...
-        metadata.description = post.selftext;
-        metadata.thumbnail   = null !== metadataLink.pathname.match(/\/media\//) ? post.url_overridden_by_dest || null : null;
-        metadata.title       = post.title;
+        if (null !== response) {
+          var redirected = response.status >= 300 && response.status < 400;
+          var resolved   = response.status >= 200 && response.status < 300;
 
-        if (null !== metadata.thumbnail) {
-          try { metadata.thumbnail = "preview" in post && 0 !== (post.preview.images || []).length ? post.preview.images[0].source.url : new URL(post.thumbnail).href }
-          catch (error) { metadata.thumbnail = special.method === "reddit-oauth" ? "https://share.redd.it/preview/post/" + special.data : null } // ->> still requires Open Authorization
+          // ...
+          if (redirected)
+          if (typeof response.headers.location === "string") {
+            preview.requests[0] = new LinkPreviewRequest(preview.requests[0].platform, preview.requests[0].method, new URL(response.headers.location));
+            continue
+          }
+
+          if (resolved)
+          switch (preview.requests[0].method) {
+            case "reddit-json": case "reddit-oauth": try { var post    = response.json[0].data.children[0].data;                   resolved = "selftext"       in post   && "thumbnail" in post   && "title" in post }                      catch (error) /* --> ReferenceError */ { resolved = false } break;
+            case "reddit-search":                    try { var result  = response.json   .data.children[0].data;                   resolved = "selftext"       in result && "thumbnail" in result && "title" in result }                    catch (error) /* --> ReferenceError */ { resolved = false } break;
+            case "stackexchange-answers":            try { var post    = response.json   .items[0];                                resolved = "body"           in post }                                                                    catch (error) /* --> ReferenceError */ { resolved = false } break;
+            case "stackexchange-questions":          try { var post    = response.json   .items[0];                                resolved = "body"           in post && "title" in post }                                                 catch (error) /* --> ReferenceError */ { resolved = false } break;
+            case "twitter-x":                        try { var tweet   = response.json.data;                                       resolved = "text"           in tweet }                                                                   catch (error) /* --> ReferenceError */ { resolved = false } break;
+            case "twitter-x-open-embed":             try { var tweet   = response.json;                                            resolved = "author_name"    in tweet && "html" in tweet }                                                catch (error) /* --> ReferenceError */ { resolved = false } break;
+            case "wikipedia-action":                 try { var article = Object.values(response.json.query.pages)[0];              resolved = "extract"        in article                                           && "title" in article } catch (error) /* --> ReferenceError */ { resolved = false } break;
+            case "wikipedia-action-file":            try { var file    = Object.values(response.json.query.pages)[0].imageinfo[0]; resolved = "canonicaltitle" in file    && "ImageDescription" in file.extmetadata && "url"   in file }    catch (error) /* --> ReferenceError */ { resolved = false } break;
+            case "wikipedia-rest":                   try { var article = response.json;                                            resolved = "extract"        in article && "thumbnail"        in article          && "title" in article } catch (error) /* --> ReferenceError */ { resolved = false } break;
+            default:
+          }
+
+          if (resolved)
+          break
         }
 
-        console.info("Previewing “special” " + special.platform + " link")
-      } break;
+        if (true)                                      console.error("Unable to " + (null !== preview.requests[0].method ? "(specially) " : "") + "preview link `" + preview.requests[0].link.href.replace(/`/g, "%60") + "`; Status " + response.status, response, preview.requests[0]);
+        if (preview.requests.length === 1) return void new Notice   ("Unable to " + (null !== preview.requests[0].method ? "(specially) " : "") + "preview link `" + preview.requests[0].link.href.replace(/`/g, "%60") + "`; Status " + response.status);
 
-      default: {
+        void preview.requests.splice(0, 1);
+        response = null
+      }
+
+      // ... ->> Get `preview` (from `preview` or otherwise) of the `link`
+      process: {
         var responseContentType   = (response.headers["content-type"] || response.headers["Content-Type"] || "text/html").split(';')[0];
         var responseText          = response.text;
         var responseTextFormatted = responseText.length >= 80 ? responseText.slice(0, 79) + '…' : responseText;
 
         // ...
+        if (null !== preview.requests[0].method) {
+          console.info("Previewing a “special” " + preview.requests[0].platform + " link");
+
+          switch (preview.requests[0].method) {
+            case "reddit-json":
+            case "reddit-oauth":
+            case "reddit-search": {
+              var post = (preview.requests[0].method === "reddit-search" ? response.json : response.json[0]).data.children[0].data;
+
+              // ...
+              preview.description = post.selftext;
+              preview.thumbnail   = post.thumbnail;
+              preview.thumbnail   = null === preview.thumbnail && null !== preview.requests[0].link.pathname.match(/\/media\//) ? post.url_overridden_by_dest       || null : preview.thumbnail;
+              preview.thumbnail   = null === preview.thumbnail && "preview" in post && 0 !== (post.preview.images || []).length ? post.preview.images[0].source.url || null : preview.thumbnail;
+              preview.title       = post.title
+            } break;
+
+            case "stackexchange-answers":
+            case "stackexchange-questions": {
+              var post = response.json.items[0];
+
+              // ...
+              preview.description = null === preview.description ? sanitizeTextForPlaintext(post.body)                         : preview.description;
+              preview.thumbnail   = null === preview.thumbnail   ? (post.owner || {profile_image: null}).profile_image || null : preview.thumbnail;
+              preview.title       = null === preview.title       ? post.title                                          || null : preview.title
+            } break;
+
+            case "twitter-x": {
+              var tweet = response.json;
+
+              // ...
+              preview.description = sanitizeTextForPlaintext(tweet.data.text);
+              preview.thumbnail   = null === preview.thumbnail && "includes" in tweet && 0 !== (tweet.includes.media || []).length ? tweet.includes.media[0].url || null                                                                                : preview.thumbnail;
+              preview.title       = null === preview.title     && "includes" in tweet && 0 !== (tweet.includes.users || []).length ? (tweet.includes.users.find(function(user) { return tweet.data.author_id+"" === user.id+"" }) || {name: null}).name : preview.title
+            } break;
+
+            case "twitter-x-open-embed": {
+              var tweet = response.json;
+
+              // ...
+              preview.description = new DOMParser().parseFromString(tweet.html, "text/html").body.outerText;
+              preview.title       = tweet.author_name
+            } break;
+
+            case "wikipedia-action": {
+              var article = Object.values(response.json.query.pages)[0];
+
+              // ...
+              preview.description = article.extract;
+              preview.title       = article.title
+            } break;
+
+            case "wikipedia-action-file": {
+              var file = Object.values(response.json.query.pages)[0].imageinfo[0];
+
+              // ...
+              preview.description = sanitizeTextForPlaintext(file.extmetadata.ImageDescription.value || file.extmetadata.ImageDescription + "");
+              preview.thumbnail   = file.url;
+              preview.title       = file.canonicaltitle.replace(/^\s*File\:/, "")
+            } break;
+
+            case "wikipedia-rest": {
+              var article = response.json;
+
+              // ...
+              preview.description = article.extract;
+              preview.thumbnail   = article.thumbnail.source || article.thumbnail + "";
+              preview.title       = article.title
+            } break;
+
+            default:
+          }
+
+          break process
+        }
+
+        // ... ->> Preview image links
         if (responseContentType.startsWith("image/")) {
-          var extension = responseContentType.slice("image/".length);
+          var format = responseContentType.slice("image/".length);
 
           // ...
-          switch (extension) {
-            case "aces": case "apng": case "avci": case "avcs": case "avif":
-            case "bmp":
-            case "cgm":
-            case "dicom-rle": case "dpx":
-            case "emf":
-            case "fits":
-            case "g3fax": case "gif":
-            case "heic": case "heic-sequence": case "heif": case "heif-sequence": case "hej2k": case "hsj2":
-            case "ief": case "j2c": case "jaii": case "jais": case "jls": case "jp2": case "jpeg": case "jph": case "jphc": case "jpm": case "jpx": case "jxl": case "jxr": case "jxrA": case "jxrS": case "jxs": case "jxsc": case "jxsi": case "jxss":
-            case "ktx": case "ktx2":
-            case "naplps":
-            case "png": case "prs.btif": case "prs.pti": case "pwg-raster":
-            case "svg+xml":
-            case "t38": case "tiff": case "tiff-fx":
-            case "vnd.adobe.photoshop": case "vnd.airzip.accelerator.azv": case "vnd.blockfact.facti": case "vnd.clip": case "vnd.cns.inf2": case "vnd.dece.graphic": case "vnd.djvu": case "vnd.dwg": case "vnd.dxf": case "vnd.dvb.subtitle": case "vnd.fastbidsheet": case "vnd.fpx": case "vnd.fst": case "vnd.fujixerox.edmics-mmr": case "vnd.fujixerox.edmics-rlc": case "vnd.globalgraphics.pgb": case "vnd.microsoft.icon": case "vnd.mix": case "vnd.ms-modi": case "vnd.mozilla.apng": case "vnd.net-fpx": case "vnd.pco.b16": case "vnd.radiance": case "vnd.sealed.png": case "vnd.sealedmedia.softseal.gif": case "vnd.sealedmedia.softseal.jpg": case "vnd.svf": case "vnd.tencent.tap": case "vnd.valve.source.texture": case "vnd.wap.wbmp": case "vnd.xiff": case "vnd.zbrush.pcx":
-            case "webp": case "wmf":
-            case "x-emf": case "x-wmf": break;
-            default:
-              extension = metadataLink.href.split(/[\\\/]/);
-              extension = extension[extension.length - 1];
-              extension = extension.indexOf('.') !== -1 ? extension.replace(/[^\.]*\./, "") : extension
+          if (format !== "aces" && format !== "apng" && format !== "avci" && format !== "avcs" && format !== "avif" && format !== "bmp" && format !== "cgm" && format !== "dicom-rle" && format !== "dpx" && format !== "emf" && format !== "fits" && format !== "g3fax" && format !== "gif" && format !== "heic" && format !== "heic-sequence" && format !== "heif" && format !== "heif-sequence" && format !== "hej2k" && format !== "hsj2" && format !== "ief" && format !== "j2c" && format !== "jaii" && format !== "jais" && format !== "jls" && format !== "jp2" && format !== "jpeg" && format !== "jph" && format !== "jphc" && format !== "jpm" && format !== "jpx" && format !== "jxl" && format !== "jxr" && format !== "jxrA" && format !== "jxrS" && format !== "jxs" && format !== "jxsc" && format !== "jxsi" && format !== "jxss" && format !== "ktx" && format !== "ktx2" && format !== "naplps" && format !== "png" && format !== "prs.btif" && format !== "prs.pti" && format !== "pwg-raster" && format !== "svg+xml" && format !== "t38" && format !== "tiff" && format !== "tiff-fx" && format !== "vnd.adobe.photoshop" && format !== "vnd.airzip.accelerator.azv" && format !== "vnd.blockfact.facti" && format !== "vnd.clip" && format !== "vnd.cns.inf2" && format !== "vnd.dece.graphic" && format !== "vnd.djvu" && format !== "vnd.dwg" && format !== "vnd.dxf" && format !== "vnd.dvb.subtitle" && format !== "vnd.fastbidsheet" && format !== "vnd.fpx" && format !== "vnd.fst" && format !== "vnd.fujixerox.edmics-mmr" && format !== "vnd.fujixerox.edmics-rlc" && format !== "vnd.globalgraphics.pgb" && format !== "vnd.microsoft.icon" && format !== "vnd.mix" && format !== "vnd.ms-modi" && format !== "vnd.mozilla.apng" && format !== "vnd.net-fpx" && format !== "vnd.pco.b16" && format !== "vnd.radiance" && format !== "vnd.sealed.png" && format !== "vnd.sealedmedia.softseal.gif" && format !== "vnd.sealedmedia.softseal.jpg" && format !== "vnd.svf" && format !== "vnd.tencent.tap" && format !== "vnd.valve.source.texture" && format !== "vnd.wap.wbmp" && format !== "vnd.xiff" && format !== "vnd.zbrush.pcx" && format !== "webp" && format !== "wmf" && format !== "x-emf" && format !== "x-wmf") {
+            format = preview.requests[0].link.href.split(/[\\\/]/);
+            format = format[format.length - 1];
+            format = format.indexOf('.') !== -1 ? format.replace(/[^\.]*\./, "") : format
           }
 
           try {
-            var blob   = new Blob([responseText], {type: "image/png"});
+            var blob   = new Blob      ([responseText], {type: "image/" + format});
             var reader = new FileReader();
 
             // ...
-            responseTextFormatted = await new Promise(function(resolve, reject) {
-              reader.onerror = function(event) { reject (null) };
-              reader.onload  = function(event) { resolve(event.target.result) };
-
-              reader.readAsDataURL(blob)
-            });
-
+            responseTextFormatted = await new Promise(function(resolve, reject) { reader.onerror = function(event) { reject(null) }; reader.onload = function(event) { resolve(event.target.result) }; reader.readAsDataURL(blob) });
             responseTextFormatted = null !== responseTextFormatted ? responseTextFormatted : URL.createObjectURL(blob);
-            responseTextFormatted = null !== responseTextFormatted ? responseTextFormatted : "data:image/" + extension + ";base64," + Buffer.from(responseText, "binary").toString("base64");
-            responseTextFormatted = null !== responseTextFormatted ? responseTextFormatted : "data:image/" + extension + ";base64," + /* --> atob(…) */ responseText;
-            responseTextFormatted = null; // TODO (Lapys) -> Figure this out somehow
+            responseTextFormatted = null !== responseTextFormatted ? responseTextFormatted : "data:image/" + format + ";base64," + Buffer.from(responseText, "binary").toString("base64");
+            responseTextFormatted = null !== responseTextFormatted ? responseTextFormatted : "data:image/" + format + ";base64," + /* --> atob(…) */ responseText;
+            responseTextFormatted = null; // ->> Figure this out somehow? Nah
             responseTextFormatted = null !== responseTextFormatted ? responseTextFormatted : link.href;
-            preview               = "![" + new DOMParser().parseFromString(responseText, "text/html").title + "](" + responseTextFormatted + ')';
+            preview.content       = "![" + link.href + "](" + responseTextFormatted + ')';
 
-            console.info("Previewing static " + extension.toUpperCase() + " image `" + responseTextFormatted + '`')
-          } catch (error) { console.error(error) } // ->> Assume MIME media type is supported
+            console.info("Previewing static " + format.toUpperCase() + " image `" + responseTextFormatted + '`')
+          } catch (error) /* --> InvalidCharacterError */ { console.error(error) } // ->> Assume MIME media type is supported
         }
 
-        else if (responseContentType === "model/3mf")                                                                     preview = "```3mf\n" + "<!-- Previewed: " + sanitizeLinkForCode(link.href).replace(/\-\->/g, "--%3E") + " -->\n"        + responseTextFormatted + "\n```"; // ->> XML
-        else if (responseContentType === "application/A2L")                                                               preview = "```a2l\n" + "// Previewed: "   + sanitizeLinkForCode(link.href) + '\n'                                       + responseTextFormatted + "\n```"; // ->> A2L
-        else if (responseContentType === "application/aml")                                                               preview = "```aml\n"                                                                                                    + responseTextFormatted + "\n```"; // ->> XML
-        else if (responseContentType === "application/ATFX")                                                              preview = "```atfx\n"                                                                                                   + responseTextFormatted + "\n```"; // ->> XML
-        else if (responseContentType === "application/ATXML")                                                             preview = "```atxml\n"                                                                                                  + responseTextFormatted + "\n```"; // ->> XML
-        else if (responseContentType === "application/vnd.gentoo.ebuild")                                                 preview = "```bash\n" + "# Previewed: "  + sanitizeLinkForCode(link.href)                        + '\n'                 + responseTextFormatted + "\n```"; // ->> Bash
-        else if (null !== responseContentType.match(/[\/\-\+]cbor($|\-)/))                                                preview = "```cbor\n" + "# Previewed: "  + sanitizeLinkForCode(link.href)                        + '\n'                 + responseTextFormatted + "\n```"; // ->> CBOR
-        else if (responseContentType === "text/css")                                                                      preview = "```css\n"  + "/* Previewed: " + sanitizeLinkForCode(link.href).replace(/\*\//g, "*/") + " */\n"              + responseTextFormatted + "\n```"; // ->> CSS
-        else if (null !== responseContentType.match(/^text\/csv(\-schema)$/))                                             preview = "```csv\n"                                                                                                    + responseTextFormatted + "\n```"; // ->> CSV
-        else if (responseContentType === "application/vnd.gentoo.eclass")                                                 preview = "```eclass\n"     + "# Previewed: "  + sanitizeLinkForCode(link.href) + '\n'                                  + responseTextFormatted + "\n```"; // ->> EClass
-        else if (responseContentType === "application/vnd.hp-HPGL")                                                       preview = "```hgpl\n"       + "CO “"           + sanitizeLinkForCode(link.href) + "”;"                                  + responseTextFormatted + "\n```"; // ->> HPGL
-        else if (null !== responseContentType.match(/^(|application|text)\/((ecma|java)script|node|vnd\.cab\-jscript)$/)) preview = "```javascript\n" + "// Previewed: " + sanitizeLinkForCode(link.href) + '\n'                                  + responseTextFormatted + "\n```"; // ->> JavaScript (Node.js, …)
-        else if (responseContentType === "application/cwl")                                                               preview = "```json\n"                                                                                                   + responseTextFormatted + "\n```"; // ->> JSON
-        else if (null !== responseContentType.match(/(^application\/|\+)json(|\-seq)$/))                                  preview = "```json\n"                                                                                                   + responseTextFormatted + "\n```"; // ->> JSON
-        else if (responseContentType === "text/markdown")                                                                 preview = "```markdown\n" + "<!-- Previewed: " + sanitizeLinkForCode(link.href).replace(/\-\->/g, "--%3E") + " -->\n"   + responseTextFormatted + "\n```"; // ->> Markdown
-        else if (responseContentType === "text/mathematica")                                                              preview = "```mathematica\n"                                                                                            + responseTextFormatted + "\n```"; // ->> Mathematica
-        else if (responseContentType === "text/mizar")                                                                    preview = "```mizar\n"                                                                                                  + responseTextFormatted + "\n```"; // ->> Mizar
-        else if (responseContentType === "model/vnd.opengex")                                                             preview = "```opengex\n"  + "/* Previewed: "   + sanitizeLinkForCode(link.href).replace(/\*\//g, "*/")     + " */\n"    + responseTextFormatted + "\n```"; // ->> JSON
-        else if (null !== responseContentType.match(/^(application|text)\/sgml$/))                                        preview = "```sgml\n"     + "<!-- Previewed: " + sanitizeLinkForCode(link.href).replace(/\-\->/g, "--%3E") + " -->\n"   + responseTextFormatted + "\n```"; // ->> Standard Graphics Markup Language
-        else if (responseContentType === "text/turtle")                                                                   preview = "```turtle\n"                                                                                                 + responseTextFormatted + "\n```"; // ->> Turtle
-        else if (responseContentType === "text/vtt")                                                                      preview = "```vtt\n" + "NOTE Previewed: " + sanitizeLinkForCode(link.href) + '\n'                                       + responseTextFormatted + "\n```"; // ->> WebVTT
-        else if (responseContentType === "model/vnd.vtu")                                                                 preview = "```vtu\n"                                                                                                    + responseTextFormatted + "\n```"; // ->> XML
-        else if (responseContentType === "text/wgsl")                                                                     preview = "```wgsl\n" + "// Previewed: " + sanitizeLinkForCode(link.href) + '\n'                                        + responseTextFormatted + "\n```"; // ->> WebGPU Shading Language
-        else if (null !== responseContentType.match(/^application\/pkcs7\-[A-z\-]+$/))                                    preview = "```pkcs7\n"                                                                                                  + responseTextFormatted + "\n```"; // ->> PKCS #12
-        else if (responseContentType === "application/pkcs8")                                                             preview = "```pkcs8\n"                                                                                                  + responseTextFormatted + "\n```"; // ->> PKCS #12
-        else if (responseContentType === "application/pkcs10")                                                            preview = "```pkcs10\n"                                                                                                 + responseTextFormatted + "\n```"; // ->> PKCS #12
-        else if (responseContentType === "application/pkcs12")                                                            preview = "```pkcs12\n"                                                                                                 + responseTextFormatted + "\n```"; // ->> PKCS #12
-        else if (responseContentType === "application/sparql-query")                                                      preview = "```sparql\n"  + "# Previewed: "  + sanitizeLinkForCode(link.href) + '\n'                                     + responseTextFormatted + "\n```"; // ->> SPARQL
-        else if (responseContentType === "application/sql")                                                               preview = "```sql\n"     + "-- Previewed: " + sanitizeLinkForCode(link.href) + '\n'                                     + responseTextFormatted + "\n```"; // ->> SQL
-        else if (responseContentType === "application/texinfo")                                                           preview = "```texinfo\n" + "@c Previewed: " + sanitizeLinkForCode(link.href) + '\n'                                     + responseTextFormatted + "\n```"; // ->> Texinfo
-        else if (responseContentType === "application/toml")                                                              preview = "```toml\n"    + "# Previewed: "  + sanitizeLinkForCode(link.href) + '\n'                                     + responseTextFormatted + "\n```"; // ->> TOML
-        else if (null !== responseContentType.match(/^application\/pkix\-[A-z\-]+$/))                                     preview = "```x509\n"                                                                                                   + responseTextFormatted + "\n```"; // ->> X.509
-        else if (null !== responseContentType.match(/[\/\-\+](XML|xml)($|\-|\+)/))                                        preview = "```xml\n"  + "<!-- Previewed: " + sanitizeLinkForCode(link.href).replace(/\-\->/g, "--%3E") + " -->\n"       + responseTextFormatted + "\n```"; // ->> XML
-        else if (responseContentType === "application/prs.cyn")                                                           preview = "```yaml\n"                                                                                                   + responseTextFormatted + "\n```"; // ->> YAML
-        else if (null !== responseContentType.match(/[\/\-\+]yaml($|\-|\+)/))                                             preview = "```yaml\n" + "# Previewed: "  + sanitizeLinkForCode(link.href) + '\n'                                        + responseTextFormatted + "\n```"; // ->> YAML
-        else if (responseContentType === "application/yang")                                                              preview = "```yang\n" + "// Previewed: " + sanitizeLinkForCode(link.href) + '\n'                                        + responseTextFormatted + "\n```"; // ->> YANG
+        else switch (
+          responseContentType === "model/3mf"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ? "3mf"         :
+          responseContentType === "application/A2L"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ? "a2l"         :
+          responseContentType === "application/aml"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ? "aml"         :
+          responseContentType === "application/ATFX"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ? "atfx"        :
+          responseContentType === "application/ATXML"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ? "atxml"       :
+          responseContentType === "application/vnd.gentoo.ebuild"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ? "bash"        :
+          null !== responseContentType.match(/[\/\-\+]cbor($|\-)/)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 ? "cbor"        :
+          responseContentType === "text/css"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ? "css"         :
+          null !== responseContentType.match(/^text\/csv(\-schema)$/)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ? "csv"         :
+          responseContentType === "application/vnd.gentoo.eclass"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ? "eclass"      :
+          responseContentType === "application/vnd.hp-HPGL"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ? "hgpl"        :
+          responseContentType === "text/html"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ? "html"        :
+          null !== responseContentType.match(/^(|application|text)\/((ecma|java)script|node|vnd\.cab\-jscript)$/)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ? "javascript"  :
+          responseContentType === "application/cwl" || null !== responseContentType.match(/(^application\/|\+)json(|\-seq)$/) || null !== responseContentType.match(/^application\/(cdmi\-[A-z]+|cose(|\-key(|\-set))|dashdelta|did|(dpop|eat|entity\-statement|jwk\-set|kb|logout|oauth\-authz\-req|provided\-claims|resolve\-response|secevent|token\-introspection|trust\-mark(|\-delegation)|vc|vnd\.ga4gh\.passport|vp)\+jwt|jose|jsonpath|jwt|linkset|multipart\-core|private\-token\-[A-z\-]+|prs\.implied\-structure|scvp\-(cv|vp)\-(request|response)|sd\-jwt|vc(|\+cose)|vnd\.(artsquare|astraea\-software\.iota|audiograph|banana\-accounting|bbf\.usp\.(error|msg)|balsamiq\.bmpr|bint\.med\-content|blink\-idb\-value\-wrapper|blueice\.multipass|bmi|bpf(|3)|wordlift|vc(|\+cose)))$/)                               ? "json"        :
+          responseContentType === "text/markdown"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ? "markdown"    :
+          responseContentType === "text/mathematica"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ? "mathematica" :
+          responseContentType === "text/mizar"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ? "mizar"       :
+          responseContentType === "model/vnd.opengex"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ? "opengex"     :
+          responseContentType === "application/pkcs10"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ? "pkcs10"      :
+          responseContentType === "application/pkcs12"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ? "pkcs12"      :
+          null !== responseContentType.match(/^application\/pkcs7\-[A-z\-]+$/)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ? "pkcs7"       :
+          responseContentType === "application/pkcs8"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ? "pkcs8"       :
+          null !== responseContentType.match(/^(application|text)\/sgml$/)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         ? "sgml"        :
+          responseContentType === "application/sparql-query"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ? "sparql"      :
+          responseContentType === "application/sql"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ? "sql"         :
+          responseContentType === "application/texinfo"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ? "texinfo"     :
+          responseContentType === "application/toml"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ? "toml"        :
+          responseContentType === "text/turtle"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ? "turtle"      :
+          responseContentType === "text/vtt"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ? "vtt"         :
+          responseContentType === "model/vnd.vtu"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ? "vtu"         :
+          responseContentType === "text/wgsl"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ? "wgsl"        :
+          null !== responseContentType.match(/^application\/pkix\-[A-z\-]+$/)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ? "x509"        :
+          null !== responseContentType.match(/[\/\-\+](XML|xml)($|\-|\+)/) || null !== responseContentType.match(/^application\/(index\.[A-z]+|IOTP|ipfix|ipp|marc|mp21|mpeg4\-iod\-xmt|PDX|prs\.(alvestrand\.titrax\-sheet|cww)|srgs|vnd\.(adobe\.formscentral\.fcdt|businessobjects|canon\-[a-z]+|cel|ims\.imsccv1p[1-3]|intu\.(qbo|qfx)|oma\.push|omaloc\-supl\-init|oma\-scws\-config|onepager(|tam[px]|tat(|p|x))|onvif\.metadata|openeye\.oeb|openxmlformats\-officedocument\.(presentationml\.(presentation|slide(|show)|template|spreadsheetml\.(sheet|template)|vmlDrawing|wordprocessingml\.(document|template)))|osa\.netdeploy|osgeo\.mapguide\.package|osgi\.subsystem|patientecommsdoc|piaccess\.application\-licence|pmi\.widget|pocketlearn|recordare\.musicxml|xfdl(|\.webform)|yamaha\.openscoreformat)|xfdf)$/) ? "xml"         :
+          responseContentType === "application/prs.cyn" || null !== responseContentType.match(/[\/\-\+]yaml($|\-|\+)/)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ? "yaml"        :
+          responseContentType === "application/yang"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ? "yang"        :
+          null !== responseContentType.match(/^(application\/(1d\-interleaved\-parityfec|activemessage|andrew\-inset|applefile|at\+jwt|ATF|link\-format|mbox|n\-triples|news\-[A-z]+|passport|pdf|pem\-certificate\-chain|pgp\-[a-z]+|pkixcmp|postscript|prs\.[a-z\-]+|QSIG|raptorfec|relax\-ng\-compact\-syntax|remote\-printing|riscos|rpki\-[a-z\-]+|rtf|rtploopback|rtx|sbe|sdp|sen(|s)ml\-exi|sgml\-open\-catalog|sieve|simple\-message\-summary|slate|trickle\-ice\-sdpfrag|trig|tzif|vnd\.(apple\.[a-z]+|aristanetworks\.swi|autopackage|bluetooth\.(ep|le)\.oob|cendio\.thinlinc\.clientconf|chess\-pgn|gentoo\.manifest|groove\-vcard|hsl|oma\-scws\-http\-(request|response)|wfa\.wsc|wolfram\.mathematica(\.package))|x\-www\-form\-urlencoded)$|(haptics|message|model|multipart|text)\/)/)                            ? '*'           :
+          void null
+        ) {
+          case "3mf":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```3mf\n"         + responseTextFormatted + "\n```"; break;
+          case "a2l":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```a2l\n"         + responseTextFormatted + "\n```"; break;
+          case "aml":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```aml\n"         + responseTextFormatted + "\n```"; break;
+          case "atfx":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```atfx\n"        + responseTextFormatted + "\n```"; break;
+          case "atxml":       preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```atxml\n"       + responseTextFormatted + "\n```"; break;
+          case "bash":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```bash\n"        + responseTextFormatted + "\n```"; break;
+          case "cbor":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```cbor\n"        + responseTextFormatted + "\n```"; break;
+          case "css":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```css\n"         + responseTextFormatted + "\n```"; break;
+          case "csv":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```csv\n"         + responseTextFormatted + "\n```"; break;
+          case "eclass":      preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```eclass\n"      + responseTextFormatted + "\n```"; break;
+          case "hgpl":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```hgpl\n"        + responseTextFormatted + "\n```"; break;
+          case "javascript":  preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```javascript\n"  + responseTextFormatted + "\n```"; break;
+          case "json":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```json\n"        + responseTextFormatted + "\n```"; break;
+          case "markdown":    preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```markdown\n"    + responseTextFormatted + "\n```"; break;
+          case "mathematica": preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```mathematica\n" + responseTextFormatted + "\n```"; break;
+          case "mizar":       preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```mizar\n"       + responseTextFormatted + "\n```"; break;
+          case "opengex":     preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```opengex\n"     + responseTextFormatted + "\n```"; break;
+          case "pkcs10":      preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```pkcs10\n"      + responseTextFormatted + "\n```"; break;
+          case "pkcs12":      preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```pkcs12\n"      + responseTextFormatted + "\n```"; break;
+          case "pkcs7":       preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```pkcs7\n"       + responseTextFormatted + "\n```"; break;
+          case "pkcs8":       preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```pkcs8\n"       + responseTextFormatted + "\n```"; break;
+          case "sgml":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```sgml\n"        + responseTextFormatted + "\n```"; break;
+          case "sparql":      preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```sparql\n"      + responseTextFormatted + "\n```"; break;
+          case "sql":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```sql\n"         + responseTextFormatted + "\n```"; break;
+          case "texinfo":     preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```texinfo\n"     + responseTextFormatted + "\n```"; break;
+          case "toml":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```toml\n"        + responseTextFormatted + "\n```"; break;
+          case "turtle":      preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```turtle\n"      + responseTextFormatted + "\n```"; break;
+          case "vtt":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```vtt\n"         + responseTextFormatted + "\n```"; break;
+          case "vtu":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```vtu\n"         + responseTextFormatted + "\n```"; break;
+          case "wgsl":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```wgsl\n"        + responseTextFormatted + "\n```"; break;
+          case "x509":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```x509\n"        + responseTextFormatted + "\n```"; break;
+          case "xml":         preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```xml\n"         + responseTextFormatted + "\n```"; break;
+          case "yaml":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```yaml\n"        + responseTextFormatted + "\n```"; break;
+          case "yang":        preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```yang\n"        + responseTextFormatted + "\n```"; break;
+          case '*':           preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```\n"            + responseTextFormatted + "\n```"; break;
 
-        else if (null !== responseContentType.match(/^application\/(cdmi\-[A-z]+|cose(|\-key(|\-set))|dashdelta|did|(dpop|eat|entity\-statement|jwk\-set|kb|logout|oauth\-authz\-req|provided\-claims|resolve\-response|secevent|token\-introspection|trust\-mark(|\-delegation)|vc|vnd\.ga4gh\.passport|vp)\+jwt|jose|jsonpath|jwt|linkset|multipart\-core|private\-token\-[A-z\-]+|prs\.implied\-structure|scvp\-(cv|vp)\-(request|response)|sd\-jwt|vc(|\+cose)|vnd\.(artsquare|astraea\-software\.iota|audiograph|banana\-accounting|bbf\.usp\.(error|msg)|balsamiq\.bmpr|bint\.med\-content|blink\-idb\-value\-wrapper|blueice\.multipass|bmi|bpf(|3)|wordlift|vc(|\+cose)))$/))                                                                                  preview = "```json\n" + responseTextFormatted + "\n```"; // ->> JSON
-        else if (null !== responseContentType.match(/^application\/(index\.[A-z]+|IOTP|ipfix|ipp|marc|mp21|mpeg4\-iod\-xmt|PDX|prs\.(alvestrand\.titrax\-sheet|cww)|srgs|vnd\.(adobe\.formscentral\.fcdt|businessobjects|canon\-[a-z]+|cel|ims\.imsccv1p[1-3]|intu\.(qbo|qfx)|oma\.push|omaloc\-supl\-init|oma\-scws\-config|onepager(|tam[px]|tat(|p|x))|onvif\.metadata|openeye\.oeb|openxmlformats\-officedocument\.(presentationml\.(presentation|slide(|show)|template|spreadsheetml\.(sheet|template)|vmlDrawing|wordprocessingml\.(document|template)))|osa\.netdeploy|osgeo\.mapguide\.package|osgi\.subsystem|patientecommsdoc|piaccess\.application\-licence|pmi\.widget|pocketlearn|recordare\.musicxml|xfdl(|\.webform)|yamaha\.openscoreformat)|xfdf)$/)) preview = "```xml\n"  + responseTextFormatted + "\n```"; // ->> XML
+          case "html": {
+            var document            = new DOMParser().parseFromString(responseText, "text/html");
+            var documentCollections = [document.links, document.getElementsByTagName("meta")];
+            var metadataRanks       = {description: 1, thumbnail: 1.0, title: 1};
 
-        else if (
-          responseContentType.startsWith("haptics/")                                       ||
-          responseContentType.startsWith("message/")                                       ||
-          responseContentType.startsWith("model/")                                         ||
-          responseContentType.startsWith("multipart/")                                     ||
-          (responseContentType.startsWith("text/") && responseContentType !== "text/html") ||
-          null !== responseContentType.match(/^application\/(1d\-interleaved\-parityfec|activemessage|andrew\-inset|applefile|at\+jwt|ATF|link\-format|mbox|n\-triples|news\-[A-z]+|passport|pdf|pem\-certificate\-chain|pgp\-[a-z]+|pkixcmp|postscript|prs\.[a-z\-]+|QSIG|raptorfec|relax\-ng\-compact\-syntax|remote\-printing|riscos|rpki\-[a-z\-]+|rtf|rtploopback|rtx|sbe|sdp|sen(|s)ml\-exi|sgml\-open\-catalog|sieve|simple\-message\-summary|slate|trickle\-ice\-sdpfrag|trig|tzif|vnd\.(apple\.[a-z]+|aristanetworks\.swi|autopackage|bluetooth\.(ep|le)\.oob|cendio\.thinlinc\.clientconf|chess\-pgn|gentoo\.manifest|groove\-vcard|hsl|oma\-scws\-http\-(request|response)|wfa\.wsc|wolfram\.mathematica(\.package))|x\-www\-form\-urlencoded)$/)
-        ) preview = "```\n" + responseTextFormatted + "\n```";
+            // ... ->> Parse `preview` from `document` `<link>` and `<meta>`
+            documentTitle = document.title;
 
-        else if (responseContentType !== "text/html") {
-          var width = 2;
+            for (var documentCollectionsIndex = documentCollections.length; documentCollectionsIndex; )
+            for (var documentCollection = documentCollections[--documentCollectionsIndex], documentCollectionIndex = documentCollection.length; documentCollectionIndex; ) {
+              var element           = documentCollection.item(--documentCollectionIndex);
+              var elementAttributes = [];
+              var elementRanks      = {description: 0, thumbnail: 0.0, title: 0};
+              var elementValue      = null, elementSubvalue = null;
 
-          // ...
-          responseTextFormatted = "";
+              // ...
+              switch (documentCollectionsIndex) {
+                case 0: elementAttributes = [].concat(element.rel.split(/[ \f\n\t]/));              elementValue = element.href;    elementSubvalue = element.sizes; break; // --> <link/>
+                case 1: elementAttributes = [element.name, element.getAttribute("property") || ""]; elementValue = element.content; elementSubvalue = null;          break; // --> <meta/>
+                default:
+              }
 
-          for (var index = Math.min(responseText.length, 80); index; )
-          width = Math.max(width, responseText.charCodeAt(--index).toString(16).length);
+              elementAttributes = elementAttributes.map(function(attribute) { return attribute.trim() });
+              elementValue      = null !== elementValue ? elementValue.trim() : null;
 
-          for (var index = Math.min(responseText.length, 80); index; ) {
-            var code = responseText.charCodeAt(--index).toString(16).toUpperCase();
-            responseTextFormatted = '0'.repeat(width - code.length) + code + ' ' + responseTextFormatted
-          }
+              for (var index = elementAttributes.length; index; )
+              switch (elementAttributes[--index]) {
+                case "DC.description":      elementRanks.description = 2; break; // --> name
+                case "description":         elementRanks.description = 3; break; // --> name
+                case "og:description":      elementRanks.description = 4; break; // --> property
+                case "twitter:description": elementRanks.description = 5; break; // --> name
 
-          preview = "```\n" + (responseText.length >= 80 ? responseTextFormatted + '…' : responseTextFormatted.slice(0, -1)) + "\n```"
-        }
+                case "apple-touch-icon":          elementRanks.thumbnail = 9.0 + getMetadataSize(elementSubvalue || []); break; // --> rel
+                case "apple-touch-startup-image": elementRanks.thumbnail = 8.0;                                          break; // --> rel
+                case "fluid-icon":                elementRanks.thumbnail = 6.0;                                          break; // --> rel
+                case "icon":                      elementRanks.thumbnail = 4.0 + getMetadataSize(elementSubvalue || []); break; // --> rel
+                case "mask-icon":                 elementRanks.thumbnail = 7.0;                                          break; // --> rel
+                case "og:image":                  elementRanks.thumbnail = 11.0;                                         break; // --> property
+                case "shortcut icon":             elementRanks.thumbnail = 2.0 + getMetadataSize(elementSubvalue || []); break; // --> rel
+                case "twitter:image":             elementRanks.thumbnail = 12.0;                                         break; // --> name
 
-        // ... ->> Can handle more than `text/html` MIME media type
-        if (null === preview) {
-          var document = new DOMParser().parseFromString(responseText, "text/html");
+                case "DC.title":        elementRanks.title = 3; break; // --> name
+                case "og:title":        elementRanks.title = 5; break; // --> property
+                case "twitter:title":   elementRanks.title = 4; break; // --> name
+                case "tweetmeme-title": elementRanks.title = 2; break; // --> name
 
-          // ... ->> Parse `metadata` from `document` `<link>` and `<meta>`
-          documentTitle = document.title;
-          documentCollections.push(document.links, document.getElementsByTagName("meta"));
+                default:
+              }
 
-          for (var documentCollectionsIndex = documentCollections.length; documentCollectionsIndex; )
-          for (var documentCollection = documentCollections[--documentCollectionsIndex], documentCollectionIndex = documentCollection.length; documentCollectionIndex; ) {
-            var attributes = [];
-            var element    = documentCollection.item(--documentCollectionIndex);
-            var subranks   = {description: 0, thumbnail: 0.0, title: 0};
-            var value      = null, subvalue = null;
+              if (0 !== (elementValue || "").replace(/\s+/g, "").length && elementRanks.description >= metadataRanks.description) { preview.description = elementValue; metadataRanks.description = elementRanks.description }
+              if (0 !== (elementValue || "").replace(/\s+/g, "").length && elementRanks.thumbnail   >= metadataRanks.thumbnail)   { preview.thumbnail   = elementValue; metadataRanks.thumbnail   = elementRanks.thumbnail }
+              if (0 !== (elementValue || "").replace(/\s+/g, "").length && elementRanks.title       >= metadataRanks.title)       { preview.title       = elementValue; metadataRanks.title       = elementRanks.title }
+            }
+          } break;
+
+          default: {
+            var width = 2;
 
             // ...
-            switch (documentCollectionsIndex) {
-              case 0: attributes = [].concat(element.rel.split(/[ \f\n\t]/));              value = element.href;    subvalue = element.sizes; break; // --> <link/>
-              case 1: attributes = [element.name, element.getAttribute("property") || ""]; value = element.content; subvalue = null;          break; // --> <meta/>
-              default:
-            }
+            responseTextFormatted = "";
 
-            attributes = attributes.map(function(attribute) { return attribute.trim() });
-            value      = null !== value ? value.trim() : null;
+            for (var index = Math.min(responseText.length, 80); index; ) { width = Math.max(width, responseText.charCodeAt(--index).toString(16).length) }
+            for (var index = Math.min(responseText.length, 80); index; ) { var code = responseText.charCodeAt(--index).toString(16).toUpperCase(); responseTextFormatted = '0'.repeat(width - code.length) + code + ' ' + responseTextFormatted }
 
-            for (var index = attributes.length; index; )
-            switch (attributes[--index]) {
-              case "DC.description":      subranks.description = 2; break; // --> name
-              case "description":         subranks.description = 3; break; // --> name
-              case "og:description":      subranks.description = 4; break; // --> property
-              case "twitter:description": subranks.description = 5; break; // --> name
-
-              case "apple-touch-icon":          subranks.thumbnail = 9.0 + getMetadataSize(subvalue || []); break; // --> rel
-              case "apple-touch-startup-image": subranks.thumbnail = 8.0;                                   break; // --> rel
-              case "fluid-icon":                subranks.thumbnail = 6.0;                                   break; // --> rel
-              case "icon":                      subranks.thumbnail = 4.0 + getMetadataSize(subvalue || []); break; // --> rel
-              case "mask-icon":                 subranks.thumbnail = 7.0;                                   break; // --> rel
-              case "og:image":                  subranks.thumbnail = 11.0;                                  break; // --> property
-              case "shortcut icon":             subranks.thumbnail = 2.0 + getMetadataSize(subvalue || []); break; // --> rel
-              case "twitter:image":             subranks.thumbnail = 12.0;                                  break; // --> name
-
-              case "DC.title":        subranks.title = 3; break; // --> name
-              case "og:title":        subranks.title = 5; break; // --> property
-              case "twitter:title":   subranks.title = 4; break; // --> name
-              case "tweetmeme-title": subranks.title = 2; break; // --> name
-
-              default:
-            }
-
-            if ((value || "").replace(/\s+/g, "").length && ranks.description <= subranks.description) { metadata.description = value; ranks.description = subranks.description }
-            if ((value || "").replace(/\s+/g, "").length && ranks.thumbnail   <= subranks.thumbnail)   { metadata.thumbnail   = value; ranks.thumbnail   = subranks.thumbnail }
-            if ((value || "").replace(/\s+/g, "").length && ranks.title       <= subranks.title)       { metadata.title       = value; ranks.title       = subranks.title }
+            preview.content = "```\n" + sanitizeLinkForCode(preview.requests[0].link.href) + "\n```\n```\n" + (responseText.length >= 80 ? responseTextFormatted + '…' : responseTextFormatted.slice(0, -1)) + "\n```"
           }
         }
       }
-    }
 
-    if (null === preview) {
-      // ... ->> Fallback `metadata` from link `<title>` and Chromium’s placeholder favicon
-      if (null === metadata.title)        metadata.title = documentTitle.trim();
-      if (0    === metadata.title.length) metadata.title = link.href    .trim();
+      fallback:
+      if (null === preview.content) {
+        // ... ->> Fallback `preview` i.e. Chromium’s placeholder favicon
+        if (null !== preview.thumbnail)
+        try {
+          response = await requestUrl({contentType: LinkPreviewRequest.DEFAULT_RESPONSE_HEADERS["Content-Type"], headers: LinkPreviewRequest.DEFAULT_RESPONSE_HEADERS, method: "GET", "throw": true, url: new URL(preview.thumbnail).href});
 
-      if (null === metadata.thumbnail) {
-        var thumbnail = "https://www.google.com/s2/favicons?domain=" + link.hostname + "&sz=256";
+          if (response.status >= 200 && response.status < 300);
+          else preview.thumbnail = null
+        } catch (error) /* --> Error | TypeError */ { preview.thumbnail = null }
+
+        if (null === preview.favicon || null === preview.thumbnail) {
+          var thumbnail = "https://www.google.com/s2/favicons?domain=" + link.hostname + "&sz=256";
+
+          // ...
+          response = await requestUrl({contentType: LinkPreviewRequest.DEFAULT_RESPONSE_HEADERS["Content-Type"], headers: LinkPreviewRequest.DEFAULT_RESPONSE_HEADERS, method: "GET", "throw": false, url: thumbnail});
+
+          if (response.status >= 200 && response.status < 300) preview[null !== preview.thumbnail ? "favicon" : "thumbnail"] = thumbnail;
+          else console.info("Unable to preview link thumbnail; Status " + response.status, response)
+        }
 
         // ...
-        response = await requestUrl({contentType: /* --> image/* */ DEFAULT_RESPONSE_HEADERS["Content-Type"], headers: DEFAULT_RESPONSE_HEADERS, method: "GET", "throw": false, url: thumbnail});
-
-        if (response.status >= 200 && response.status < 300) metadata.thumbnail = thumbnail;
-        else console.info("Unable to preview link thumbnail; Status " + response.status, response)
+        preview.title       = (preview.title || "").length === 0 ? documentTitle.trim() || link.href.trim() : preview.title;
+        preview.title       = sanitizeTextForMarkdown(preview.title).replace(/[\n\r]/g, "");
+        preview.description = (preview.description || "").length >= 80 ? sanitizeTextForMarkdown(preview.description.slice(0, 79)) + "&hellip;" : null !== preview.description ? sanitizeTextForMarkdown(preview.description) : null; // ->> More than 80 characters
+        preview.content     = (
+          "<div class=link-preview id=" + new Date().getTime() + "" + Array.from(crypto.getRandomValues(new Uint8Array(16))).map(byte => byte.toString(16).padStart(2, '0')).join("") + ">"                                                                                                      +
+            "<button class=link-preview-close><span><!-- &#x1F6AB;&#xFE0F; --></span></button>"                                                                                                                                                                                                           +
+            "<div class=link-preview-thumbnail" + (null !== preview.thumbnail ? " style='background-image: url(\"" + sanitizeLinkForMarkdownAttribute(preview.thumbnail) + "\") !important'" : "") + "><a href=\"" + sanitizeLinkForMarkdownAttribute(link.href) + "\" target=_blank></a></div>" +
+            (null !== preview.favicon ? "<div class=link-preview-badge style=\"background-image: url(" + preview.favicon + ") !important\"></div>" : "")                                                                                                                                         +
+            "<div class=link-preview-content>"                                                                                                                                                                                                                                                   +
+              "<h1 class=link-preview-title><a href=\"" + sanitizeLinkForMarkdownAttribute(link.href) + "\" target=_blank>" + preview.title                                             + "</a></h1>"                                                                                            +
+              "<p class=link-preview-description>"                                                                          + (null !== preview.description ? preview.description : "") + "</p>"                                                                                                 +
+              "<a class=link-preview-url href=\"" + sanitizeLinkForMarkdownAttribute(link.href) + "\" target=_blank>"       + sanitizeLinkForMarkdown(link.href)                        + "</a>"                                                                                                 +
+            "</div>"                                                                                                                                                                                                                                                                             +
+            "<div class=link-preview-end></div>"                                                                                                                                                                                                                                                 +
+          "</div>"
+        )
       }
 
-      // ... ->> Format `metadata`
-      metadata.description = (metadata.description || "").length >= 80 ? sanitizeTextForMarkdown(metadata.description.slice(0, 79)) + "&hellip;" : null !== metadata.description ? sanitizeTextForMarkdown(metadata.description) : null; // ->> More than 80 characters
-      metadata.title       = sanitizeTextForMarkdown(metadata.title).replace(/[\n\r]/g, "");
+      // ... ->> Set the preview
+      cursorPosition = editor.getCursor();
+      cursorPosition.ch === editorSelectionCursorPosition.ch && cursorPosition.line === editorSelectionCursorPosition.line ? editor.replaceSelection(preview.content) : editor.replaceRange(preview.content, cursorPosition)
+    } catch (error) /* --> TypeError */ {
+      new Notice   (!editorSelected ? "Selection must be a link to preview…"                                       : "Select a link to turn to preview");
+      console.error(!editorSelected ? "Unexpected link `" + editorSelection.replace(/`/g, "%60") + "` encountered" : "Pending link to preview")
+    }
+  }
+
+  static remove(preview, view) {
+    if (null !== preview) {
+      var previewBeginPosition = view.posAtDOM(preview, 0);
+      var previewEndPosition   = view.posAtDOM(LinkPreviewPlugin.getLastChildElementByClassName(preview, "link-preview-end") || preview, 0);
+      var previewTitle         = LinkPreviewPlugin.format((LinkPreviewPlugin.getPreviewTitle(preview) || {innerText: null}).innerText);
 
       // ...
-      preview = (
-        "<div class=link-preview id=" + Array.from(crypto.getRandomValues(new Uint8Array(16))).map(byte => byte.toString(16).padStart(2, '0')).join("") + ">"                                                                                                                                    +
-          "<button class=link-preview-close><span>&#x1F6AB;&#xFE0F;</span></button>"                                                                                                                                                                                                             +
-          "<div class=link-preview-thumbnail" + (null !== metadata.thumbnail ? " style='background-image: url(\"" + sanitizeLinkForMarkdownAttribute(metadata.thumbnail) + "\") !important'" : "") + "><a href=\"" + sanitizeLinkForMarkdownAttribute(link.href) + "\" target=_blank></a></div>" +
-          "<div class=link-preview-content>"                                                                                                                                                                                                                                                     +
-            "<h1 class=link-preview-title><a href=\"" + sanitizeLinkForMarkdownAttribute(link.href) + "\" target=_blank>" + metadata.title                                              + "</a></h1>"                                                                                            +
-            "<p class=link-preview-description>"                                                                          + (null !== metadata.description ? metadata.description : "") + "</p>"                                                                                                 +
-            "<a class=link-preview-url href=\"" + sanitizeLinkForMarkdownAttribute(link.href) + "\" target=_blank>"       + sanitizeLinkForMarkdown(link.href)                          + "</a>"                                                                                                 +
-          "</div>"                                                                                                                                                                                                                                                                               +
-          "<div class=link-preview-end><!-- Do not remove --></div>"                                                                                                                                                                                                                               +
-        "</div>"
-      )
+      if (null !== previewBeginPosition && null !== previewEndPosition) {
+        previewBeginPosition = view.state.doc.lineAt(previewBeginPosition).from;
+        previewEndPosition   = view.state.doc.lineAt(previewEndPosition)  .to;
+
+        new Notice   ("Removed preview" + previewTitle.replace(/.+/, " $&"));
+        console.info ("Removed preview" + previewTitle.replace(/.+/, " $& ") + "at " + previewBeginPosition + "–" + previewEndPosition);
+        view.dispatch({changes: {from: previewBeginPosition, insert: "", to: previewEndPosition}, selection: {anchor: previewBeginPosition, head: previewBeginPosition}, scrollIntoView: true});
+
+        // ...
+        return true
+      }
     }
 
-    cursorPosition = editor.getCursor();
-    cursorPosition.ch === editorSelectionCursorPosition.ch && cursorPosition.line === editorSelectionCursorPosition.line ? editor.replaceSelection(preview) : editor.replaceRange(preview, cursorPosition)
+    return false
+  }
+
+  url() {
+    return this.app.vault.adapter.basePath.replace(/\\/g, '/').replace(/[\/\s]+$/g, "") + '/' + this.app.vault.configDir.replace(/(^[\/\s]+|[\/\s]+$)/g, "") + "/plugins/" + LinkPreviewPlugin.ID
   }
 }
