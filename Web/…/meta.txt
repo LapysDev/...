@@ -45,6 +45,7 @@ HTML Meta Tags
 • <meta content="Lapys’ Development"                                                                                                                     name="subtitle"/>
 • <meta content=""                                                                                                                                       name="summary"/>
 • <meta content=all                                                                                                                                      name="target"/>
+• <meta content=scale                                                                                                                                    name="text-scale"/>
 • <meta content=#0000FF                                                                                                                                  name="theme-color"/>
 • <meta content=""                                                                                                                                       name="topic"/>
 • <meta content=on                                                                                                                                       name="uri-translation"/>
