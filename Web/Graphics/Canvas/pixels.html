@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style type=text/css>
+            button {
+                background-color: #000033;
+                border: 1px solid rgba(0, 0, 0, 0.5);
+                border-radius: 50px;
+                box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 3px 6px 0 rgba(0, 0, 0, 0.3);
+                box-sizing: border-box;
+                cursor: pointer;
+                height: 50px;
+                transition: background-color 100ms ease-out 0s;
+                width: 50px
+            }
+
+            canvas {
+                background-color: #000033;
+                height: 500px;
+                width: 500px
+            }
+        </style>
+
+        <title> Canvas2D Pixel Manipulation </title>
+    </head>
+
+    <body>
+        <canvas> </canvas>
+        <button> </button>
+
+        <script type=text/javascript>
+            var ASSERTS_CORS_POLICY = (function() {
+                switch (location.protocol.slice(0, -1)) {
+                    case "data": case "http": case "https":
+                    return true
+                }
+
+                return false
+            })();
+
+            var button = document.getElementsByTagName("button")[0];
+            var canvas = document.getElementsByTagName("canvas")[0];
+
+            var bitmap = null, context = canvas.getContext("2d", {alpha: false, desynchronized: true});
+            var style = button.style;
+
+            // ...
+            canvas.height = canvas.getBoundingClientRect().height;
+            canvas.width = canvas.getBoundingClientRect().width;
+
+            context.globalAlpha = 1.0;
+            context.globalCompositeOperation = "source-over";
+            context.imageSmoothingEnabled = false;
+            context.imageSmoothingQuality = "low";
+
+            void function() {
+                var active = false; // ->> Pointer state
+
+                var color = [0.0, 0.0, 0.0]; // ->> RGB(A)
+                var range = color.length;
+                var step = Math.trunc(Math.random() * 2) + 1; // ->> +1 to +Infinity
+
+                var count = Math.pow(step + 1, range); // ->> Based on `color` variegations
+                var total = (function /* square */ () {
+                    // ->> Consistently ratio out cells onto the grid area i.e.: `canvas.height * canvas.width`
+                    for (var value = 1; ; ++value) {
+                        if (value * value >= count * /* ->> The checkered pattern effectively doubles the `count` */ 2)
+                        return value * value
+                    }
+                })();
+
+                var column = 0, row = 0;
+                var height = Math.sqrt((canvas.height * canvas.width) / total);
+                var width = Math.sqrt((canvas.height * canvas.width) / total);
+
+                var image = document.createElement("img");
+
+                // ...
+                image.onload = function() {
+                    var imageSize = Math.max(image.height, image.width);
+                    var imageHeight = image.height * (canvas.height / imageSize), imageWidth = image.width * (canvas.width / imageSize);
+
+                    // ... ->> Draw the backdrop
+                    ASSERTS_CORS_POLICY && context.drawImage(image, 0, 0, image.width, image.height, (canvas.width - imageWidth) / 2, (canvas.height - imageHeight) / 2, imageWidth, imageHeight);
+
+                    context.fillStyle = "rgba(0, 0, 0, 0.3)"; // ->> Tone the backdrop `image`
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // ... ->> Draw the colored cells
+                    while (true) /* --> for (var iterator = count; iterator; --iterator) */ {
+                        context.fillStyle = "rgba(" + Math.trunc(color[0]) + ", " + Math.trunc(color[1]) + ", " + Math.trunc(color[2]) + ", " + (ASSERTS_CORS_POLICY ? 0.075 : 1.0) + ")";
+                        context.fillRect(row * width, column * height, width, height);
+
+                        // ... ->> Next color (based on `step` size)
+                        var index = range - 1;
+
+                        while (color[index] >= 255.0 && ~index) --index;
+
+                        if (~index) color[index] += 255.0 / step; else break;
+                        while (index != range - 1) color[++index] = 0.0;
+
+                        // ... ->> Next coordinates (based on checkered pattern)
+                        row += 2;
+                        if (canvas.width <= row * width) row = ++column % 2
+                    }
+
+                    // ...
+                    button.onclick = function() {
+                        image.onload = function() {
+                            context.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
+
+                            bitmap = context.getImageData(0, 0, canvas.width, canvas.height);
+                            color = bitmap.data;
+
+                            // ... ->> Effect: Invert the colors
+                            for (var y = bitmap.height - 1; ~y; --y)
+                            for (var x = bitmap.width - 1; ~x; --x)
+                            /* --> for (var i = 0; i < imageData.length; i += 4) */ {
+                                color[((x * 4) + ((y * 4) * bitmap.width)) + 0] = 255 - color[((x * 4) + ((y * 4) * bitmap.width)) + 0];
+                                color[((x * 4) + ((y * 4) * bitmap.width)) + 1] = 255 - color[((x * 4) + ((y * 4) * bitmap.width)) + 1];
+                                color[((x * 4) + ((y * 4) * bitmap.width)) + 2] = 255 - color[((x * 4) + ((y * 4) * bitmap.width)) + 2]
+                            }
+
+                            // ...
+                            context.putImageData(bitmap, 0, 0)
+                        };
+
+                        image.setAttribute("src", canvas.toDataURL())
+                    };
+
+                    canvas.onmousedown = function(event) {
+                        active = true;
+                        arguments.length || (event = window.event);
+
+                        bitmap = context.createImageData(1, 1); {
+                            bitmap.data[0] = color[0];
+                            bitmap.data[1] = color[1];
+                            bitmap.data[2] = color[2];
+                            bitmap.data[3] = color[3]
+                        }
+                        color = bitmap.data
+                    };
+
+                    canvas.onmousemove = function(event) {
+                        arguments.length || (event = window.event);
+
+                        if (false == active) {
+                            bitmap = context.getImageData(event.x, event.y, 1, 1);
+                            color = bitmap.data
+                        }
+
+                        else context.putImageData(bitmap, event.x, event.y);
+
+                        style.backgroundColor = "rgba(" + color[0] + ", " + color[1] + ", " + color[2] + ", " + (color[3] / 255) + ')'
+                    };
+
+                    canvas.onmouseup = function(event) {
+                        active = false;
+                        arguments.length || (event = window.event)
+                    }
+                };
+
+                ASSERTS_CORS_POLICY && image.setAttribute("crossorigin", "use-credentials" /* --> not "anonymous" */);
+                image.setAttribute("src", "pixels.png")
+            }()
+        </script>
+    </body>
+</html>

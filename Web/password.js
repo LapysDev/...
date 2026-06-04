@@ -1,0 +1,3 @@
+new Array(16).fill().map(x => "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()<>?:\"{}".charAt(Math.trunc(Math.random() * 79))).join("")
+Array.from(crypto.getRandomValues(new Uint8Array(16))).map(x => "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()<>?:\"{}".charAt(x % 79)).join("")
+(s => { for (var buffer = new Uint8Array(32), i = 0; i !== 16; ) { crypto.getRandomValues(buffer).forEach(x => s += x < 237 && i !== 16 ? (++i, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()<>?:\"{}".charAt(x % 79)) : "") } return s })("")

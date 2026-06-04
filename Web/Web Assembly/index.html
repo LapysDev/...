@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Document Title -->
+    <title> WebAssembly </title>
+  </head>
+
+  <body>
+    <script language=javascript type=text/javascript>
+      var imports = (function(temporary) { return {"env": {
+        // "getTempRet0"    : function() { return temporary },
+        // "memory"         : new WebAssembly.Memory({"initial": 256, "maximum": 512}),
+        // "memoryBase"     : +0,
+        // "setTempRet0"    : function(value) { temporary = value },
+        // "table"          : new WebAssembly.Table({"element": "anyfunc", "initial": +0, "maximum": +0}),
+        // "tableBase"      : +0,
+        // "__memory_base"  : +0,
+        // "__stack_pointer": new WebAssembly.Global({"mutable": true, value: "i32"}, +0),
+        // "__table_base"   : +0,
+
+        "allocate": allocate, // ->> used by the WASM-compiled `source.cpp` code
+        "time"    : time      // --> std::time(…)
+      }} })(0);
+      var memory         = null;
+      var memoryCapacity = +0;
+      var request        = null;
+      var sourcePath     = "source.wasm";
+
+      // ...
+      function allocate(size) {
+        var allocation = memoryCapacity;
+
+        // ...
+        while (memory.buffer.byteLength <= memoryCapacity + size) memory.grow(1);
+        memoryCapacity += size;
+
+        return allocation
+      }
+
+      function compile(module) {
+        memory = module.instance.exports.memory;
+
+        with (module.instance.exports) {
+          var array = new Uint32Array(memory.buffer, 0x0000000 * Uint32Array.BYTES_PER_ELEMENT, 64);
+
+          // ...
+          allocate(array.length * Uint32Array.BYTES_PER_ELEMENT); // ->> un-released `allocate(…)`
+          array.set(new Array(array.length).fill().map(function() { return Math.trunc(Math.random() * 10) }));
+
+          console.log("[unsorted...]:", array);
+          console.log("[...]:", new BigUint64Array(memory.buffer, sort(array.byteOffset, array.length), 2)); // ->> un-released `allocate(…)`
+          console.log("[sorted...]:", array)
+        }
+      }
+
+      function time(argument) {
+        return new Date().valueOf()
+      }
+
+      // ...
+      if ("function" === typeof fetch && "function" === typeof WebAssembly.instantiateStreaming) {
+        request = fetch(sourcePath, {"headers": {"Content-Type": "application/wasm"}});
+        WebAssembly.instantiateStreaming(request, imports).then(compile)
+      }
+
+      else {
+        request = new XMLHttpRequest;
+
+        // ...
+        request.onload       = function() { WebAssembly.instantiate(request.response, imports).then(compile) };
+        request.responseType = "arraybuffer";
+
+        request.open("GET", sourcePath);
+        request.setRequestHeader("Content-Type", "application/wasm");
+        request.send()
+      }
+    </script>
+  </body>
+</html>
