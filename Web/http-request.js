@@ -4,7 +4,7 @@ var body         = null; // --> Blob | BufferSource | FormData | Int8Array | Doc
 var method       = "GET";
 var password     = null;
 var requests     = [];
-var url          = "https://www.example.com";
+var url          = "https://example.com";
 var username     = null;
 
 // ...
@@ -33,7 +33,7 @@ if ("function" === typeof XMLHttpRequest) {
 
 if ("function" === typeof ActiveXObject) {
   var requests = [];
-  var types = ["Msxml2.XMLHTTP.6.0", "Msxml2.XMLHTTP.3.0", "Msxml2.XMLHTTP", "Microsoft.XMLHTTP"];
+  var types = ["Microsoft.XMLHTTP", "Msxml2.XMLHTTP.3.0", "Msxml2.XMLHTTP.6.0", "Msxml2.XMLHTTP"];
 
   // ...
   for (var iterator = types.length; iterator--; ) {

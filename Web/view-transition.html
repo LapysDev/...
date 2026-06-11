@@ -4,15 +4,169 @@
 <iframe              src=about:blank> A </iframe>
 <iframe class=hidden src=about:blank> B </iframe>
 
-<style> .hidden { display: none } </style>
-<script>
+<style  type=text/css> .hidden { display: none } </style>
+<script type=text/javascript>
   var iframes = document.getElementsByTagName("iframe");
   var sources = [
-    "<body bgcolor=\#00003F> <button onclick=\"(typeof parent === typeof window ? parent : top).postMessage({/* ... */}, '*')\"> Go to B </button> </body>",
-    "<body bgcolor=\#300F00> <button onclick=\"(typeof parent === typeof window ? parent : top).postMessage({/* ... */}, '*')\"> Go to A </button> </body>"
+    "<body bgcolor=\#7FBFFF> <button onclick=\"(typeof parent === typeof window ? parent : top).postMessage({/* ... */}, '*')\"> Page Transition to B </button> <a href=youtube.com onclick=\"return (" + format(transition.toString()) + ")(false, event, 'data:text/html,Howdy! I%26rsquo;m Flowey! Flowey, the Flower! %26%23127803;')\"> Link Transition </a> </body>",
+    "<body bgcolor=\#FFBF7F> <button onclick=\"(typeof parent === typeof window ? parent : top).postMessage({/* ... */}, '*')\"> Page Transition to A </button> </body>"
   ];
 
   /* ... */
+  function format(source) {
+    var formatted = source;
+
+    // TODO (Lapys) -> Also matches single-line comments within strings; Invalidates automatic semicolon insertion
+    do {
+      source    = formatted;
+      formatted = formatted.replace(/(\/\/[^\n]*)\*\/([^\n]*(?:$|\n))/g, "$1*\u200B/$2")
+    } while (formatted !== source);
+
+    return formatted.replace(/\/\/(\s)?(\s+)?([^\n]*)(?:$|\n)/g, "/*$1$2$3$1*/").replace(/\s/g, ' ').replace(/"/g, "'")
+  }
+
+  function transition(blocking, event, url) {
+    function complete(valid) /* ->> Use `window.onpopstate` to redo the animated navigation */ {
+      try { history.pushState(null, "", url) }
+      catch (error) { /* --> DataCloneError | DOMException | SecurityError */ }
+
+      progress.style.cssText = progressStyle + "; width: 100.0%" + (valid ? "; background-color: lime !important" : "");
+      void setTimeout(function() {
+        progress.style.cssText = progressStyle + "; background-color: gray !important; width: 100.0%";
+        try /* ->> Internet Explorer does not support data URLs */ {
+          if (typeof navigate === "function") navigate(url);
+          else                                throw null
+        } catch (error) /* --> DataCloneError | DOMException | InvalidStateError | NotSupportedError | SyntaxError */ {
+          var anchor = progress.appendChild(document.createElement('a'));
+
+          // ...
+          anchor  .href = url;
+          location.href = url;
+
+          try {
+            anchor.click();
+            location.replace(url)
+          } catch (error) /* --> SecurityError | SyntaxError */ {}
+        }
+      }, 0.3e3)
+    }
+
+    function pend() {
+      progress.style.cssText = progressStyle + "animation: pend 1000ms ease 0ms infinite; margin-left: auto; margin-right: auto; width: 50%"
+    }
+
+    // ...
+    if (typeof event.preventDefault === "function")
+    event.preventDefault();
+
+    if (!blocking) {
+      var progress      = document.body.appendChild(document.createElement('div'));
+      var progressStyle = "background: red; height: 8px; left: 0; top: 0; transition-duration: 300ms; transition-property: margin-left, width; ";
+
+      // ...
+      blocking               = true;
+      progress.innerHTML     = "<style type=text/css> @keyframes pend { 0% { margin-left: 0% } 50% { margin-left: 50% } 100% { margin-left: 0% } } </style>";
+      progress.style.cssText = progressStyle + "width: 0%";
+
+      for (var count = document.body.childNodes.length - 1; count--; )
+      void document.body.appendChild(document.body.childNodes.item(0));
+
+      if (typeof fetch === "function") {
+        var loaded = 0.0;
+        var total  = null;
+
+        void fetch(url, {body: null, cache: "no-cache", method: "HEAD"}).then(function(response) {
+          total = response.headers.get("Content-Length");
+          return fetch(url, {body: null, headers: {}, method: "GET"})
+        }).then(function(response) {
+          if (null !== response.body && response.status >= 200 && response.status < 400)
+          return (function read(reader) {
+            return reader.read().then(function(data) {
+              if (!data.done) {
+                loaded += data.value.length;
+
+                if (null === total) pend();
+                else progress.style.cssText = progressStyle + "width: " + ((loaded / total) * 100.0) + '%';
+
+                // ...
+                return read(reader)
+              }
+
+              return void complete(true)
+            })
+          })(response.body.getReader());
+
+          else complete(false)
+        })["catch"](function(error) /* --> AbortError | DOMException | SyntaxError | TypeError | … */ { complete(false) })
+      }
+
+      else if (typeof ActiveXObject === "function" || typeof XMLHttpRequest === "function") {
+        var request = typeof XMLHttpRequest === "function" ? new XMLHttpRequest() : null;
+
+        /* ... */
+        function go(request, contentLength, contentType) {
+          request.onerror    = null;
+          request.onload     = null;
+          request.onprogress = function(event) {
+            if (null === contentLength) pend();
+            else progress.style.cssText = progressStyle + "width: " + ((event.loaded / (event.lengthComputable ? event.total : contentLength)) * 100.0) + '%'
+          };
+
+          request.onreadystatechange = function(event) {
+            if (null === contentLength)     pend();
+            if (request.readyState === 0x4) complete(request.status >= 200 && request.status < 400) // --> XMLHttpRequest.DONE
+          };
+
+          request.open("GET", url, true, null, null); // --> .abort()
+          request.setRequestHeader("Content-Type", contentType || "text/html");
+          request.send(null)
+        }
+
+        function pre(request) {
+          request.onerror = function(event) { go(request, null, request.getResponseHeader("Content-Type")) };
+          request.onload  = function(event) {
+            if (0x0 === request.status || (request.status >= 200 && request.status < 400)) {
+              var contentLength = request.getResponseHeader("Content-Length"); // --> Access-Control-Allow-Methods: HEAD, …; Access-Control-Expose-Headers: Content-Length, …
+
+              if (null !== contentLength)
+              return void go(request, +contentLength, request.getResponseHeader("Content-Type"))
+            }
+
+            go(request, null, request.getResponseHeader("Content-Type"))
+          };
+
+          try {
+            request.open("HEAD", url, true, null, null);
+            request.send(null)
+          } catch (error) { complete(false) }
+        }
+
+        // ...
+        try {
+          if (null === request && typeof ActiveXObject === "function") request = new ActiveXObject("Msxml2.XMLHTTP"); // ->> Internet Explorer 6+
+          if (null === request && typeof ActiveXObject === "function") request = new ActiveXObject("Msxml2.XMLHTTP.6.0");
+          if (null === request && typeof ActiveXObject === "function") request = new ActiveXObject("Msxml2.XMLHTTP.3.0");
+          if (null === request && typeof ActiveXObject === "function") request = new ActiveXObject("Microsoft.XMLHTTP") // ->> Internet Explorer 5
+        } catch (error) {}
+
+        if (null !== request && (
+          typeof request.getResponseHeader === /* --> not "unknown" */ "function" &&
+          typeof request.open              === /* --> not "unknown" */ "function" &&
+          typeof request.send              === /* --> not "unknown" */ "function" &&
+          typeof request.setRequestHeader  === /* --> not "unknown" */ "function"
+        )) pre(request);
+
+        else complete(false)
+      }
+
+      else
+        complete(false)
+    }
+
+    return false
+  }
+
+  // ...
   if ((typeof onmessage !== "object" || null !== onmessage) || (typeof postMessage !== "function" && /* ->> Internet Explorer */ typeof postMessage !== "object")) {
     alert("error: unable to switch");
     close()
@@ -20,20 +174,24 @@
 
   for (var index = 0; index !== Math.min(iframes.length, sources.length); ++index) {
     var iframe         = iframes.item(index);
-    var iframeDocument = iframe.contentWindow.document;
+    var iframeDocument = null;
 
     // ...
-    if (typeof iframe.srcdoc === "string")
+    if (typeof iframe.srcdoc === "string") {
       iframe.srcdoc = sources[index];
-
-    else {
-      iframe.src = encodeURI(sources[index]);
-      ie: /* ->> Internet Explorer */ {
-        iframeDocument.open();
-        iframeDocument.write(sources[index]);
-        iframeDocument.close()
-      }
+      continue
     }
+
+    try {
+      // ->> Internet Explorer
+      iframe.contentWindow.document.open();
+      iframe.contentWindow.document.write(sources[index]);
+      iframe.contentWindow.document.close();
+
+      continue
+    } catch (error) {}
+
+    iframe.src = encodeURI("data:text/html;charset=UTF-8," + sources[index])
   }
 
   onmessage = function(_) {
