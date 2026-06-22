@@ -1,0 +1,43 @@
+[data-\:preview-container] { overflow: hidden }
+body                       { margin  : 0 }
+body, html                 { display : table }
+
+[data-\:preview], .preview {
+  height    : 90%;
+  margin    : 5% auto;
+  min-height: 300px;
+  width     : 90%
+}
+
+[data-\:preview-destination] iframe, .preview-destination iframe, body, html {
+  border : none;
+  height : 100%;
+  padding: 0;
+  width  : 100%
+}
+
+[data-\:preview-source], .preview-source {
+  border             : 1px solid red;
+  box-sizing         : border-box;
+  clip               : rect(0px 300px 150px 0px);
+  cursor             : pointer !important;
+  float              : left;
+  height             : 150px;
+  overflow           : auto;
+  position           : absolute;
+  touch-action       : none;
+  user-select        : none;
+  width              : 300px;
+  -khtml-user-select : none;
+  -moz-user-input    : none;
+  -moz-user-select   : none;
+  -ms-touch-action   : none;
+  -ms-user-select    : none;
+  -webkit-user-select: none
+}
+
+[data-\:preview-source], .preview-source, body {
+  background-color: #191920;
+  color           : #C6C6C6
+}
+  [data-\:preview-source] * { pointer-events: none !important }
