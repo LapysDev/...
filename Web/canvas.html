@@ -2,6 +2,7 @@
 <body bgcolor=#0F0F0F leftmargin=0 topmargin=0>
 <script type=text/javascript>
   /* ->> Canvas API? Never heard of ’er */
+  var ball, image;
   void setInterval(function(image, ball) {
     var CHAR_BIT                        = 8;
     var CRC32_FORWARD_POLYNOMIAL        = 0x04C11DB7, CRC32_MASK = 0xFFFFFFFF;
@@ -13,7 +14,9 @@
     var ZLIB_BLOCK_MAXIMUM              = 0xFFFF;
     var ZLIB_BLOCK_TYPE_DYNAMIC_HUFFMAN = 0x2, ZLIB_BLOCK_TYPE_FIXED_HUFFMAN = 0x1, ZLIB_BLOCK_TYPE_RESERVED = 0x3, ZLIB_BLOCK_TYPE_UNCOMPRESSED = 0x0;
 
+    var ball                        = ball || window.ball;
     var ballRadius                  = Math.floor((ball.radius * ball.radius) / 4);
+    var image                       = image || window.image;
     var imageBinary                 = "";
     var imageBitDepth               = 1; // ->> 1 bit per pixel (must be square up to 16-bits inclusively)
     var imageChecksum               = 0; // ->> Adler-32 checksum (Big-Endian)
@@ -45,7 +48,7 @@
       break
     }
 
-    for (let count = 32, polynomial = 0x00000000; ; imageCRCForwardPolynomial >>>= 1)  {
+    for (var count = 32, polynomial = 0x00000000; ; imageCRCForwardPolynomial >>>= 1)  {
       polynomial = (polynomial << 1) | (imageCRCForwardPolynomial & 1);          // ->> Little-Endian requires bit reversal
       if (0 === --count) { imageCRCForwardPolynomial = polynomial >>> 0; break } // --> 0xEDB88320
     }
@@ -177,7 +180,7 @@
 
     if (ball.position.x <= 0 || ball.position.x >= imageWidth)  { ball.color = (Math.random() * 0xFFFFFF) >>> 0; ball.direction.x = -ball.direction.x; ball.position.x = Math.min(imageWidth,  Math.max(ball.position.x, 0)) }
     if (ball.position.y <= 0 || ball.position.y >= imageHeight) { ball.color = (Math.random() * 0xFFFFFF) >>> 0; ball.direction.y = -ball.direction.y; ball.position.y = Math.min(imageHeight, Math.max(ball.position.y, 0)) }
-  }, 1.0e3 / 60, document.images.item(0) || document.body.appendChild(new Image(0, 0)), {
+  }, 1.0e3 / 60, image = document.images.item(0) || document.body.appendChild(new Image(0, 0)), ball = {
     color    : 0xF0F0F0,
     direction: {x: Math.random() > 0.5 ? +1 : -1, y: Math.random() > 0.5 ? +1 : -1},
     position : {x: Math.random() * 1024,          y: Math.random() * 1024},
