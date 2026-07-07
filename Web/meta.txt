@@ -84,7 +84,7 @@ Vendor Meta Tags
     • <link href=icon.ico rel="shortcut icon" sizes="any" type="image/png"/>
 
     • <meta content=RevealTrans(Duration=2.0,Transition=2)  http-equiv="Page-Enter"/>
-    • <meta content=RevealTrans(Duration=3.0,Transition=12) http-equiv="Page-Exit"/>
+    • <meta content=BlendTrans(Duration=3.0) http-equiv="Page-Exit"/>
     • <meta content="action-uri=index.html;icon-uri=icon.ico;name=Task Name" name="msapplication-task"/>
     • <meta content="chrome=1" http-equiv="X-UA-Compatible"/>
       ▴ [chrome=1]       Google Chrome Frame is an open source browser plug-in. Users who have the plug-in installed have access to Google Chrome's open web technologies and speedy JavaScript engine when they open pages in the browser
