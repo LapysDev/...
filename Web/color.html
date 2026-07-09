@@ -44,8 +44,10 @@
   var XYB_BIAS = 0.0037930732552754493;
 
   var COLOR_CONVERTERS = {
+    "hsi": {"rgb": function(hsi) { var hue = rad(normalize(hsi[0])), rgb = [0.0, 0.0, 0.0]; if (hsi[1]) { hue %= Math.PI * 2.0; if (hue < (Math.PI / 3.0) * 2.0) { hue -= 0.0; rgb = [hsi[2] * (1.0 + (hsi[1] * (Math.cos(hue) / Math.cos((Math.PI / 3.0) - hue)))), 0.0, hsi[2] * (1.0 - hsi[1])]; rgb[1] = (hsi[2] * 3.0) - (rgb[0] + rgb[2]) } else if (hue < (Math.PI / 3.0) * 4.0) { hue -= (Math.PI / 3.0) * 2.0; rgb = [hsi[2] * (1.0 - hsi[1]), hsi[2] * (1.0 + hsi[1] * (Math.cos(hue) / Math.cos((Math.PI / 3.0) - hue))), 0.0]; rgb[2] = (hsi[2] * 3.0) - (rgb[0] + rgb[1]) } else { hue -= (Math.PI / 3.0) * 4.0; rgb = [0.0, hsi[2] * (1.0 - hsi[1]), hsi[2] * (1.0 + (hsi[1] * (Math.cos(hue) / Math.cos((Math.PI / 3.0) - hue))))]; rgb[0] = (hsi[2] * 3.0) - (rgb[1] + rgb[2]) } return [Math.min(Math.max(rgb[0], 0.0), 1.0), Math.min(Math.max(rgb[1], 0.0), 1.0), Math.min(Math.max(rgb[2], 0.0), 1.0)] } return [hsi[2], hsi[2], hsi[2]] }},
     "hsl": {"rgb": function(hsl) { var rgb = [hsl[2], hsl[2], hsl[2]], hue = normalize(hsl[0]) / 360.0; if (hsl[1]) { var hueOffsets = [hue + (1.0 / 3.0), hue, hue - (1.0 / 3.0)], blend = {lower: hsl[2] * 2.0, upper: hsl[2] < 0.5 ? hsl[2] * (hsl[1] + 1.0) : hsl[2] + hsl[1] - (hsl[1] * hsl[2])}; blend.lower -= blend.upper; for (var index = hueOffsets.length; index--; ) { var hueOffset = hueOffsets[index]; hueOffset = hueOffset < 0.0 ? hueOffset + 1.0 : hueOffset > 1.0 ? hueOffset - 1.0 : hueOffset; rgb[index] = hueOffset < 1.0 / 6.0 ? blend.lower + ((blend.upper - blend.lower) * hueOffset * 6.0) : hueOffset < 1.0 / 2.0 ? blend.upper : hueOffset < 2.0 / 3.0 ? blend.lower + ((blend.upper - blend.lower) * ((2.0 / 3.0) - hueOffset) * 6.0) : blend.lower } } return rgb }},
     "hsv": {"rgb": function(hsv) { var hueSector = normalize(hsv[0]) / 60.0, chromaPrimary = hsv[1] * hsv[2], chromaSecondary = chromaPrimary * (1.0 - Math.abs((hueSector % 2.0) - 1.0)), matchOffset = hsv[2] - chromaPrimar; return hueSector < 1.0 ? [chromaPrimary + matchOffset, chromaSecondary + matchOffset, matchOffset] : hueSector < 2.0 ? [chromaSecondary + matchOffset, chromaPrimary + matchOffset, matchOffset] : hueSector < 3.0 ? [matchOffset, chromaPrimary + matchOffset, chromaSecondary + matchOffset] : hueSector < 4.0 ? [matchOffset, chromaSecondary + matchOffset, chromaPrimary + matchOffset] : hueSector < 5.0 ? [chromaSecondary + matchOffset, matchOffset, chromaPrimary + matchOffset] : hueSector < 6.0 ? [chromaPrimary + matchOffset, matchOffset, chromaSecondary + matchOffset] : [matchOffset, matchOffset, matchOffset] }},
+    "hwb": {"rgb": function(hwb) { var whiteness = hwb[1], rgb = COLOR_CONVERTERS["hsv"]["rgb"]([hwb[0], 1.0, 1.0]), blackness = hwb[2], blacknessWhitenessRatio = blackness + whiteness; if (blacknessWhitenessRatio > 1.0) { blackness /= blacknessWhitenessRatio; whiteness /= blacknessWhitenessRatio } for (var index = 0; index !== rgb.length; ++index) { rgb[index] = whiteness + (rgb[index] * (1.0 - whiteness - blackness)) } return rgb }},
 
     "lab": {
       "lch": function(lab)             { return [lab[0], Math.sqrt(Math.pow(lab[1], 2) + Math.pow(lab[2], 2)), deg(Math.atan2(lab[2], lab[1]))] },
@@ -56,10 +58,19 @@
     "lab-d65": {"xyz-d65": function(lab) { return labToXyz(lab, WHITE_D65) }},
     "lch"    : {"lab"    : function(lch) { var hue = rad(lch[2]); return [lch[0], lch[1] * Math.cos(hue), lch[1] * Math.sin(hue)] }},
     "luv"    : {"xyz"    : function(luv) { if (luv[0]) { var whiteDenominator = WHITE_D65[0] + (WHITE_D65[1] * 15.0) + (WHITE_D65[2] * 3.0), whiteUVPrime = {u: (WHITE_D65[0] / whiteDenominator) * 4.0, v: (WHITE_D65[1] / whiteDenominator) * 9.0}, uvPrime = {u: whiteUVPrime.u + (luv[1] / (luv[0] * 13.0)), v: whiteUVPrime.v + (luv[2] / (luv[0] * 13.0))}; return [(WHITE_D65[1] * COLOR_SPACE_LAB.lightnessToLuminance(luv[0])) * (uvPrime.u / (uvPrime.v * 4.0)) * 9.0, WHITE_D65[1] * COLOR_SPACE_LAB.lightnessToLuminance(luv[0]), (WHITE_D65[1] * COLOR_SPACE_LAB.lightnessToLuminance(luv[0])) * ((12.0 - (uvPrime.u * 3.0) - (uvPrime.v * 20.0)) / (uvPrime.v * 4.0))] } return [0.0, 0.0, 0.0] }},
-    "oklab"  : {"rgb"    : function(lab) { var cone = {long: lab[0] + (lab[1] * 0.3963377774) + (lab[2] * 0.2158037573), medium: lab[0] - (lab[1] * 0.1055613458) - (lab[2] * 0.0638541728), short: lab[0] - (lab[1] * 0.0894841775) - (lab[2] * 1.2914855480)}, cone = {long: Math.pow(cone.long, 3), medium: Math.pow(cone.medium, 3), short: Math.pow(cone.short, 3)}; return [(cone.long * 4.0767416621) - (cone.medium * 3.3077115913) + (cone.short * 0.2309699292), (cone.long * -1.2684380046) + (cone.medium * 2.6097574011) - (cone.short * 0.3413193965), (cone.long * -0.0041960863) - (cone.medium * 0.7034186147) + (cone.short * 1.7076147010)] }},
+    "oklab"  : {
+      "okhsl": function(lab) { var chroma = Math.sqrt(Math.pow(lab[1], 2) + Math.pow(lab[2], 2)), lightness = COLOR_SPACE_OK.toe(lab[0]), saturation = 0.00; if (chroma && 0.00 !== lightness && lightness !== 1.00) { var chromas = COLOR_SPACE_OK.gamutChromas([lab[0], lab[1] / chroma, lab[2] / chroma]), chromaScale = 0.00; if (chroma < chromas.middle) { chromaScale = COLOR_SPACE_OK.LAB_SATURATION_MIDPOINT * chromas.low; saturation = COLOR_SPACE_OK.LAB_SATURATION_MIDPOINT * (chroma / (chromaScale + (chroma * (1.00 - (chromaScale / chromas.middle))))) } else { chromaScale = chromas.middle * chromas.middle * (1.25 / chromas.low) * 0.25; saturation = COLOR_SPACE_OK.LAB_SATURATION_MIDPOINT + (((chroma - chromas.middle) / (chromaScale + ((1.00 - (chromaScale / (chromas.maximum - chromas.middle))) * (chroma - chromas.middle)))) * 0.20) } } return [normalize(((Math.atan2(-lab[2], -lab[1]) / (Math.PI * 2.00)) + 0.50) * 360.00), saturation, lightness] },
+      "rgb"  : function(lab) { var cone = {long: lab[0] + (lab[1] * 0.3963377774) + (lab[2] * 0.2158037573), medium: lab[0] - (lab[1] * 0.1055613458) - (lab[2] * 0.0638541728), short: lab[0] - (lab[1] * 0.0894841775) - (lab[2] * 1.2914855480)}, cone = {long: Math.pow(cone.long, 3), medium: Math.pow(cone.medium, 3), short: Math.pow(cone.short, 3)}; return [(cone.long * 4.0767416621) - (cone.medium * 3.3077115913) + (cone.short * 0.2309699292), (cone.long * -1.2684380046) + (cone.medium * 2.6097574011) - (cone.short * 0.3413193965), (cone.long * -0.0041960863) - (cone.medium * 0.7034186147) + (cone.short * 1.7076147010)] }
+    },
+
+    "okhsl": {"oklab": function(okhsl) { var a = 0.00, b = 0.00, lightness = COLOR_SPACE_OK.toeInverse(okhsl[2]); if (0.00 !== lightness && lightness !== 1.00 && okhsl[1]) { var saturationBlend = 0.00, hue = normalize(okhsl[0]) / 360.00, hueDirectionB = Math.sin(hue * Math.PI * 2.00), hueDirectionA = Math.cos(hue * Math.PI * 2.00), chromas = COLOR_SPACE_OK.gamutChromas([lightness, hueDirectionA, hueDirectionB]), chromaScale = 0.00, chromaOffset = 0.00, chromaCurvature = 0.00; if (COLOR_SPACE_OK.LAB_SATURATION_MIDPOINT > okhsl[1]) { saturationBlend = okhsl[1] * 1.25; chromaScale = COLOR_SPACE_OK.LAB_SATURATION_MIDPOINT * chromas.low; chromaCurvature = 1.00 - (chromaScale / chromas.middle) } else { saturationBlend = (okhsl[1] - COLOR_SPACE_OK.LAB_SATURATION_MIDPOINT) * 5.00; chromaOffset = chromas.middle; chromaScale = chromas.middle * chromas.middle * (1.25 / chromas.low) * 0.25; chromaCurvature = 1.00 - (chromaScale / (chromas.maximum - chromas.middle)) } a = hueDirectionA * (chromaOffset + (saturationBlend * (chromaScale / (1.0 - (chromaCurvature * saturationBlend))))); b = hueDirectionB * (chromaOffset + (saturationBlend * (chromaScale / (1.0 - (chromaCurvature * saturationBlend))))) } return [lightness, a, b] }},
+    "okhsv": {"oklab": function(okhsv) { var a = 0.0, b = 0.0, lightness = COLOR_SPACE_OK.toeInverse(okhsv[2]); if (lightness && okhsv[1]) { var hueDirectionB = Math.sin(Math.PI * (normalize(okhsv[0]) / 360.0) * 2.0), hueDirectionA = Math.cos(Math.PI * (normalize(okhsv[0]) / 360.0) * 2.0), hueCuspSlopes = COLOR_SPACE_OK.gamutSlopes(COLOR_SPACE_OK.gamutBoundary(hueDirectionA, hueDirectionB)), saturationCurveScale = 1.0 - (COLOR_SPACE_OK.HSV_SATURATION_ANCHOR / hueCuspSlopes.lower), valueLightness = 1.0 - (okhsv[1] * (COLOR_SPACE_OK.HSV_SATURATION_ANCHOR / (COLOR_SPACE_OK.HSV_SATURATION_ANCHOR + hueCuspSlopes.upper - (hueCuspSlopes.upper * saturationCurveScale * okhsv[1])))), valueChroma = okhsv[1] * hueCuspSlopes.upper * (COLOR_SPACE_OK.HSV_SATURATION_ANCHOR / (COLOR_SPACE_OK.HSV_SATURATION_ANCHOR + hueCuspSlopes.upper - (hueCuspSlopes.upper * saturationCurveScale * okhsv[1]))), toeValueLightness = COLOR_SPACE_OK.toeInverse(valueLightness), toeValueChroma = valueChroma * (toeValueLightness / valueLightness), rgb = COLOR_CONVERTERS["oklab"]["rgb"]([toeValueLightness, hueDirectionA * toeValueChroma, hueDirectionB * toeValueChroma]), scale = cbrt(1.0 / Math.max(rgb[0], rgb[1], rgb[2], 0.0)), chroma = okhsv[2] * valueChroma; lightness = COLOR_SPACE_OK.toeInverse(okhsv[2] * valueLightness); chroma *= lightness / (okhsv[2] * valueLightness); a = hueDirectionA * chroma * scale; b = hueDirectionB * chroma * scale; lightness *= scale } return [lightness, a, b] }},
 
     "rgb": {
+      "hsi"  : function(rgb)             { var intensity = (rgb[0] + rgb[1] + rgb[2]) / 3.0, saturation = intensity ? 1.0 - (Math.min(rgb[0], rgb[1], rgb[2]) / intensity) : 0.0; return [saturation ? deg(Math.atan2(Math.sqrt(3.0) * (rgb[1] - rgb[2]), (rgb[0] * 2.0) - rgb[1] - rgb[2])) : 0.0, saturation, intensity] },
+      "hsl"  : function(rgb)             { var channelMaximum = Math.max(rgb[0], rgb[1], rgb[2]), channelMinimum = Math.min(rgb[0], rgb[1], rgb[2]), hsl = [0.0, 0.0, (channelMaximum + channelMinimum) / 2.0]; if (channelMaximum !== channelMinimum) { hsl[1] = hsl[2] > 0.5 ? (channelMaximum - channelMinimum) / (2.0 - channelMaximum - channelMinimum) : (channelMaximum - channelMinimum) / (channelMaximum + channelMinimum); switch (channelMaximum) { case rgb[0]: hsl[0] = (rgb[1] - rgb[2]) / (channelMaximum - channelMinimum) + (rgb[1] < rgb[2] ? 6.0 : 0.0); break; case rgb[1]: hsl[0] = (rgb[2] - rgb[0]) / (channelMaximum - channelMinimum) + 2.0; break; case rgb[2]: hsl[0] = (rgb[0] - rgb[1]) / (channelMaximum - channelMinimum) + 4.0 } hsl[0] *= 60.0 } hsl[0] = normalize(hsl[0]); return hsl },
       "hsv"  : function(rgb)             { var channelMaximum = Math.max(rgb[0], rgb[1], rgb[2]), channelMinimum = Math.min(rgb[0], rgb[1], rgb[2]), hue = 0.0; if (channelMaximum !== channelMinimum) switch (channelMaximum) { case rgb[0]: hue = (((rgb[1] - rgb[2]) / (channelMaximum - channelMinimum)) % 6.0) * 60.0; break; case rgb[1]: hue = ((rgb[2] - rgb[0]) / (channelMaximum - channelMinimum) + 2.0) * 60.0; break; case rgb[2]: hue = ((rgb[0] - rgb[1]) / (channelMaximum - channelMinimum) + 4.0) * 60.0 } return [normalize(hue), channelMaximum ? (channelMaximum - channelMinimum) / channelMaximum : 0.0, channelMaximum] },
+      "hwb"  : function(rgb)             { return [COLOR_CONVERTERS["rgb"]["hsl"](rgb)[0], 0.0 + Math.min(rgb[0], rgb[1], rgb[2]), 1.0 - Math.max(rgb[0], rgb[1], rgb[2])] },
       "oklab": function(rgb)             { var responses = multiply3x3([0.4122214708, 0.5363325363, 0.0514459929, 0.2119034982, 0.6806995451, 0.1073969566, 0.0883024619, 0.2817188376, 0.6299787005], rgb), root = {long: cbrt(responses[0]), medium: cbrt(responses[1]), short: cbrt(responses[2])}; return multiply3x3([0.2104542553, 0.7936177850, -0.0040720468, 1.9779984951, -2.4285922050, 0.4505937099, 0.0259040371, 0.7827717662, -0.8086757660], [root.long, root.medium, root.short]) },
       "xyz"  : function(rgb, colorSpace) { var rgb = [colorSpace.decode(rgb[0]), colorSpace.decode(rgb[1]), colorSpace.decode(rgb[2])]; return chromaticAdaptWhite(multiply3x3(colorSpace.RGB_TO_XYZ, rgb), colorSpace.WHITE, WHITE_D65) }
     },
@@ -116,18 +127,24 @@
     "rec2100-pq"    : {decode: COLOR_DECODERS["rec2100-pq"],                                             encode: COLOR_ENCODERS["rec2100-pq"],                                             RGB_TO_XYZ: [0.6369580483, 0.1446169036, 0.1688809752, 0.2627002120, 0.6779980715,  0.0593017165,  0.0000000000, 0.0280726930, 1.0609850577], WHITE: WHITE_D65, XYZ_TO_RGB: [1.7166511880, -0.3556707838, -0.2533662814, -0.6666843518, 1.6164812366, 0.0157685458, 0.0176398574, -0.0427706133, 0.9421031212]},
     "rgb"           : {decode: COLOR_DECODERS["rgb"],                                                    encode: COLOR_ENCODERS["rgb"],                                                    RGB_TO_XYZ: [0.4124564391, 0.3575760776, 0.1804374833, 0.2126728514, 0.7151521553,  0.0721749933,  0.0193338956, 0.1191920259, 0.9503040785], WHITE: WHITE_D65, XYZ_TO_RGB: [3.2404541621, -1.5371385128, -0.4985314096, -0.9692660305, 1.8760108454, 0.0415560175, 0.0556434309, -0.2040259135, 1.0572251882]}
   }, COLOR_SPACE_REC = {
-    CHANNELS : [3424.000000000000000 / 4096.000000000000000,  2413.000000000000000 / 128.000000000000000, 2392.000000000000000 / 128.000000000000000], // ->> Rec. 2100 (Perceptual Quantizer)
+    // ->> Rec. 2100 (Perceptual Quantizer)
+    CHANNELS : [3424.000000000000000 / 4096.000000000000000,  2413.000000000000000 / 128.000000000000000, 2392.000000000000000 / 128.000000000000000],
     EXPONENTS: [2610.000000000000000 / 16384.000000000000000, 2523.000000000000000 / 32.000000000000000],
 
-    OFFSET  : 0.559910730000000, // ->> Rec. 2100 (HLG)
+    // ->> Rec. 2100 (HLG)
+    OFFSET  : 0.559910730000000,
     SHIFT   : 0.284668920000000,
     STRENGTH: 0.178832770000000,
 
-    PQ_REFERENCE_SCALE: 10000.000000000000000, // ->> Rec. 2100 (PQ)
+    // ->> Rec. 2100 (PQ)
+    PQ_REFERENCE_SCALE: 10000.000000000000000,
 
-    SCALING_COEFFICIENT: 1.099296826809440, // ->> Rec. 709 (Opto-Electronic Transfer Function)
+    // ->> Rec. 709 (Opto-Electronic Transfer Function)
+    SCALING_COEFFICIENT: 1.099296826809440,
     THRESHOLD          : 0.018053968510807
   }, COLOR_SPACE_OK = {
+    HSV_SATURATION_ANCHOR          : 0.500,
+    LAB_SATURATION_MIDPOINT        : 0.800,
     SOFTNESS                       : 0.030,         // -@> https://bottosson.github.io/posts/colorpicker/#intermission---a-new-lightness-estimate-for-oklab
     SHADOW_OFFSET                  : 0.206,         // ->> Toe Curvature ∿ Strength
     SCALE                          : 1.206 / 1.030, // --> (::SHADOW_OFFSET + 1) / (::SOFTNESS + 1)
@@ -138,11 +155,17 @@
       {gamut: [ 0.13110758,  1.81333971], saturation: [1.35733652, -0.00915799, -1.15130210, -0.50559606,  0.00692167]}  // ->> Blue
     ],
 
-    gamutChromas: function(lab)                          { var lightness = lab[0], hueDirectionB = lab[2], hueDirectionA = lab[1], hueCusp = COLOR_SPACE_OK.hueCusp(hueDirectionA, hueDirectionB), gamutSlopesMaximum = COLOR_SPACE_OK.gamutSlopes(hueCusp), cone = {factor: null, firstDerivative: null, root: null, secondDerivative: null}, chroma = {low: 0.0000000000, maximum: 0.0000000000, middle: 0.0000000000}, channels = [null, null, null], midpoints = {slope: (1.0000000000 / (7.4477897000 + (4.1590124000 * hueDirectionB) + (hueDirectionA * (-2.1955734700 + (1.7519840100 * hueDirectionB) + hueDirectionA * (-2.1370494800 - (10.0230104300 * hueDirectionB) + (hueDirectionA * (-4.24894561000 + (5.3877081900 * hueDirectionB) + (4.6989101300 * hueDirectionA)))))))) + 0.1151699300, toe: (1.0000000000 / (1.6132032000 - (0.6812437900 * hueDirectionB) + (hueDirectionA * (0.4037061200 + (0.9014812300 * hueDirectionB) + hueDirectionA * (-0.2708794300 + (0.6122399000 * hueDirectionB) + (hueDirectionA * (0.0029921500 - (0.4539956800 * hueDirectionB) - (0.1466187200 * hueDirectionA)))))))) + 0.1123964200}; if (hueCusp.lightness >= lightness) chroma.maximum = hueCusp.chroma * ((lightness - 0.0000000000) / (hueCusp.lightness - 0.0000000000)); else { chroma.maximum += hueCusp.chroma * ((lightness - 1.0000000000) / (hueCusp.lightness - 1.0000000000)); lightness = (lightness * (1.0000000000 - chroma.maximum)) + (lightness * (0.0000000000 + chroma.maximum)); cone.factor = {long: (hueDirectionA * 0.3963377774) + (hueDirectionB * 0.2158037573), medium: (hueDirectionA * -0.1055613458) - (hueDirectionB * 0.0638541728), short: (hueDirectionA * -0.0894841775) - (hueDirectionB * 1.2914855480)}; cone.root = {long: lightness + (chroma.maximum * cone.factor.long), medium: lightness + (chroma.maximum * cone.factor.medium), short: lightness + (chroma.maximum * cone.factor.short)}; cone.secondDerivative = {long: cone.factor.long * cone.factor.long * cone.root.long * 6.0000000000, medium: cone.factor.medium * cone.factor.medium * cone.root.medium * 6.0000000000, short: cone.factor.short * cone.factor.short * cone.root.short * 6.0000000000}; cone.firstDerivative = {long: cone.factor.long * cone.root.long * cone.root.long * 3.0000000000, medium: cone.factor.medium * cone.root.medium * cone.root.medium * 3.0000000000, short: cone.factor.short * cone.root.short * cone.root.short * 3.0000000000}; lightness = lab[0]; channels = [{error: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][0] * Math.pow(cone.root.long, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][1] * Math.pow(cone.root.medium, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][2] * Math.pow(cone.root.short, 3)) - 1.0000000000, firstDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][0] * cone.firstDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][1] * cone.firstDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][2] * cone.firstDerivative.short), secondDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][0] * cone.secondDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][1] * cone.secondDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][2] * cone.secondDerivative.short), step: 0.0000000000}, {error: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][0] * Math.pow(cone.root.long, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][1] * Math.pow(cone.root.medium, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][2] * Math.pow(cone.root.short, 3)) - 1.0000000000, firstDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][0] * cone.firstDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][1] * cone.firstDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][2] * cone.firstDerivative.short), secondDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][0] * cone.secondDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][1] * cone.secondDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][2] * cone.secondDerivative.short), step: 0.0000000000}, {error: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][0] * Math.pow(cone.root.long, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][1] * Math.pow(cone.root.medium, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][2] * Math.pow(cone.root.short, 3)) - 1.0000000000, firstDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][0] * cone.firstDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][1] * cone.firstDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][2] * cone.firstDerivative.short), secondDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][0] * cone.secondDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][1] * cone.secondDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][2] * cone.secondDerivative.short), step: 0.0000000000}]; channels[0].step = channels[0].firstDerivative / (Math.pow(channels[0].firstDerivative, 2) - (channels[0].error * channels[0].secondDerivative * 0.5000000000)); channels[1].step = channels[1].firstDerivative / (Math.pow(channels[1].firstDerivative, 2) - (channels[1].error * channels[1].secondDerivative * 0.5000000000)); channels[2].step = channels[2].firstDerivative / (Math.pow(channels[2].firstDerivative, 2) - (channels[2].error * channels[2].secondDerivative * 0.5000000000)); chroma.maximum += Math.min(channels[0].step >= 0.0000000000 ? -channels[0].error * channels[0].step : Number.MAX_VALUE, channels[1].step >= 0.0000000000 ? -channels[1].error * channels[1].step : Number.MAX_VALUE, channels[2].step >= 0.0000000000 ? -channels[2].error * channels[2].step : Number.MAX_VALUE) } chroma.low = Math.sqrt(1.0000000000 / ((1.0000000000 / Math.pow((0.0000000000 + lightness) * 0.4000000000, 2)) + (1.0000000000 / Math.pow((1.0000000000 - lightness) * 0.8000000000, 2)))); chroma.middle = (chroma.maximum / Math.min((0.0000000000 + lightness) * gamutSlopesMaximum.lower, (1.0000000000 - lightness) * gamutSlopesMaximum.upper)) * Math.sqrt(Math.sqrt(1.0000000000 / ((1.0000000000 / Math.pow(midpoints.slope * (0.0000000000 + lightness), 4)) + (1.0 / Math.pow(midpoints.toe * (1.0000000000 - lightness), 4))))) * 0.9000000000; return chroma },
-    gamutSlopes : function(hueCusp)                      { return {lower: /* ->> S: Black to Hue Cusp */ hueCusp.chroma / (0.0 + hueCusp.lightness), upper: /* ->> T: White to Hue Cusp */  hueCusp.chroma / (1.0 - hueCusp.lightness)} },
-    hueCusp     : function(hueDirectionA, hueDirectionB) { var channel = null, cone = {factor: null, firstDerivative: null, root: null, secondDerivative: null}, lightnessHueCusp = 0.0000000000, rgb = COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB.length - 1], saturation = 0.0000000000, saturationCoefficients = COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS[COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS.length - 1].saturation, saturationHueCusp = 0.0000000000; for (var index = 0; COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS.length !== index; ++index) { if ((COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS[index].gamut[0] * hueDirectionA) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS[index].gamut[1] * hueDirectionB) > 1.0) { rgb = COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[index]; saturationCoefficients = COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS[index].saturation; break } } saturation = saturationCoefficients[0] + (hueDirectionA * saturationCoefficients[1]) + (hueDirectionB * saturationCoefficients[2]) + (hueDirectionA * hueDirectionA * saturationCoefficients[3]) + (hueDirectionA * hueDirectionB * saturationCoefficients[4]); cone.factor = {long: (hueDirectionA * 0.3963377774) + (hueDirectionB * 0.2158037573), medium: (hueDirectionA * -0.1055613458) - (hueDirectionB * 0.0638541728), short: (hueDirectionA * -0.0894841775) - (hueDirectionB * 1.2914855480)}; cone.root = {long: (saturation * cone.factor.long) + 1.0000000000, medium: (saturation * cone.factor.medium) + 1.0000000000, short: (saturation * cone.factor.short) + 1.0000000000}; cone.secondDerivative = {long: cone.factor.long * cone.factor.long * cone.root.long * 6.0000000000, medium: cone.factor.medium * cone.factor.medium * cone.root.medium * 6.0000000000, short: cone.factor.short * cone.factor.short * cone.root.short * 6.0000000000}; cone.firstDerivative = {long: cone.factor.long * cone.root.long * cone.root.long * 3.0000000000, medium: cone.factor.medium * cone.root.medium * cone.root.medium * 3.0000000000, short: cone.factor.short * cone.root.short * cone.root.short * 3.0000000000}; channel = {error: (rgb[0] * Math.pow(cone.root.long, 3)) + (rgb[1] * Math.pow(cone.root.medium, 3)) + (rgb[2] * Math.pow(cone.root.short, 3)), firstDerivative: (rgb[0] * cone.firstDerivative.long) + (rgb[1] * cone.firstDerivative.medium) + (rgb[2] * cone.firstDerivative.short), secondDerivative: (rgb[0] * cone.secondDerivative.long) + (rgb[1] * cone.secondDerivative.medium) + (rgb[2] * cone.secondDerivative.short)}; saturationHueCusp = saturation - (channel.error * (channel.firstDerivative / (Math.pow(channel.firstDerivative, 2) - (channel.error * channel.secondDerivative * 0.5000000000)))); rgb = COLOR_CONVERTERS["oklab"]["rgb"]([1.0000000000, hueDirectionA * saturationHueCusp, hueDirectionB * saturationHueCusp]); lightnessHueCusp = cbrt(1.0000000000 / Math.max(rgb[0], rgb[1], rgb[2])); return {chroma: lightnessHueCusp * saturationHueCusp, lightness: lightnessHueCusp} }, // ->> Peak gamut boundary for `hueDirection*`
-    toe         : function(input)                        { return ((COLOR_SPACE_OK.SCALE * input) - COLOR_SPACE_OK.SHADOW_OFFSET + Math.sqrt((((COLOR_SPACE_OK.SCALE * input) - COLOR_SPACE_OK.SHADOW_OFFSET) * ((COLOR_SPACE_OK.SCALE * input) - COLOR_SPACE_OK.SHADOW_OFFSET)) + (COLOR_SPACE_OK.SCALE * COLOR_SPACE_OK.SOFTNESS * input * 4.000))) * 0.500 }, // ->> Compresses linear/ perceptual lightness for natural dark colours
-    toeInverse  : function(input)                        { return (Math.pow(input, 2) + (COLOR_SPACE_OK.SHADOW_OFFSET * input)) / (COLOR_SPACE_OK.SCALE * (COLOR_SPACE_OK.SOFTNESS + input)) }
+    gamutBoundary: function(hueDirectionA, hueDirectionB) { var channel = null, cone = {factor: null, firstDerivative: null, root: null, secondDerivative: null}, lightnessHueCusp = 0.0000000000, rgb = COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB.length - 1], saturation = 0.0000000000, saturationCoefficients = COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS[COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS.length - 1].saturation, saturationHueCusp = 0.0000000000; for (var index = 0; COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS.length !== index; ++index) { if ((COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS[index].gamut[0] * hueDirectionA) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS[index].gamut[1] * hueDirectionB) > 1.0) { rgb = COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[index]; saturationCoefficients = COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB_COEFFICIENTS[index].saturation; break } } saturation = saturationCoefficients[0] + (hueDirectionA * saturationCoefficients[1]) + (hueDirectionB * saturationCoefficients[2]) + (hueDirectionA * hueDirectionA * saturationCoefficients[3]) + (hueDirectionA * hueDirectionB * saturationCoefficients[4]); cone.factor = {long: (hueDirectionA * 0.3963377774) + (hueDirectionB * 0.2158037573), medium: (hueDirectionA * -0.1055613458) - (hueDirectionB * 0.0638541728), short: (hueDirectionA * -0.0894841775) - (hueDirectionB * 1.2914855480)}; cone.root = {long: (saturation * cone.factor.long) + 1.0000000000, medium: (saturation * cone.factor.medium) + 1.0000000000, short: (saturation * cone.factor.short) + 1.0000000000}; cone.secondDerivative = {long: cone.factor.long * cone.factor.long * cone.root.long * 6.0000000000, medium: cone.factor.medium * cone.factor.medium * cone.root.medium * 6.0000000000, short: cone.factor.short * cone.factor.short * cone.root.short * 6.0000000000}; cone.firstDerivative = {long: cone.factor.long * cone.root.long * cone.root.long * 3.0000000000, medium: cone.factor.medium * cone.root.medium * cone.root.medium * 3.0000000000, short: cone.factor.short * cone.root.short * cone.root.short * 3.0000000000}; channel = {error: (rgb[0] * Math.pow(cone.root.long, 3)) + (rgb[1] * Math.pow(cone.root.medium, 3)) + (rgb[2] * Math.pow(cone.root.short, 3)), firstDerivative: (rgb[0] * cone.firstDerivative.long) + (rgb[1] * cone.firstDerivative.medium) + (rgb[2] * cone.firstDerivative.short), secondDerivative: (rgb[0] * cone.secondDerivative.long) + (rgb[1] * cone.secondDerivative.medium) + (rgb[2] * cone.secondDerivative.short)}; saturationHueCusp = saturation - (channel.error * (channel.firstDerivative / (Math.pow(channel.firstDerivative, 2) - (channel.error * channel.secondDerivative * 0.5000000000)))); rgb = COLOR_CONVERTERS["oklab"]["rgb"]([1.0000000000, hueDirectionA * saturationHueCusp, hueDirectionB * saturationHueCusp]); lightnessHueCusp = cbrt(1.0000000000 / Math.max(rgb[0], rgb[1], rgb[2])); return {chroma: lightnessHueCusp * saturationHueCusp, lightness: lightnessHueCusp} },
+    gamutChromas : function(lab)                          { var lightness = lab[0], hueDirectionB = lab[2], hueDirectionA = lab[1], hueCusp = COLOR_SPACE_OK.gamutBoundary(hueDirectionA, hueDirectionB), gamutSlopesMaximum = COLOR_SPACE_OK.gamutSlopes(hueCusp), cone = {factor: null, firstDerivative: null, root: null, secondDerivative: null}, chroma = {low: 0.0000000000, maximum: 0.0000000000, middle: 0.0000000000}, channels = [null, null, null], midpoints = {slope: (1.0000000000 / (7.4477897000 + (4.1590124000 * hueDirectionB) + (hueDirectionA * (-2.1955734700 + (1.7519840100 * hueDirectionB) + hueDirectionA * (-2.1370494800 - (10.0230104300 * hueDirectionB) + (hueDirectionA * (-4.24894561000 + (5.3877081900 * hueDirectionB) + (4.6989101300 * hueDirectionA)))))))) + 0.1151699300, toe: (1.0000000000 / (1.6132032000 - (0.6812437900 * hueDirectionB) + (hueDirectionA * (0.4037061200 + (0.9014812300 * hueDirectionB) + hueDirectionA * (-0.2708794300 + (0.6122399000 * hueDirectionB) + (hueDirectionA * (0.0029921500 - (0.4539956800 * hueDirectionB) - (0.1466187200 * hueDirectionA)))))))) + 0.1123964200}; if (hueCusp.lightness >= lightness) chroma.maximum = hueCusp.chroma * ((lightness - 0.0000000000) / (hueCusp.lightness - 0.0000000000)); else { chroma.maximum += hueCusp.chroma * ((lightness - 1.0000000000) / (hueCusp.lightness - 1.0000000000)); lightness = (lightness * (1.0000000000 - chroma.maximum)) + (lightness * (0.0000000000 + chroma.maximum)); cone.factor = {long: (hueDirectionA * 0.3963377774) + (hueDirectionB * 0.2158037573), medium: (hueDirectionA * -0.1055613458) - (hueDirectionB * 0.0638541728), short: (hueDirectionA * -0.0894841775) - (hueDirectionB * 1.2914855480)}; cone.root = {long: lightness + (chroma.maximum * cone.factor.long), medium: lightness + (chroma.maximum * cone.factor.medium), short: lightness + (chroma.maximum * cone.factor.short)}; cone.secondDerivative = {long: cone.factor.long * cone.factor.long * cone.root.long * 6.0000000000, medium: cone.factor.medium * cone.factor.medium * cone.root.medium * 6.0000000000, short: cone.factor.short * cone.factor.short * cone.root.short * 6.0000000000}; cone.firstDerivative = {long: cone.factor.long * cone.root.long * cone.root.long * 3.0000000000, medium: cone.factor.medium * cone.root.medium * cone.root.medium * 3.0000000000, short: cone.factor.short * cone.root.short * cone.root.short * 3.0000000000}; lightness = lab[0]; channels = [{error: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][0] * Math.pow(cone.root.long, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][1] * Math.pow(cone.root.medium, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][2] * Math.pow(cone.root.short, 3)) - 1.0000000000, firstDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][0] * cone.firstDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][1] * cone.firstDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][2] * cone.firstDerivative.short), secondDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][0] * cone.secondDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][1] * cone.secondDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[0][2] * cone.secondDerivative.short), step: 0.0000000000}, {error: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][0] * Math.pow(cone.root.long, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][1] * Math.pow(cone.root.medium, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][2] * Math.pow(cone.root.short, 3)) - 1.0000000000, firstDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][0] * cone.firstDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][1] * cone.firstDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][2] * cone.firstDerivative.short), secondDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][0] * cone.secondDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][1] * cone.secondDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[1][2] * cone.secondDerivative.short), step: 0.0000000000}, {error: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][0] * Math.pow(cone.root.long, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][1] * Math.pow(cone.root.medium, 3)) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][2] * Math.pow(cone.root.short, 3)) - 1.0000000000, firstDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][0] * cone.firstDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][1] * cone.firstDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][2] * cone.firstDerivative.short), secondDerivative: (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][0] * cone.secondDerivative.long) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][1] * cone.secondDerivative.medium) + (COLOR_SPACE_OK.LMS_TO_LINEAR_SRGB[2][2] * cone.secondDerivative.short), step: 0.0000000000}]; channels[0].step = channels[0].firstDerivative / (Math.pow(channels[0].firstDerivative, 2) - (channels[0].error * channels[0].secondDerivative * 0.5000000000)); channels[1].step = channels[1].firstDerivative / (Math.pow(channels[1].firstDerivative, 2) - (channels[1].error * channels[1].secondDerivative * 0.5000000000)); channels[2].step = channels[2].firstDerivative / (Math.pow(channels[2].firstDerivative, 2) - (channels[2].error * channels[2].secondDerivative * 0.5000000000)); chroma.maximum += Math.min(channels[0].step >= 0.0000000000 ? -channels[0].error * channels[0].step : Number.MAX_VALUE, channels[1].step >= 0.0000000000 ? -channels[1].error * channels[1].step : Number.MAX_VALUE, channels[2].step >= 0.0000000000 ? -channels[2].error * channels[2].step : Number.MAX_VALUE) } chroma.low = Math.sqrt(1.0000000000 / ((1.0000000000 / Math.pow((0.0000000000 + lightness) * 0.4000000000, 2)) + (1.0000000000 / Math.pow((1.0000000000 - lightness) * 0.8000000000, 2)))); chroma.middle = (chroma.maximum / Math.min((0.0000000000 + lightness) * gamutSlopesMaximum.lower, (1.0000000000 - lightness) * gamutSlopesMaximum.upper)) * Math.sqrt(Math.sqrt(1.0000000000 / ((1.0000000000 / Math.pow(midpoints.slope * (0.0000000000 + lightness), 4)) + (1.0 / Math.pow(midpoints.toe * (1.0000000000 - lightness), 4))))) * 0.9000000000; return chroma },
+    gamutSlopes  : function(hueCusp)                      { return {lower: /* ->> S: Black to Hue Cusp */ hueCusp.chroma / (0.0 + hueCusp.lightness), upper: /* ->> T: White to Hue Cusp */  hueCusp.chroma / (1.0 - hueCusp.lightness)} },
+    toe          : function(input)                        { return ((COLOR_SPACE_OK.SCALE * input) - COLOR_SPACE_OK.SHADOW_OFFSET + Math.sqrt((((COLOR_SPACE_OK.SCALE * input) - COLOR_SPACE_OK.SHADOW_OFFSET) * ((COLOR_SPACE_OK.SCALE * input) - COLOR_SPACE_OK.SHADOW_OFFSET)) + (COLOR_SPACE_OK.SCALE * COLOR_SPACE_OK.SOFTNESS * input * 4.000))) * 0.500 }, // ->> Compresses linear/ perceptual lightness for natural dark colours
+    toeInverse   : function(input)                        { return (Math.pow(input, 2) + (COLOR_SPACE_OK.SHADOW_OFFSET * input)) / (COLOR_SPACE_OK.SCALE * (COLOR_SPACE_OK.SOFTNESS + input)) }
+  }, COLOR_SPACE_LUV = {
+    RGB_BOUNDARY_COUNT: 2, // ->> Upper and lower
+
+    hplChromaMaximum     : function(lightness)      { var chroma = Infinity, lines = COLOR_SPACE_LUV.hslGamutBoundaryLines(lightness); for (var index = 0; index !== lines.length; ++index) { var length = lines[index].intercept / Math.sqrt(Math.pow(lines[index].slope, 2) + 1.0); chroma = length >= 0.0 ? Math.min(chroma, length) : chroma } return chroma },
+    hslChromaMaximum     : function(lightness, hue) { var chroma = Infinity, lines = COLOR_SPACE_LUV.hslGamutBoundaryLines(lightness); for (var index = 0; index !== lines.length; ++index) { var length = lines[index].intercept / (Math.sin(rad(hue)) - (lines[index].slope * Math.cos(rad(hue)))); chroma = length >= 0.0 ? Math.min(chroma, length) : chroma } return chroma },
+    hslGamutBoundaryLines: function(lightness)      { var relativeLuminanceCubic = Math.pow(lightness + 16.0, 3) / 1560896.0, relativeLuminance = relativeLuminanceCubic > 216.0 / 24389.0 ? relativeLuminanceCubic : lightness / (24389.0 / 27.0), lines = []; for (var rgbIndex = 0; COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB.length !== rgbIndex; rgbIndex += 3) for (var rgbBoundaryIndex = 0; COLOR_SPACE_LUV.RGB_BOUNDARY_COUNT !== rgbBoundaryIndex; ++rgbBoundaryIndex) { var denominator = (relativeLuminance * ((COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbIndex + 2] * 632260.0) - (COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbIndex + 1] * 126452.0))) + (rgbBoundaryIndex * 126452.0); void lines.push({intercept: ((lightness * relativeLuminance * ((COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbIndex + 2] * 838422.0) + (COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbIndex + 1] * 769860.0) + (COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbIndex + 0] * 731718.0))) - (rgbBoundaryIndex * lightness * 769860.0)) / denominator, slope: (relativeLuminance * ((COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbIndex + 0] * 284517.0) - (COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbIndex + 2] * 94839.0))) / denominator}) } return lines }
   }, COLOR_SPACE_LAB = {
     EPSILON: 216.0   / 24389.0, // --> (6 ÷ 29)³
     KAPPA  : 24389.0 / 27.0,    // --> (29 ÷ 3)³
@@ -150,7 +173,7 @@
     lightnessToLuminance: function(lightness) { return COLOR_SPACE_LAB.EPSILON * COLOR_SPACE_LAB.KAPPA < lightness ? Math.pow(lightness + 16.0, 3) / 1560896.0 : lightness / COLOR_SPACE_LAB.KAPPA },
     luminanceToLightness: function(luminance) { return COLOR_SPACE_LAB.EPSILON < luminance ? (cbrt(luminance) * 116.0) - 16.0 : COLOR_SPACE_LAB.KAPPA * luminance }
   }, COLOR_SPACE_CAM = {
-    BACKGROUND_LUMINANCE: 20.0000000000000000,
+    BACKGROUND_LUMINANCE:  20.0000000000000000,
     WHITE_LUMINANCE     : 100.0000000000000000
   }, COLOR_SPACE_CAM = {
     ADAPTING_LUMINANCE  : (64.0000000000000000 / Math.PI) * 0.2000000000000000,
@@ -162,36 +185,18 @@
     SURROUND_IMPACT     : 0.6900000000000000,
     WHITE_LUMINANCE     : COLOR_SPACE_CAM.WHITE_LUMINANCE,
 
-    adaptResponse: function(coords, luminanceAdaptation) {
-      var adapted = [], channelIndex, channel, response;
-      for (channelIndex = 0; channelIndex < 3; channelIndex++) {
-        channel = coords[channelIndex];
-        response = Math.pow(luminanceAdaptation * Math.abs(channel) * 0.01, 0.42);
-        adapted[channelIndex] = 400 * (channel < 0 ? -x : response) / (response + 27.13);
-      }
-      return adapted
-    },
-
+    adaptResponse        : function(response, luminanceAdaptation)              { var adaptedResponse = [0.00, 0.00, 0.00]; for (var index = 0; index !== response.length; ++index) { var channel = response[index], compressedResponse = Math.pow(luminanceAdaptation * Math.abs(channel) * 0.01, 0.42); adaptedResponse[index] = ((channel < 0.00 ? -compressedResponse : +compressedResponse) / (compressedResponse + 27.13)) * 400.00 } return adaptedResponse },
     createCIEEnvironment : function(format, xyzToResponseRGB, responseRGBToXYZ) { var WHITE_POINT_SCALE = 100.0000000000000000, SURROUND = 1.0000000000000000, LUMINANCE_FACTOR = 1.0000000000000000 / ((COLOR_SPACE_CAM.ADAPTING_LUMINANCE * 5.0000000000000000) + 1.0000000000000000), LUMINANCE_ADAPTATION = (COLOR_SPACE_CAM.ADAPTING_LUMINANCE * Math.pow(LUMINANCE_FACTOR, 4)) + (Math.pow(COLOR_SPACE_CAM.ADAPTING_LUMINANCE * 5.0000000000000000, 1.0000000000000000 / 3.0000000000000000) * Math.pow(1.0000000000000000 - Math.pow(LUMINANCE_FACTOR, 4), 2) * 0.1000000000000000), DISCOUNTING = Math.min(Math.max(SURROUND * (1.0000000000000000 - ((1.0000000000000000 / 3.6000000000000000) * Math.exp((-COLOR_SPACE_CAM.ADAPTING_LUMINANCE - 42.0000000000000000) / 92.0000000000000000))), 0.0000000000000000), 1.0000000000000000); var adaptationRGB = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], adaptedWhiteConeResponse = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], appearanceWhiteResponse = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], whiteConeResponse = multiply3x3(xyzToResponseRGB, [WHITE_D65[0] * WHITE_POINT_SCALE, WHITE_D65[1] * WHITE_POINT_SCALE, WHITE_D65[2] * WHITE_POINT_SCALE]); for (var index = 0; index !== whiteConeResponse.length; ++index) switch (format) { case COLOR_FORMAT_CAM2002: adaptationRGB[index] = ((COLOR_SPACE_CAM.WHITE_LUMINANCE * (DISCOUNTING / whiteConeResponse[index])) + 1) - DISCOUNTING; adaptedWhiteConeResponse[index] = adaptationRGB[index] * whiteConeResponse[index]; break; case COLOR_FORMAT_CAM2016: adaptationRGB[index] = ((DISCOUNTING * (COLOR_SPACE_CAM.WHITE_LUMINANCE / whiteConeResponse[index])) + 1) - DISCOUNTING; adaptedWhiteConeResponse[index] = adaptationRGB[index] * whiteConeResponse[index] } if (COLOR_FORMAT_CAM2002 === format) { adaptedWhiteConeResponse = multiply3x3(multiply9x9([0.3897100000000000, 0.6889800000000000, -0.0786800000000000, -0.2298100000000000, 1.1834000000000000, 0.0464100000000000, 0.0000000000000000, 0.0000000000000000, 1.0000000000000000], responseRGBToXYZ), adaptedWhiteConeResponse) } appearanceWhiteResponse = COLOR_SPACE_CAM.adaptResponse(adaptedWhiteConeResponse, LUMINANCE_ADAPTATION); return {achromaticWhiteResponse: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION * ((appearanceWhiteResponse[0] * 2.0000000000000000) + appearanceWhiteResponse[1] + (appearanceWhiteResponse[2] * 0.0500000000000000)), achromaticWhiteResponseOffset: 0.0000000000000000, adaptationsRGB: adaptationRGB, backgroundBrightnessInduction: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION, backgroundChromaticInduction: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION, backgroundLuminance: COLOR_SPACE_CAM.BACKGROUND_LUMINANCE / COLOR_SPACE_CAM.WHITE_LUMINANCE, baseExponential: COLOR_SPACE_CAM.BASE_EXPONENTIAL, brightnessWhiteResponse: 249.8028380684859800, chromaticInduction: COLOR_SPACE_CAM.CHROMATIC_INDUCTION, format: format, luminanceAdaptation: LUMINANCE_ADAPTATION, pqLuminanceScale: COLOR_SPACE_CAM.PQ_LUMINANCE_SCALE, responseRGBToXYZ: responseRGBToXYZ, surround: SURROUND, surroundImpact: COLOR_SPACE_CAM.SURROUND_IMPACT, xyzToResponseRGB: xyzToResponseRGB} },
     createZhaiEnvironment: function()                                           { var SURROUND = 0.6900000000000000, LUMINANCE_ADAPTATION = Math.pow(COLOR_SPACE_CAM.ADAPTING_LUMINANCE, 1.0000000000000000 / 3.0000000000000000) * (1.0000000000000000 - Math.exp(COLOR_SPACE_CAM.ADAPTING_LUMINANCE * (-48.0000000000000000 / 9.0000000000000000))) * 0.1710000000000000, BACKGROUND_FACTOR = Math.sqrt(COLOR_SPACE_CAM.BACKGROUND_LUMINANCE / COLOR_SPACE_CAM.WHITE_LUMINANCE), ACHROMATIC_WHITE_RESPONSE_OFFSET = 3.7035226210190005e-11, ACHROMATIC_WHITE_RESPONSE = xyzD65ToJzazbz([WHITE_D65[0], WHITE_D65[1], WHITE_D65[2]], [0.0000000000000000, 1.0000000000000000, 0.0000000000000000, 3.5240000000000000, -4.0667080000000000, 0.5427080000000000, 0.1990760000000000, 1.0967990000000000, -1.2958750000000000], COLOR_SPACE_CAM.PQ_LUMINANCE_SCALE)[0] - ACHROMATIC_WHITE_RESPONSE_OFFSET; return {achromaticWhiteResponse: ACHROMATIC_WHITE_RESPONSE, achromaticWhiteResponseOffset: ACHROMATIC_WHITE_RESPONSE_OFFSET, adaptationsRGB: null, backgroundBrightnessInduction: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION, backgroundChromaticInduction: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION, backgroundLuminance: BACKGROUND_FACTOR, baseExponential: COLOR_SPACE_CAM.BASE_EXPONENTIAL, brightnessWhiteResponse: spow(ACHROMATIC_WHITE_RESPONSE, (SURROUND * 1.6) / Math.pow(BACKGROUND_FACTOR, 0.12)) * (Math.pow(SURROUND, 2.2) * Math.pow(BACKGROUND_FACTOR, 0.5) * Math.pow(LUMINANCE_ADAPTATION, 0.2)) * 2700, chromaticInduction: COLOR_SPACE_CAM.CHROMATIC_INDUCTION, format: COLOR_FORMAT_ZCAM, luminanceAdaptation: LUMINANCE_ADAPTATION, pqLuminanceScale: COLOR_SPACE_CAM.PQ_LUMINANCE_SCALE, responseRGBToXYZ: null, surround: SURROUND, surroundImpact: COLOR_SPACE_CAM.SURROUND_IMPACT, xyzToResponseRGB: null} },
-
-    unadaptResponse: function(adapted, luminanceAdaptation) {
-      var unadapted = [], channelIndex, channel, absoluteChannel;
-      for (channelIndex = 0; channelIndex < 3; channelIndex++) {
-        channel = adapted[channelIndex]; absoluteChannel = Math.abs(channel);
-        unadapted[channelIndex] = (channel < 0 ? -1 : 1) * (100 / luminanceAdaptation) * Math.pow((27.13 * absoluteChannel) / (400 - absoluteChannel), 1.00 / 0.42);
-      }
-
-      return unadapted
-    }
+    unadaptResponse      : function(response, luminanceAdaptation)              { var unadaptedResponse = []; for (var index = 0; index !== response.length; ++index) { var channel = response[index]; unadaptedResponse[index] = (channel < 0 ? -1.00 : +1.00) * (100.00 / luminanceAdaptation) * Math.pow((27.13 * Math.abs(channel)) / (400.00 - Math.abs(channel)), 1.00 / 0.42) } return unadaptedResponse }
   }, COLOR_SPACE_CAM = {
     ADAPTING_LUMINANCE  : COLOR_SPACE_CAM.ADAPTING_LUMINANCE,
     BACKGROUND_LUMINANCE: COLOR_SPACE_CAM.BACKGROUND_LUMINANCE,
     BASE_EXPONENTIAL    : COLOR_SPACE_CAM.BASE_EXPONENTIAL,
     BRIGHTNESS_INDUCTION: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION,
     CHROMATIC_INDUCTION : COLOR_SPACE_CAM.CHROMATIC_INDUCTION,
-    ENVIRONMENT_2002    : COLOR_SPACE_CAM.createCIEEnvironment(COLOR_FORMAT_CAM2002, [0.7328000000, 0.4296000000, -0.1624000000, -0.7036000000, 1.6975000000, 0.0061000000,  0.0030000000, 0.0136000000, 0.9834000000], [1.0961238208, -0.2788690002, 0.1827451794, 0.4543690420, 0.4735331543,  0.0720978037, -0.0096276087, -0.0056980312, 1.0153256400]),
-    ENVIRONMENT_2016    : COLOR_SPACE_CAM.createCIEEnvironment(COLOR_FORMAT_CAM2016, [0.4012880000, 0.6501730000, -0.0514610000, -0.2502680000, 1.2044140000, 0.0458540000, -0.0020790000, 0.0489520000, 0.9531270000], [1.8620678551, -1.0112546305, 0.1491867754, 0.3875265432, 0.6214474419, -0.0089739852, -0.0158414988, -0.0341229380, 1.0499644369]),
+    ENVIRONMENT_2002    : COLOR_SPACE_CAM.createCIEEnvironment (COLOR_FORMAT_CAM2002, [0.7328000000, 0.4296000000, -0.1624000000, -0.7036000000, 1.6975000000, 0.0061000000,  0.0030000000, 0.0136000000, 0.9834000000], [1.0961238208, -0.2788690002, 0.1827451794, 0.4543690420, 0.4735331543,  0.0720978037, -0.0096276087, -0.0056980312, 1.0153256400]),
+    ENVIRONMENT_2016    : COLOR_SPACE_CAM.createCIEEnvironment (COLOR_FORMAT_CAM2016, [0.4012880000, 0.6501730000, -0.0514610000, -0.2502680000, 1.2044140000, 0.0458540000, -0.0020790000, 0.0489520000, 0.9531270000], [1.8620678551, -1.0112546305, 0.1491867754, 0.3875265432, 0.6214474419, -0.0089739852, -0.0158414988, -0.0341229380, 1.0499644369]),
     ENVIRONMENT_ZCAM    : COLOR_SPACE_CAM.createZhaiEnvironment(), // -@> Qiyan Zhai’s “Study of Chromatic Adaptation using Memory Color Matches (Part 1: Neutral Illuminants)”
     PQ_LUMINANCE_SCALE  : COLOR_SPACE_CAM.PQ_LUMINANCE_SCALE,
     SURROUND_IMPACT     : COLOR_SPACE_CAM.SURROUND_IMPACT,
@@ -224,112 +229,16 @@
     function chromaticAdaptWhite(xyz, sourceMatrix, destinationMatrix) { if (destinationMatrix === sourceMatrix) return [xyz[0], xyz[1], xyz[2]]; switch (destinationMatrix) { case WHITE_D50: switch (sourceMatrix) { case WHITE_D65: return multiply3x3(CHROMATIC_ADAPTATION_D65_TO_D50, xyz) } break; case WHITE_D60: switch (sourceMatrix) { case WHITE_D65: return multiply3x3(CHROMATIC_ADAPTATION_D65_TO_D60, xyz) } break; case WHITE_D65: switch (sourceMatrix) { case WHITE_D50: return multiply3x3(CHROMATIC_ADAPTATION_D50_TO_D65, xyz); case WHITE_D60: return multiply3x3(CHROMATIC_ADAPTATION_D60_TO_D65, xyz) } } throw new Error("Unsupported white adaptation: " + sourceMatrix + " to " + destinationMatrix) }
 
     // CONTINUE HERE
-    function rgbToHsl(rgb) {
-      var red = rgb[0], green = rgb[1], blue = rgb[2];
-      var channelMaximum = Math.max(red, green, blue), channelMinimum = Math.min(red, green, blue);
-      var hue = 0, saturation = 0, lightness = (channelMaximum + channelMinimum) / 2;
-      if (channelMaximum !== channelMinimum) {
-        var delta = channelMaximum - channelMinimum;
-        saturation = lightness > 0.5 ? delta / (2 - channelMaximum - channelMinimum) : delta / (channelMaximum + channelMinimum);
-        if (channelMaximum === red) hue = (green - blue) / delta + (green < blue ? 6 : 0);
-        else if (channelMaximum === green) hue = (blue - red) / delta + 2;
-        else hue = (red - green) / delta + 4;
-        hue *= 60;
-      }
-      return [normalize(hue), saturation, lightness];
-    }
-    function hsiToRgb(hsi) {
-      var hueRadians = rad(normalize(hsi[0])), saturation = hsi[1], intensity = hsi[2];
-      var red, green, blue, clampedRgb;
-      if (saturation === 0) return [intensity, intensity, intensity];
-      hueRadians = hueRadians % (2 * Math.PI);
-      if (hueRadians < 2 * Math.PI / 3) {
-        blue = intensity * (1 - saturation);
-        red = intensity * (1 + saturation * Math.cos(hueRadians) / Math.cos(Math.PI / 3 - hueRadians));
-        green = 3 * intensity - (red + blue);
-      } else if (hueRadians < 4 * Math.PI / 3) {
-        hueRadians -= 2 * Math.PI / 3;
-        red = intensity * (1 - saturation);
-        green = intensity * (1 + saturation * Math.cos(hueRadians) / Math.cos(Math.PI / 3 - hueRadians));
-        blue = 3 * intensity - (red + green);
-      } else {
-        hueRadians -= 4 * Math.PI / 3;
-        green = intensity * (1 - saturation);
-        blue = intensity * (1 + saturation * Math.cos(hueRadians) / Math.cos(Math.PI / 3 - hueRadians));
-        red = 3 * intensity - (green + blue);
-      }
-      clampedRgb = [red, green, blue];
-      return [Math.min(Math.max(clampedRgb[0], 0), 1), Math.min(Math.max(clampedRgb[1], 0), 1), Math.min(Math.max(clampedRgb[2], 0), 1)];
-    }
-    function rgbToHsi(rgb) {
-      var red = rgb[0], green = rgb[1], blue = rgb[2];
-      var intensity = (red + green + blue) / 3;
-      var channelMinimum = Math.min(red, green, blue);
-      var saturation = intensity === 0 ? 0 : 1 - channelMinimum / intensity;
-      var hue = 0;
-      if (saturation !== 0) {
-        hue = deg(Math.atan2(Math.sqrt(3) * (green - blue), 2 * red - green - blue));
-      }
-      return [hue, saturation, intensity];
-    }
-    function hwbToRgb(hwb) {
-      var hue = hwb[0], whiteness = hwb[1], blackness = hwb[2];
-      var ratio = whiteness + blackness;
-      if (ratio > 1) { whiteness /= ratio; blackness /= ratio; }
-      var baseRgb = COLOR_CONVERTERS["hsv"]["rgb"]([hue, 1, 1]);
-      var channelIndex;
-      for (channelIndex = 0; channelIndex < 3; channelIndex++) baseRgb[channelIndex] = baseRgb[channelIndex] * (1 - whiteness - blackness) + whiteness;
-      return baseRgb;
-    }
-    function rgbToHwb(rgb) {
-      return [rgbToHsl(rgb)[0], Math.min(rgb[0], rgb[1], rgb[2]), 1 - Math.max(rgb[0], rgb[1], rgb[2])];
-    }
-
-    function okhslToOklab(okhsl) {
-      var hueFraction = normalize(okhsl[0]) / 360, saturation = okhsl[1], okLightness = COLOR_SPACE_OK.toeInverse(okhsl[2]), okA = 0, okB = 0, hueDirectionA, hueDirectionB, chromaCandidates, midSaturation, blendT, k0, k1, k2, chroma;
-      if (okLightness !== 0 && okLightness !== 1 && saturation !== 0) {
-        hueDirectionA = Math.cos(2 * Math.PI * hueFraction); hueDirectionB = Math.sin(2 * Math.PI * hueFraction);
-        chromaCandidates = COLOR_SPACE_OK.gamutChromas([okLightness, hueDirectionA, hueDirectionB]); midSaturation = 0.8;
-        if (saturation < midSaturation) { blendT = 1.25 * saturation; k0 = 0; k1 = midSaturation * chromaCandidates.low; k2 = 1 - k1 / chromaCandidates.middle; }
-        else { blendT = 5 * (saturation - midSaturation); k0 = chromaCandidates.middle; k1 = 0.2 * chromaCandidates.middle * chromaCandidates.middle * 1.25 * 1.25 / chromaCandidates.low; k2 = 1 - k1 / (chromaCandidates.maximum - chromaCandidates.middle); }
-        chroma = k0 + blendT * k1 / (1 - k2 * blendT); okA = chroma * hueDirectionA; okB = chroma * hueDirectionB;
-      }
-      return [okLightness, okA, okB];
-    }
-    function oklabToOkhsl(lab) {
-      var okLightness = lab[0], chroma = Math.sqrt(Math.pow(lab[1], 2) + Math.pow(lab[2], 2)), hue = normalize((0.5 + Math.atan2(-lab[2], -lab[1]) / (2 * Math.PI)) * 360), saturation = 0, toeLightness = COLOR_SPACE_OK.toe(okLightness), hueDirectionA, hueDirectionB, chromaCandidates, midSaturation, k0, k1, k2, blendT;
-      if (toeLightness !== 0 && toeLightness !== 1 && chroma !== 0) {
-        hueDirectionA = lab[1] / chroma; hueDirectionB = lab[2] / chroma; chromaCandidates = COLOR_SPACE_OK.gamutChromas([okLightness, hueDirectionA, hueDirectionB]); midSaturation = 0.8;
-        if (chroma < chromaCandidates.middle) { k1 = midSaturation * chromaCandidates.low; k2 = 1 - k1 / chromaCandidates.middle; blendT = chroma / (k1 + k2 * chroma); saturation = blendT * midSaturation; }
-        else { k0 = chromaCandidates.middle; k1 = 0.2 * chromaCandidates.middle * chromaCandidates.middle * 1.25 * 1.25 / chromaCandidates.low; k2 = 1 - k1 / (chromaCandidates.maximum - chromaCandidates.middle); blendT = (chroma - k0) / (k1 + k2 * (chroma - k0)); saturation = midSaturation + 0.2 * blendT; }
-      }
-      return [hue, saturation, toeLightness];
-    }
-    function okhsvToOklab(okhsv) {
-      var hueFraction = normalize(okhsv[0]) / 360, saturation = okhsv[1], value = okhsv[2], okLightness = COLOR_SPACE_OK.toeInverse(value), okA = 0, okB = 0, hueDirectionA, hueDirectionB, hueCusp, cuspST, maxS, maxT, toeS, scaleK, valueLightness, valueChroma, toeValueLightness, toeValueChroma, normalizedLightness, scale, rgb, chroma;
-      if (okLightness !== 0 && saturation !== 0) {
-        hueDirectionA = Math.cos(2 * Math.PI * hueFraction); hueDirectionB = Math.sin(2 * Math.PI * hueFraction); hueCusp = COLOR_SPACE_OK.hueCusp(hueDirectionA, hueDirectionB); cuspST = COLOR_SPACE_OK.gamutSlopes(hueCusp); maxS = cuspST.lower; maxT = cuspST.upper;
-        toeS = 0.5; scaleK = 1 - toeS / maxS;
-        valueLightness = 1 - saturation * toeS / (toeS + maxT - maxT * scaleK * saturation);
-        valueChroma = saturation * maxT * toeS / (toeS + maxT - maxT * scaleK * saturation);
-        okLightness = value * valueLightness; chroma = value * valueChroma;
-        toeValueLightness = COLOR_SPACE_OK.toeInverse(valueLightness); toeValueChroma = valueChroma * toeValueLightness / valueLightness; normalizedLightness = COLOR_SPACE_OK.toeInverse(okLightness); chroma = chroma * normalizedLightness / okLightness; okLightness = normalizedLightness;
-        rgb = COLOR_CONVERTERS["oklab"]["rgb"]([toeValueLightness, hueDirectionA * toeValueChroma, hueDirectionB * toeValueChroma]);
-        scale = cbrt(1.0 / Math.max(rgb[0], rgb[1], rgb[2], 0));
-        okLightness *= scale; chroma *= scale; okA = chroma * hueDirectionA; okB = chroma * hueDirectionB;
-      }
-      return [okLightness, okA, okB];
-    }
     function oklabToOkhsv(lab) {
-      var okLightness = lab[0], chroma = Math.sqrt(Math.pow(lab[1], 2) + Math.pow(lab[2], 2)), hue = normalize((0.5 + Math.atan2(-lab[2], -lab[1]) / (2 * Math.PI)) * 360), saturation = 0, value = COLOR_SPACE_OK.toe(okLightness), hueDirectionA, hueDirectionB, hueCusp, cuspST, maxS, maxT, toeS, scaleK, intersectionUpper, valueLightness, valueChroma, toeValueLightness, toeValueChroma, rgb, scale;
+      var okLightness = lab[0], chroma = Math.sqrt(Math.pow(lab[1], 2) + Math.pow(lab[2], 2)), hue = normalize((0.5 + Math.atan2(-lab[2], -lab[1]) / (2 * Math.PI)) * 360), saturation = 0, value = COLOR_SPACE_OK.toe(okLightness), hueDirectionA, hueDirectionB, hueCusp, hueCuspSlopes, maxS, maxT, saturationCurveScale, intersectionUpper, valueLightness, valueChroma, toeValueLightness, toeValueChroma, rgb, scale;
       if (okLightness !== 0 && okLightness !== 1 && chroma !== 0) {
-        hueDirectionA = lab[1] / chroma; hueDirectionB = lab[2] / chroma; hueCusp = COLOR_SPACE_OK.hueCusp(hueDirectionA, hueDirectionB); cuspST = COLOR_SPACE_OK.gamutSlopes(hueCusp); maxS = cuspST.lower; maxT = cuspST.upper;
-        toeS = 0.5; scaleK = 1 - toeS / maxS;
+        hueDirectionA = lab[1] / chroma; hueDirectionB = lab[2] / chroma; hueCusp = COLOR_SPACE_OK.gamutBoundary(hueDirectionA, hueDirectionB); hueCuspSlopes = COLOR_SPACE_OK.gamutSlopes(hueCusp); maxS = hueCuspSlopes.lower; maxT = hueCuspSlopes.upper;
+        saturationCurveScale = 1 - COLOR_SPACE_OK.HSV_SATURATION_ANCHOR / maxS;
         intersectionUpper = maxT / (chroma + okLightness * maxT); valueLightness = intersectionUpper * okLightness; valueChroma = intersectionUpper * chroma; toeValueLightness = COLOR_SPACE_OK.toeInverse(valueLightness); toeValueChroma = valueChroma * toeValueLightness / valueLightness;
         rgb = COLOR_CONVERTERS["oklab"]["rgb"]([toeValueLightness, hueDirectionA * toeValueChroma, hueDirectionB * toeValueChroma]);
         scale = cbrt(1.0 / Math.max(rgb[0], rgb[1], rgb[2], 0));
         okLightness = okLightness / scale; chroma = chroma / scale; chroma = chroma * COLOR_SPACE_OK.toe(okLightness) / okLightness; okLightness = COLOR_SPACE_OK.toe(okLightness);
-        value = okLightness / valueLightness; saturation = (toeS + maxT) * valueChroma / (maxT * toeS + maxT * scaleK * valueChroma);
+        value = okLightness / valueLightness; saturation = (COLOR_SPACE_OK.HSV_SATURATION_ANCHOR + maxT) * valueChroma / (maxT * COLOR_SPACE_OK.HSV_SATURATION_ANCHOR + maxT * saturationCurveScale * valueChroma);
       }
       return [hue, saturation, value];
     }
@@ -346,15 +255,7 @@
       }
       return rgb;
     }
-    function solve3x3(matrix, vector) {
-      var determinant = matrix[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7]) - matrix[3] * (matrix[1] * matrix[8] - matrix[2] * matrix[7]) + matrix[6] * (matrix[1] * matrix[5] - matrix[2] * matrix[4]);
-      if (Math.abs(determinant) < 1e-14) return [0, 0, 0];
-      return [
-        (vector[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7]) - matrix[3] * (vector[1] * matrix[8] - matrix[2] * vector[2]) + matrix[6] * (vector[1] * matrix[5] - matrix[4] * vector[2])) / determinant,
-        (matrix[0] * (vector[1] * matrix[8] - matrix[5] * vector[2]) - vector[0] * (matrix[1] * matrix[8] - matrix[2] * matrix[7]) + matrix[6] * (matrix[1] * vector[2] - vector[1] * matrix[2])) / determinant,
-        (matrix[0] * (matrix[4] * vector[2] - vector[1] * matrix[7]) - matrix[3] * (matrix[1] * vector[2] - vector[1] * matrix[2]) + vector[0] * (matrix[1] * matrix[5] - matrix[4] * matrix[2])) / determinant
-      ];
-    }
+
     function rgbToRyb(rgb) {
       var ryb = [rgb[0], rgb[1], rgb[2]], iterationIndex, inputChannelIndex, outputChannelIndex, baseRgb, errorVector, error, trialError, epsilon = 1e-5, plusRgb, jacobian, step, trial, stepScale;
       for (iterationIndex = 0; iterationIndex < 24; iterationIndex++) {
@@ -369,7 +270,15 @@
           plusRgb = rybToRGB(trial);
           for (outputChannelIndex = 0; outputChannelIndex < 3; outputChannelIndex++) jacobian[outputChannelIndex * 3 + inputChannelIndex] = (plusRgb[outputChannelIndex] - baseRgb[outputChannelIndex]) / (trial[inputChannelIndex] - ryb[inputChannelIndex] || epsilon);
         }
-        step = solve3x3(jacobian, errorVector);
+        step = (function solve3x3(matrix, vector) {
+          var determinant = matrix[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7]) - matrix[3] * (matrix[1] * matrix[8] - matrix[2] * matrix[7]) + matrix[6] * (matrix[1] * matrix[5] - matrix[2] * matrix[4]);
+
+          return Math.abs(determinant) < 1.0e-14 ? [0.0, 0.0, 0.0] : [
+            (vector[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7]) - matrix[3] * (vector[1] * matrix[8] - matrix[2] * vector[2]) + matrix[6] * (vector[1] * matrix[5] - matrix[4] * vector[2])) / determinant,
+            (matrix[0] * (vector[1] * matrix[8] - matrix[5] * vector[2]) - vector[0] * (matrix[1] * matrix[8] - matrix[2] * matrix[7]) + matrix[6] * (matrix[1] * vector[2] - vector[1] * matrix[2])) / determinant,
+            (matrix[0] * (matrix[4] * vector[2] - vector[1] * matrix[7]) - matrix[3] * (matrix[1] * vector[2] - vector[1] * matrix[2]) + vector[0] * (matrix[1] * matrix[5] - matrix[4] * matrix[2])) / determinant
+          ];
+        })(jacobian, errorVector);
         stepScale = 1;
         while (stepScale > 1.0 / 256) {
           trial = [Math.min(Math.max(ryb[0] - stepScale * step[0], 0), 1), Math.min(Math.max(ryb[1] - stepScale * step[1], 0), 1), Math.min(Math.max(ryb[2] - stepScale * step[2], 0), 1)];
@@ -385,43 +294,12 @@
     function rgbToPrismatic(rgb) { var maxLightness = Math.max(rgb[0], rgb[1], rgb[2]), channelSum = rgb[0] + rgb[1] + rgb[2]; return channelSum === 0 ? [maxLightness, 0, 0, 0] : [maxLightness, rgb[0] / channelSum, rgb[1] / channelSum, rgb[2] / channelSum]; }
     function prismatictoRgb(prismatic) { var maxPrismaticChannel = Math.max(prismatic[1], prismatic[2], prismatic[3]); return maxPrismaticChannel === 0 ? [0, 0, 0] : [prismatic[0] * prismatic[1] / maxPrismaticChannel, prismatic[0] * prismatic[2] / maxPrismaticChannel, prismatic[0] * prismatic[3] / maxPrismaticChannel]; }
 
-    function hsluvGetBounds(lightness) {
-      var result = [], sub1 = Math.pow(lightness + 16, 3) / 1560896;
-      var sub2 = sub1 > 216 / 24389 ? sub1 : lightness / (24389 / 27);
-      var rgbChannelIndex, boundIndex, matrixX, matrixY, matrixZ, top1, top2, bottom;
-      for (rgbChannelIndex = 0; rgbChannelIndex < 3; rgbChannelIndex++) {
-        matrixX = COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbChannelIndex * 3]; matrixY = COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbChannelIndex * 3 + 1]; matrixZ = COLOR_SPACE_RGB["rgb"].XYZ_TO_RGB[rgbChannelIndex * 3 + 2];
-        for (boundIndex = 0; boundIndex < 2; boundIndex++) {
-          top1 = (284517 * matrixX - 94839 * matrixZ) * sub2;
-          top2 = (838422 * matrixZ + 769860 * matrixY + 731718 * matrixX) * lightness * sub2 - 769860 * boundIndex * lightness;
-          bottom = (632260 * matrixZ - 126452 * matrixY) * sub2 + 126452 * boundIndex;
-          result.push({ slope: top1 / bottom, intercept: top2 / bottom });
-        }
-      }
-      return result;
-    }
-    function hsluvMaxChroma(lightness, hue) {
-      var theta = rad(hue), lines = hsluvGetBounds(lightness), minLength = Infinity, rayLength, lineIndex;
-      for (lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-        rayLength = (function hsluvRay(theta, line) { return line.intercept / (Math.sin(theta) - line.slope * Math.cos(theta)); })(theta, lines[lineIndex]);
-        if (rayLength >= 0 && rayLength < minLength) minLength = rayLength;
-      }
-      return minLength;
-    }
-    function hpluvMaxChroma(lightness) {
-      var lines = hsluvGetBounds(lightness), minLength = Infinity, lineIndex, lineLength;
-      for (lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-        lineLength = lines[lineIndex].intercept / Math.sqrt(Math.pow(lines[lineIndex].slope, 2) + 1.0);
-        if (lineLength >= 0 && lineLength < minLength) minLength = lineLength;
-      }
-      return minLength;
-    }
     function hsluvToLuv(hsluv, pastel) {
       var hue = hsluv[0], saturation = hsluv[1], lightness = hsluv[2], chroma = 0, chromaMaximum;
       if (lightness > 99.9999999) lightness = 100;
       else if (lightness < 0.00000001) lightness = 0;
       else {
-        chromaMaximum = pastel ? hpluvMaxChroma(lightness) : hsluvMaxChroma(lightness, hue);
+        chromaMaximum = pastel ? COLOR_SPACE_LUV.hplChromaMaximum(lightness) : COLOR_SPACE_LUV.hslChromaMaximum(lightness, hue);
         chroma = chromaMaximum * saturation / 100;
       }
       return COLOR_CONVERTERS["lch"]["lab"]([lightness, chroma, hue]);
@@ -431,7 +309,7 @@
       if (luvLch[0] > 99.9999999) luvLch[0] = 100;
       else if (luvLch[0] < 0.00000001) luvLch[0] = 0;
       else {
-        chromaMaximum = pastel ? hpluvMaxChroma(luvLch[0]) : hsluvMaxChroma(luvLch[0], luvLch[2]);
+        chromaMaximum = pastel ? COLOR_SPACE_LUV.hplChromaMaximum(luvLch[0]) : COLOR_SPACE_LUV.hslChromaMaximum(luvLch[0], luvLch[2]);
         saturation = luvLch[1] / chromaMaximum * 100;
       }
       return [luvLch[2], saturation, luvLch[0]];
@@ -726,19 +604,22 @@
     function ucs1960ToXyz(ucs) { var u = ucs[0], v = ucs[1], Y = ucs[2]; return v === 0 ? [0, 0, 0] : [1.5 * u * Y / v, Y, Y * (2 - 0.5 * u - 5 * v) / v]; }
 
     function rgbToORGB(rgb) {
-      var opponentChannels = multiply3x3([0.299, 0.587, 0.114, 0.5, 0.5, -1, 0.866, -0.866, 0], rgb);
-      var sourceHueRadians = Math.atan2(opponentChannels[2], opponentChannels[1]), targetHueRadians = sourceHueRadians, absoluteHue = Math.abs(sourceHueRadians);
+      var lumaOpponentChannels = multiply3x3([0.299, 0.587, 0.114, 0.5, 0.5, -1, 0.866, -0.866, 0], rgb);
+      var sourceHueRadians = Math.atan2(lumaOpponentChannels[2], lumaOpponentChannels[1]), targetHueRadians = sourceHueRadians, absoluteHue = Math.abs(sourceHueRadians);
       if (absoluteHue < Math.PI / 3) targetHueRadians = 1.5 * sourceHueRadians;
       else if (absoluteHue <= Math.PI) targetHueRadians = (sourceHueRadians < 0 ? -1 : 1) * (Math.PI / 2 + 0.75 * (absoluteHue - Math.PI / 3));
-      return rotateOpponentLcc(opponentChannels, targetHueRadians - sourceHueRadians);
+      return (function(lumaOpponentChannels, delta) {
+        return [lumaOpponentChannels[0], (lumaOpponentChannels[1] * Math.cos(delta)) - (lumaOpponentChannels[2] * Math.sin(delta)), (lumaOpponentChannels[1] * Math.sin(delta)) + (lumaOpponentChannels[2] * Math.cos(delta))]
+      })(lumaOpponentChannels, targetHueRadians - sourceHueRadians);
     }
-    function orgbToRGB(lcc) {
-      var sourceHueRadians = Math.atan2(lcc[2], lcc[1]), targetHueRadians = sourceHueRadians, absoluteHue = Math.abs(sourceHueRadians);
+    function orgbToRGB(lumaOpponentChannels) {
+      var sourceHueRadians = Math.atan2(lumaOpponentChannels[2], lumaOpponentChannels[1]), targetHueRadians = sourceHueRadians, absoluteHue = Math.abs(sourceHueRadians);
       if (absoluteHue < Math.PI / 2) targetHueRadians = (2 / 3) * sourceHueRadians;
       else if (absoluteHue <= Math.PI) targetHueRadians = (sourceHueRadians < 0 ? -1 : 1) * (Math.PI / 3 + (4 / 3) * (absoluteHue - Math.PI / 2));
-      return multiply3x3([1, 0.114, 0.7436489607, 1, 0.114, -0.4110854503, 1, -0.886, 0.1662817552], rotateOpponentLcc(lcc, targetHueRadians - sourceHueRadians));
+      return multiply3x3([1, 0.114, 0.7436489607, 1, 0.114, -0.4110854503, 1, -0.886, 0.1662817552], (function(lumaOpponentChannels, delta) {
+        return [lumaOpponentChannels[0], (lumaOpponentChannels[1] * Math.cos(delta)) - (lumaOpponentChannels[2] * Math.sin(delta)), (lumaOpponentChannels[1] * Math.sin(delta)) + (lumaOpponentChannels[2] * Math.cos(delta))]
+      })(lumaOpponentChannels, targetHueRadians - sourceHueRadians));
     }
-    function rotateOpponentLcc(opponentChannels, deltaRadians) { var cosDelta = Math.cos(deltaRadians), sinDelta = Math.sin(deltaRadians); return [opponentChannels[0], opponentChannels[1] * cosDelta - opponentChannels[2] * sinDelta, opponentChannels[1] * sinDelta + opponentChannels[2] * cosDelta]; }
 
     Color.prototype._toXYZD65 = function() {
       switch (this.format) {
@@ -767,13 +648,13 @@
         case COLOR_FORMAT_CMYK:      return COLOR_CONVERTERS["rgb"]["xyz"]                ([(1.0 - this.channels[0]) * (1.0 - this.channels[3]), (1.0 - this.channels[1]) * (1.0 - this.channels[3]), (1.0 - this.channels[2]) * (1 - this.channels[3])], COLOR_SPACE_RGB["rgb"]);
         case COLOR_FORMAT_CUBEHELIX: return COLOR_CONVERTERS["rgb"]["xyz"](cubehelixToRgb([this.channels[0],                                    this.channels[1],                                    this.channels[2]]),                                 COLOR_SPACE_RGB["rgb"]);
         case COLOR_FORMAT_HPLUV:     return COLOR_CONVERTERS["luv"]["xyz"](hsluvToLuv([this.channels[0], this.channels[1], this.channels[2]], true));
-        case COLOR_FORMAT_HSI:       return COLOR_CONVERTERS["rgb"]["xyz"](hsiToRgb([this.channels[0], this.channels[1], this.channels[2]]), COLOR_SPACE_RGB["rgb"]);
+        case COLOR_FORMAT_HSI:       return COLOR_CONVERTERS["rgb"]["xyz"](COLOR_CONVERTERS["hsi"]["rgb"]([this.channels[0], this.channels[1], this.channels[2]]), COLOR_SPACE_RGB["rgb"]);
         case COLOR_FORMAT_HSL:       return COLOR_CONVERTERS["rgb"]["xyz"](COLOR_CONVERTERS["hsl"]["rgb"]([this.channels[0], this.channels[1], this.channels[2]]), COLOR_SPACE_RGB["rgb"]);
         case COLOR_FORMAT_HSLUV:     return COLOR_CONVERTERS["luv"]["xyz"](hsluvToLuv([this.channels[0], this.channels[1], this.channels[2]], false));
         case COLOR_FORMAT_HSV:       return COLOR_CONVERTERS["rgb"]["xyz"](COLOR_CONVERTERS["hsv"]["rgb"]([this.channels[0], this.channels[1], this.channels[2]]), COLOR_SPACE_RGB["rgb"]);
-        case COLOR_FORMAT_HWB:       return COLOR_CONVERTERS["rgb"]["xyz"](hwbToRgb([this.channels[0], this.channels[1], this.channels[2]]), COLOR_SPACE_RGB["rgb"]);
-        case COLOR_FORMAT_OKHSL:     return this._xyzFromOklab(okhslToOklab([this.channels[0], this.channels[1], this.channels[2]]));
-        case COLOR_FORMAT_OKHSV:     return this._xyzFromOklab(okhsvToOklab([this.channels[0], this.channels[1], this.channels[2]]));
+        case COLOR_FORMAT_HWB:       return COLOR_CONVERTERS["rgb"]["xyz"](COLOR_CONVERTERS["hwb"]["rgb"]([this.channels[0], this.channels[1], this.channels[2]]), COLOR_SPACE_RGB["rgb"]);
+        case COLOR_FORMAT_OKHSL:     return this._xyzFromOklab(COLOR_CONVERTERS["okhsl"]["oklab"]([this.channels[0], this.channels[1], this.channels[2]]));
+        case COLOR_FORMAT_OKHSV:     return this._xyzFromOklab(COLOR_CONVERTERS["okhsv"]["oklab"]([this.channels[0], this.channels[1], this.channels[2]]));
 
         case COLOR_FORMAT_UCS1960:  return ucs1960ToXyz([this.channels[0], this.channels[1], this.channels[2]]);
         case COLOR_FORMAT_XYY:      return xyyToXyz([this.channels[0], this.channels[1], this.channels[2]]);
@@ -884,12 +765,12 @@
 
     Color.prototype.cubehelix = function() { var cubehelixChannels = srgbToCubehelix(COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"])); return {h: cubehelixChannels[0], s: cubehelixChannels[1], l: cubehelixChannels[2] } };
     Color.prototype.hpluv     = function() { var hpluvChannels = luvToHsluv(COLOR_CONVERTERS["xyz"]["luv"](this._toXYZD65()), true); return {h: hpluvChannels[0], s: hpluvChannels[1], l: hpluvChannels[2] } };
-    Color.prototype.hsi       = function() { var rgbChannels = COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"]), hsiChannels = rgbToHsi(rgbChannels); return {h: hsiChannels[0], s: hsiChannels[1], i: hsiChannels[2] } };
-    Color.prototype.hsl       = function() { var rgbChannels = COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"]), hslChannels = rgbToHsl(rgbChannels); return {h: hslChannels[0], s: hslChannels[1], l: hslChannels[2] } };
+    Color.prototype.hsi       = function() { var rgbChannels = COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"]), hsiChannels = COLOR_CONVERTERS["rgb"]["hsi"](rgbChannels); return {h: hsiChannels[0], s: hsiChannels[1], i: hsiChannels[2] } };
+    Color.prototype.hsl       = function() { var rgbChannels = COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"]), hslChannels = COLOR_CONVERTERS["rgb"]["hsl"](rgbChannels); return {h: hslChannels[0], s: hslChannels[1], l: hslChannels[2] } };
     Color.prototype.hsluv     = function() { var hsluvChannels = luvToHsluv(COLOR_CONVERTERS["xyz"]["luv"](this._toXYZD65()), false); return {h: hsluvChannels[0], s: hsluvChannels[1], l: hsluvChannels[2] } };
     Color.prototype.hsv       = function() { var rgbChannels = COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"]), hsvChannels = COLOR_CONVERTERS["rgb"]["hsv"](rgbChannels); return {h: hsvChannels[0], s: hsvChannels[1], v: hsvChannels[2] } };
-    Color.prototype.hwb       = function() { var rgbChannels = COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"]), hwbChannels = rgbToHwb(rgbChannels); return {h: hwbChannels[0], w: hwbChannels[1], b: hwbChannels[2] } };
-    Color.prototype.okhsl     = function() { var okhslChannels = oklabToOkhsl(this._oklabFromXYZ(this._toXYZD65())); return {h: okhslChannels[0], s: okhslChannels[1], l: okhslChannels[2] } };
+    Color.prototype.hwb       = function() { var rgbChannels = COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"]), hwbChannels = COLOR_CONVERTERS["rgb"]["hwb"](rgbChannels); return {h: hwbChannels[0], w: hwbChannels[1], b: hwbChannels[2] } };
+    Color.prototype.okhsl     = function() { var okhslChannels = COLOR_CONVERTERS["oklab"]["okhsl"](this._oklabFromXYZ(this._toXYZD65())); return {h: okhslChannels[0], s: okhslChannels[1], l: okhslChannels[2] } };
     Color.prototype.okhsv     = function() { var okhsvChannels = oklabToOkhsv(this._oklabFromXYZ(this._toXYZD65())); return {h: okhsvChannels[0], s: okhsvChannels[1], v: okhsvChannels[2] } };
 
     Color.prototype.cmy       = function() { var rgbChannels = COLOR_CONVERTERS["xyz"]["rgb"](this._toXYZD65(), COLOR_SPACE_RGB["rgb"]); return {c: 1 - rgbChannels[0], m: 1 - rgbChannels[1], y: 1 - rgbChannels[2] } };
