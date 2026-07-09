@@ -1132,7 +1132,7 @@
           }
         }
 
-        function lerp(valueA, valueB) {
+        function lerp(valueA, valueB, progress) {
           var scalarA       = +valueA, scalarB = +valueB;
           var interpolation = (progress * (scalarB - scalarA)) + scalarA;
 
@@ -1241,7 +1241,7 @@
           return specificity
         }
 
-        function slerp(quaternionA, quaternionB) {
+        function slerp(quaternionA, quaternionB, progress) {
           var distance      = (quaternionA.w * quaternionB.w) + (quaternionA.x * quaternionB.x) + (quaternionA.y * quaternionB.y) + (quaternionA.z * quaternionB.z);
           var interpolation = {w: 0.00, x: 0.00, y: 0.00, z: 0.00};
 
@@ -1249,10 +1249,10 @@
           if (distance > 0.9995) {
             var n;
 
-            interpolation.w = lerp(quaternionA.w, quaternionB.w);
-            interpolation.x = lerp(quaternionA.x, quaternionB.x);
-            interpolation.y = lerp(quaternionA.y, quaternionB.y);
-            interpolation.z = lerp(quaternionA.z, quaternionB.z);
+            interpolation.w = lerp(quaternionA.w, quaternionB.w, progress);
+            interpolation.x = lerp(quaternionA.x, quaternionB.x, progress);
+            interpolation.y = lerp(quaternionA.y, quaternionB.y, progress);
+            interpolation.z = lerp(quaternionA.z, quaternionB.z, progress);
 
             n = Math.sqrt((interpolation.w * interpolation.w) + (interpolation.x * interpolation.x) + (interpolation.y * interpolation.y) + (interpolation.z * interpolation.z)); // --> Math.hypot(...interpolation)
 
@@ -1264,8 +1264,7 @@
 
           else {
             if (distance < 0.0000) { distance = -distance; quaternionB.w = -quaternionB.w; quaternionB.x = -quaternionB.x; quaternionB.y = -quaternionB.y; quaternionB.z = -quaternionB.z }
-            var angularDistance = Math.acos(distance);
-            var s               = [Math.cos(angularDistance * progress) - (distance * (Math.sin(angularDistance * progress) / Math.sin(angularDistance))), Math.sin(angularDistance * progress) / Math.sin(angularDistance)];
+            var angularDistance = Math.acos(distance), = [Math.cos(angularDistance * progress) - (distance * (Math.sin(angularDistance * progress) / Math.sin(angularDistance))), Math.sin(angularDistance * progress) / Math.sin(angularDistance)];
 
             interpolation.w = (quaternionA.w * s[0]) + (quaternionB.w * s[1]);
             interpolation.x = (quaternionA.x * s[0]) + (quaternionB.x * s[1]);
@@ -2001,7 +2000,7 @@
                             if (MEASUREMENTS["function-color"].test(valueA.value) && MEASUREMENTS["function-color"].test(valueB.value)) /* --> "rgb(…, …, …)" | "rgba(…, …, …, …)" */ {
                               valueA.value  = (valueA.value.replace(/^rgba?\(\s*|\s*\)$/g, "") + (valueA.value.indexOf('a') === -1 ? ", 1" : "")).split(/\s*,\s*/);
                               valueB.value  = (valueB.value.replace(/^rgba?\(\s*|\s*\)$/g, "") + (valueB.value.indexOf('a') === -1 ? ", 1" : "")).split(/\s*,\s*/);
-                              interpolation = "rgba(" + Math.floor(lerp(valueA.value[0], valueB.value[0])) + ", " + Math.floor(lerp(valueA.value[1], valueB.value[1])) + ", " + Math.floor(lerp(valueA.value[2], valueB.value[2])) + ", " + lerp(valueA.value[3], valueB.value[3]) + ')'
+                              interpolation = "rgba(" + Math.floor(lerp(valueA.value[0], valueB.value[0], progress)) + ", " + Math.floor(lerp(valueA.value[1], valueB.value[1], progress)) + ", " + Math.floor(lerp(valueA.value[2], valueB.value[2], progress)) + ", " + lerp(valueA.value[3], valueB.value[3], progress) + ')'
                             }
 
                             else if (MEASUREMENTS["function-transform"].test(valueA.value) && MEASUREMENTS["function-transform"].test(valueB.value)) /* --> "matrix(…, …, …, …, …, …)" | "matrix3d(…, …, …, …, …, …, …, …, …, …, …, …, …, …, …, …)" */ {
@@ -2102,11 +2101,11 @@
 
                               if (null !== valueA.value && null !== valueB.value) {
                                 var matrix = {
-                                  perspective: [lerp(valueA.value.perspective[0], valueB.value.perspective[0]), lerp(valueA.value.perspective[1], valueB.value.perspective[1]), lerp(valueA.value.perspective[2], valueB.value.perspective[2]), lerp(valueA.value.perspective[3], valueB.value.perspective[3])],
-                                  quaternion : slerp(valueA.value.quaternion, valueB.value.quaternion),
-                                  scale      : {x:  lerp(valueA.value.scale      .x,  valueB.value.scale      .x),  y:  lerp(valueA.value.scale      .y,  valueB.value.scale      .y),  z:  lerp(valueA.value.scale      .z,  valueB.value.scale      .z)},
-                                  skew       : {xy: lerp(valueA.value.skew       .xy, valueB.value.skew       .xy), xz: lerp(valueA.value.skew       .xz, valueB.value.skew       .xz), yz: lerp(valueA.value.skew       .yz, valueB.value.skew       .yz)},
-                                  translation: {x:  lerp(valueA.value.translation.x,  valueB.value.translation.x),  y:  lerp(valueA.value.translation.y,  valueB.value.translation.y),  z:  lerp(valueA.value.translation.z,  valueB.value.translation.z)}
+                                  perspective: [lerp(valueA.value.perspective[0], valueB.value.perspective[0], progress), lerp(valueA.value.perspective[1], valueB.value.perspective[1], progress), lerp(valueA.value.perspective[2], valueB.value.perspective[2], progress), lerp(valueA.value.perspective[3], valueB.value.perspective[3], progress)],
+                                  quaternion : slerp(valueA.value.quaternion, valueB.value.quaternion, progress),
+                                  scale      : {x : lerp(valueA.value.scale      .x,  valueB.value.scale      .x,  progress), y : lerp(valueA.value.scale      .y,  valueB.value.scale      .y,  progress), z : lerp(valueA.value.scale      .z,  valueB.value.scale      .z,  progress)},
+                                  skew       : {xy: lerp(valueA.value.skew       .xy, valueB.value.skew       .xy, progress), xz: lerp(valueA.value.skew       .xz, valueB.value.skew       .xz, progress), yz: lerp(valueA.value.skew       .yz, valueB.value.skew       .yz, progress)},
+                                  translation: {x : lerp(valueA.value.translation.x,  valueB.value.translation.x,  progress), y : lerp(valueA.value.translation.y,  valueB.value.translation.y,  progress), z : lerp(valueA.value.translation.z,  valueB.value.translation.z,  progress)}
                                 }, rotations = [
                                   [1.00 - (((matrix.quaternion.y * matrix.quaternion.y) + (matrix.quaternion.z * matrix.quaternion.z)) * 2.00),        (((matrix.quaternion.x * matrix.quaternion.y) + (matrix.quaternion.w * matrix.quaternion.z)) * 2.00),        (((matrix.quaternion.x * matrix.quaternion.z) - (matrix.quaternion.w * matrix.quaternion.y)) * 2.00)],
                                   [       (((matrix.quaternion.x * matrix.quaternion.y) - (matrix.quaternion.w * matrix.quaternion.z)) * 2.00), 1.00 - (((matrix.quaternion.x * matrix.quaternion.x) + (matrix.quaternion.z * matrix.quaternion.z)) * 2.00),        (((matrix.quaternion.y * matrix.quaternion.z) + (matrix.quaternion.w * matrix.quaternion.x)) * 2.00)],
@@ -2122,28 +2121,28 @@
                               }
                             }
 
-                            else if (MEASUREMENTS['%']         .test(valueA.value) && MEASUREMENTS['%']         .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/%$/,    ""), valueB.value.replace(/%$/,    ""))  + '%';
-                            else if (MEASUREMENTS["angle"]     .test(valueA.value) && MEASUREMENTS["angle"]     .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/%$/,    ""), valueB.value.replace(/%$/,    ""))  + "deg";
-                            else if (MEASUREMENTS["duration"]  .test(valueA.value) && MEASUREMENTS["duration"]  .test(valueB.value)) interpolation = Math.floor(lerp(valueA.value.replace(/ms$/,   ""), valueB.value.replace(/ms$/,   ""))) + "ms";
-                            else if (MEASUREMENTS["frequency"] .test(valueA.value) && MEASUREMENTS["frequency"] .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/Hz$/,   ""), valueB.value.replace(/Hz$/,   ""))  + "Hz";
-                            else if (MEASUREMENTS["length"]    .test(valueA.value) && MEASUREMENTS["length"]    .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/px$/,   ""), valueB.value.replace(/px$/,   ""))  + "px";
-                            else if (MEASUREMENTS["resolution"].test(valueA.value) && MEASUREMENTS["resolution"].test(valueB.value)) interpolation =            lerp(valueA.value.replace(/dppx$/, ""), valueB.value.replace(/dppx$/, ""))  + "dppx";
+                            else if (MEASUREMENTS['%']         .test(valueA.value) && MEASUREMENTS['%']         .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/%$/,    ""), valueB.value.replace(/%$/,    ""), progress)  + '%';
+                            else if (MEASUREMENTS["angle"]     .test(valueA.value) && MEASUREMENTS["angle"]     .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/%$/,    ""), valueB.value.replace(/%$/,    ""), progress)  + "deg";
+                            else if (MEASUREMENTS["duration"]  .test(valueA.value) && MEASUREMENTS["duration"]  .test(valueB.value)) interpolation = Math.floor(lerp(valueA.value.replace(/ms$/,   ""), valueB.value.replace(/ms$/,   ""), progress)) + "ms";
+                            else if (MEASUREMENTS["frequency"] .test(valueA.value) && MEASUREMENTS["frequency"] .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/Hz$/,   ""), valueB.value.replace(/Hz$/,   ""), progress)  + "Hz";
+                            else if (MEASUREMENTS["length"]    .test(valueA.value) && MEASUREMENTS["length"]    .test(valueB.value)) interpolation =            lerp(valueA.value.replace(/px$/,   ""), valueB.value.replace(/px$/,   ""), progress)  + "px";
+                            else if (MEASUREMENTS["resolution"].test(valueA.value) && MEASUREMENTS["resolution"].test(valueB.value)) interpolation =            lerp(valueA.value.replace(/dppx$/, ""), valueB.value.replace(/dppx$/, ""), progress)  + "dppx";
                             else switch (name) {
                               case "aspect-ratio":
                               case "fill-opacity": case "flex-grow": case "flex-shrink": case "flood-opacity": case "font-size-adjust": case "font-variation-settings":
                               case "opacity":
                               case "scale": case "shape-image-threshold": case "stop-opacity": case "stroke-dasharray": case "stroke-dashoffset": case "stroke-miterlimit": case "stroke-opacity": case "stroke-width":
-                                interpolation = lerp(valueA.value, valueB.value) + "";
+                                interpolation = lerp(valueA.value, valueB.value, progress) + "";
                                 break;
 
                               case "column-count": case "math-depth":
                               case "order":        case "orphans":
                               case "widows":       case "z-index":
-                                interpolation = Math.floor(lerp(valueA.value, valueB.value)) + "";
+                                interpolation = Math.floor(lerp(valueA.value, valueB.value, progress)) + "";
                                 break;
 
                               case "font-weight":
-                                interpolation = (Math.floor(lerp(valueA.value, valueB.value) / 100) * 100) + ""
+                                interpolation = (Math.floor(lerp(valueA.value, valueB.value, progress) / 100) * 100) + ""
                             }
 
                             animationProperty.value += interpolation.replace(/(\.\d{6})\d+/g, "$1").replace(/(\.\d*[1-9])0+([^\d]|$)/g, "$1$2").replace(/\.0+([^\d]|$)/g, "$1") + (valueA.delimiter || valueB.delimiter).replace(/\s*([,])+\s*/, "$1 ")

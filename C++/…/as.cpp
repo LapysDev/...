@@ -8,12 +8,12 @@ union as {
   };
 
   /* ... */
-  template <typename T, typename U> // ->> The second `->*` derefences the result to a non-allocating placement `new`
+  template <typename T, typename U> // ->> The second `->*` dereferences the result to a non-allocating placement `new`
   [[nodiscard]] constexpr friend U operator ->*(struct as::template reinterpretation<T>&& reinterpretation, U*) noexcept(noexcept((U) static_cast<T&&>(reinterpretation.object))) {
     return (U) static_cast<T&&>(reinterpretation.object);
   }
 
-  template <typename T, typename U> // ->> The second `->*` derefences the result to a user-specified template `as::operator T() noexcept` member function
+  template <typename T, typename U> // ->> The second `->*` dereferences the result to a user-specified template `as::operator T() noexcept` member function
   [[nodiscard]] constexpr friend U operator ->*(struct as::template reinterpretation<T>&& reinterpretation, U (as::*)() /* noexcept */) noexcept(noexcept((U) static_cast<T&&>(reinterpretation.object))) {
     return (U) static_cast<T&&>(reinterpretation.object);
   }
