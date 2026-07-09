@@ -149,25 +149,57 @@
 
     lightnessToLuminance: function(lightness) { return COLOR_SPACE_LAB.EPSILON * COLOR_SPACE_LAB.KAPPA < lightness ? Math.pow(lightness + 16.0, 3) / 1560896.0 : lightness / COLOR_SPACE_LAB.KAPPA },
     luminanceToLightness: function(luminance) { return COLOR_SPACE_LAB.EPSILON < luminance ? (cbrt(luminance) * 116.0) - 16.0 : COLOR_SPACE_LAB.KAPPA * luminance }
-  }, COLOR_SPACE_CAM = (function() {
-    var ADAPTING_LUMINANCE   = (64.0000000000000000 / Math.PI) * 0.2000000000000000;
-    var BACKGROUND_LUMINANCE = 20.0000000000000000, WHITE_LUMINANCE = 100.0000000000000000;
-    var BASE_EXPONENTIAL     = Math.sqrt(BACKGROUND_LUMINANCE / WHITE_LUMINANCE) + 1.4800000000000000;
-    var BRIGHTNESS_INDUCTION = Math.pow(BACKGROUND_LUMINANCE / WHITE_LUMINANCE, -0.2000000000000000) * 0.7250000000000000;
-    var CHROMATIC_INDUCTION  = 1.0000000000000000;
-    var ENVIRONMENTS         = {
-      cie : function(format, xyzToResponseRGB, responseRGBToXYZ) { var WHITE_POINT_SCALE = 100.0000000000000000, SURROUND = 1.0000000000000000, LUMINANCE_FACTOR = 1.0000000000000000 / ((ADAPTING_LUMINANCE * 5.0000000000000000) + 1.0000000000000000), LUMINANCE_ADAPTATION = (ADAPTING_LUMINANCE * Math.pow(LUMINANCE_FACTOR, 4)) + (Math.pow(ADAPTING_LUMINANCE * 5.0000000000000000, 1.0000000000000000 / 3.0000000000000000) * Math.pow(1.0000000000000000 - Math.pow(LUMINANCE_FACTOR, 4), 2) * 0.1000000000000000), DISCOUNTING = Math.min(Math.max(SURROUND * (1.0000000000000000 - ((1.0000000000000000 / 3.6000000000000000) * Math.exp((-ADAPTING_LUMINANCE - 42.0000000000000000) / 92.0000000000000000))), 0.0000000000000000), 1.0000000000000000); var adaptationRGB = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], adaptedWhiteConeResponse = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], appearanceWhiteResponse = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], whiteConeResponse = multiply3x3(xyzToResponseRGB, [WHITE_D65[0] * WHITE_POINT_SCALE, WHITE_D65[1] * WHITE_POINT_SCALE, WHITE_D65[2] * WHITE_POINT_SCALE]); for (var index = 0; index !== whiteConeResponse.length; ++index) switch (format) { case COLOR_FORMAT_CAM2002: adaptationRGB[index] = ((WHITE_LUMINANCE * (DISCOUNTING / whiteConeResponse[index])) + 1) - DISCOUNTING; adaptedWhiteConeResponse[index] = adaptationRGB[index] * whiteConeResponse[index]; break; case COLOR_FORMAT_CAM2016: adaptationRGB[index] = ((DISCOUNTING * (WHITE_LUMINANCE / whiteConeResponse[index])) + 1) - DISCOUNTING; adaptedWhiteConeResponse[index] = adaptationRGB[index] * whiteConeResponse[index] } if (COLOR_FORMAT_CAM2002 === format) { adaptedWhiteConeResponse = multiply3x3(multiply9x9([0.3897100000000000, 0.6889800000000000, -0.0786800000000000, -0.2298100000000000, 1.1834000000000000, 0.0464100000000000, 0.0000000000000000, 0.0000000000000000, 1.0000000000000000], responseRGBToXYZ), adaptedWhiteConeResponse) } appearanceWhiteResponse = camAdaptResponse(adaptedWhiteConeResponse, LUMINANCE_ADAPTATION); return {achromaticWhiteResponse: BRIGHTNESS_INDUCTION * ((appearanceWhiteResponse[0] * 2.0000000000000000) + appearanceWhiteResponse[1] + (appearanceWhiteResponse[2] * 0.0500000000000000)), achromaticWhiteResponseOffset: 0.0000000000000000, adaptationsRGB: adaptationRGB, backgroundBrightnessInduction: BRIGHTNESS_INDUCTION, backgroundChromaticInduction: BRIGHTNESS_INDUCTION, backgroundLuminance: BACKGROUND_LUMINANCE / WHITE_LUMINANCE, baseExponential: BASE_EXPONENTIAL, brightnessWhiteResponse: 249.8028380684859800, chromaticInduction: CHROMATIC_INDUCTION, format: format, luminanceAdaptation: LUMINANCE_ADAPTATION, pqLuminanceScale: PQ_LUMINANCE_SCALE, responseRGBToXYZ: responseRGBToXYZ, surround: SURROUND, surroundImpact: SURROUND_IMPACT, xyzToResponseRGB: xyzToResponseRGB} },
-      zhai: function()                                           { var SURROUND = 0.6900000000000000, LUMINANCE_ADAPTATION = Math.pow(ADAPTING_LUMINANCE, 1.0000000000000000 / 3.0000000000000000) * (1.0000000000000000 - Math.exp(ADAPTING_LUMINANCE * (-48.0000000000000000 / 9.0000000000000000))) * 0.1710000000000000, BACKGROUND_FACTOR = Math.sqrt(BACKGROUND_LUMINANCE / WHITE_LUMINANCE), ACHROMATIC_WHITE_RESPONSE_OFFSET = 3.7035226210190005e-11, ACHROMATIC_WHITE_RESPONSE = xyzD65ToJzazbz([WHITE_D65[0], WHITE_D65[1], WHITE_D65[2]], [0.0000000000000000, 1.0000000000000000, 0.0000000000000000, 3.5240000000000000, -4.0667080000000000, 0.5427080000000000, 0.1990760000000000, 1.0967990000000000, -1.2958750000000000], PQ_LUMINANCE_SCALE)[0] - ACHROMATIC_WHITE_RESPONSE_OFFSET; return {achromaticWhiteResponse: ACHROMATIC_WHITE_RESPONSE, achromaticWhiteResponseOffset: ACHROMATIC_WHITE_RESPONSE_OFFSET, adaptationsRGB: null, backgroundBrightnessInduction: BRIGHTNESS_INDUCTION, backgroundChromaticInduction: BRIGHTNESS_INDUCTION, backgroundLuminance: BACKGROUND_FACTOR, baseExponential: BASE_EXPONENTIAL, brightnessWhiteResponse: spow(ACHROMATIC_WHITE_RESPONSE, (SURROUND * 1.6) / Math.pow(BACKGROUND_FACTOR, 0.12)) * (Math.pow(SURROUND, 2.2) * Math.pow(BACKGROUND_FACTOR, 0.5) * Math.pow(LUMINANCE_ADAPTATION, 0.2)) * 2700, chromaticInduction: CHROMATIC_INDUCTION, format: COLOR_FORMAT_ZCAM, luminanceAdaptation: LUMINANCE_ADAPTATION, pqLuminanceScale: PQ_LUMINANCE_SCALE, responseRGBToXYZ: null, surround: SURROUND, surroundImpact: SURROUND_IMPACT, xyzToResponseRGB: null} }
-    };
-    var PQ_LUMINANCE_SCALE = (2523.0000000000000000 / 32.0000000000000000) * 1.7000000000000000;
-    var SURROUND_IMPACT    = 0.6900000000000000;
+  }, COLOR_SPACE_CAM = {
+    BACKGROUND_LUMINANCE: 20.0000000000000000,
+    WHITE_LUMINANCE     : 100.0000000000000000
+  }, COLOR_SPACE_CAM = {
+    ADAPTING_LUMINANCE  : (64.0000000000000000 / Math.PI) * 0.2000000000000000,
+    BACKGROUND_LUMINANCE: COLOR_SPACE_CAM.BACKGROUND_LUMINANCE,
+    BASE_EXPONENTIAL    : Math.sqrt(COLOR_SPACE_CAM.BACKGROUND_LUMINANCE / COLOR_SPACE_CAM.WHITE_LUMINANCE) + 1.4800000000000000,
+    BRIGHTNESS_INDUCTION: Math.pow (COLOR_SPACE_CAM.BACKGROUND_LUMINANCE / COLOR_SPACE_CAM.WHITE_LUMINANCE, -0.2000000000000000) * 0.7250000000000000,
+    CHROMATIC_INDUCTION : 1.0000000000000000,
+    PQ_LUMINANCE_SCALE  : 1.7000000000000000 * (2523.0000000000000000 / 32.0000000000000000),
+    SURROUND_IMPACT     : 0.6900000000000000,
+    WHITE_LUMINANCE     : COLOR_SPACE_CAM.WHITE_LUMINANCE,
 
-    return {
-      ENVIRONMENT_2002: ENVIRONMENTS.cie (COLOR_FORMAT_CAM2002, [0.7328000000, 0.4296000000, -0.1624000000, -0.7036000000, 1.6975000000, 0.0061000000,  0.0030000000, 0.0136000000, 0.9834000000], [1.0961238208, -0.2788690002, 0.1827451794, 0.4543690420, 0.4735331543,  0.0720978037, -0.0096276087, -0.0056980312, 1.0153256400]),
-      ENVIRONMENT_2016: ENVIRONMENTS.cie (COLOR_FORMAT_CAM2016, [0.4012880000, 0.6501730000, -0.0514610000, -0.2502680000, 1.2044140000, 0.0458540000, -0.0020790000, 0.0489520000, 0.9531270000], [1.8620678551, -1.0112546305, 0.1491867754, 0.3875265432, 0.6214474419, -0.0089739852, -0.0158414988, -0.0341229380, 1.0499644369]),
-      ENVIRONMENT_ZCAM: ENVIRONMENTS.zhai() // -@> Qiyan Zhai’s “Study of Chromatic Adaptation using Memory Color Matches (Part 1: Neutral Illuminants)”
+    adaptResponse: function(coords, luminanceAdaptation) {
+      var adapted = [], channelIndex, channel, response;
+      for (channelIndex = 0; channelIndex < 3; channelIndex++) {
+        channel = coords[channelIndex];
+        response = Math.pow(luminanceAdaptation * Math.abs(channel) * 0.01, 0.42);
+        adapted[channelIndex] = 400 * (channel < 0 ? -x : response) / (response + 27.13);
+      }
+      return adapted
+    },
+
+    createCIEEnvironment : function(format, xyzToResponseRGB, responseRGBToXYZ) { var WHITE_POINT_SCALE = 100.0000000000000000, SURROUND = 1.0000000000000000, LUMINANCE_FACTOR = 1.0000000000000000 / ((COLOR_SPACE_CAM.ADAPTING_LUMINANCE * 5.0000000000000000) + 1.0000000000000000), LUMINANCE_ADAPTATION = (COLOR_SPACE_CAM.ADAPTING_LUMINANCE * Math.pow(LUMINANCE_FACTOR, 4)) + (Math.pow(COLOR_SPACE_CAM.ADAPTING_LUMINANCE * 5.0000000000000000, 1.0000000000000000 / 3.0000000000000000) * Math.pow(1.0000000000000000 - Math.pow(LUMINANCE_FACTOR, 4), 2) * 0.1000000000000000), DISCOUNTING = Math.min(Math.max(SURROUND * (1.0000000000000000 - ((1.0000000000000000 / 3.6000000000000000) * Math.exp((-COLOR_SPACE_CAM.ADAPTING_LUMINANCE - 42.0000000000000000) / 92.0000000000000000))), 0.0000000000000000), 1.0000000000000000); var adaptationRGB = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], adaptedWhiteConeResponse = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], appearanceWhiteResponse = [0.0000000000000000, 0.0000000000000000, 0.0000000000000000], whiteConeResponse = multiply3x3(xyzToResponseRGB, [WHITE_D65[0] * WHITE_POINT_SCALE, WHITE_D65[1] * WHITE_POINT_SCALE, WHITE_D65[2] * WHITE_POINT_SCALE]); for (var index = 0; index !== whiteConeResponse.length; ++index) switch (format) { case COLOR_FORMAT_CAM2002: adaptationRGB[index] = ((COLOR_SPACE_CAM.WHITE_LUMINANCE * (DISCOUNTING / whiteConeResponse[index])) + 1) - DISCOUNTING; adaptedWhiteConeResponse[index] = adaptationRGB[index] * whiteConeResponse[index]; break; case COLOR_FORMAT_CAM2016: adaptationRGB[index] = ((DISCOUNTING * (COLOR_SPACE_CAM.WHITE_LUMINANCE / whiteConeResponse[index])) + 1) - DISCOUNTING; adaptedWhiteConeResponse[index] = adaptationRGB[index] * whiteConeResponse[index] } if (COLOR_FORMAT_CAM2002 === format) { adaptedWhiteConeResponse = multiply3x3(multiply9x9([0.3897100000000000, 0.6889800000000000, -0.0786800000000000, -0.2298100000000000, 1.1834000000000000, 0.0464100000000000, 0.0000000000000000, 0.0000000000000000, 1.0000000000000000], responseRGBToXYZ), adaptedWhiteConeResponse) } appearanceWhiteResponse = COLOR_SPACE_CAM.adaptResponse(adaptedWhiteConeResponse, LUMINANCE_ADAPTATION); return {achromaticWhiteResponse: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION * ((appearanceWhiteResponse[0] * 2.0000000000000000) + appearanceWhiteResponse[1] + (appearanceWhiteResponse[2] * 0.0500000000000000)), achromaticWhiteResponseOffset: 0.0000000000000000, adaptationsRGB: adaptationRGB, backgroundBrightnessInduction: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION, backgroundChromaticInduction: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION, backgroundLuminance: COLOR_SPACE_CAM.BACKGROUND_LUMINANCE / COLOR_SPACE_CAM.WHITE_LUMINANCE, baseExponential: COLOR_SPACE_CAM.BASE_EXPONENTIAL, brightnessWhiteResponse: 249.8028380684859800, chromaticInduction: COLOR_SPACE_CAM.CHROMATIC_INDUCTION, format: format, luminanceAdaptation: LUMINANCE_ADAPTATION, pqLuminanceScale: COLOR_SPACE_CAM.PQ_LUMINANCE_SCALE, responseRGBToXYZ: responseRGBToXYZ, surround: SURROUND, surroundImpact: COLOR_SPACE_CAM.SURROUND_IMPACT, xyzToResponseRGB: xyzToResponseRGB} },
+    createZhaiEnvironment: function()                                           { var SURROUND = 0.6900000000000000, LUMINANCE_ADAPTATION = Math.pow(COLOR_SPACE_CAM.ADAPTING_LUMINANCE, 1.0000000000000000 / 3.0000000000000000) * (1.0000000000000000 - Math.exp(COLOR_SPACE_CAM.ADAPTING_LUMINANCE * (-48.0000000000000000 / 9.0000000000000000))) * 0.1710000000000000, BACKGROUND_FACTOR = Math.sqrt(COLOR_SPACE_CAM.BACKGROUND_LUMINANCE / COLOR_SPACE_CAM.WHITE_LUMINANCE), ACHROMATIC_WHITE_RESPONSE_OFFSET = 3.7035226210190005e-11, ACHROMATIC_WHITE_RESPONSE = xyzD65ToJzazbz([WHITE_D65[0], WHITE_D65[1], WHITE_D65[2]], [0.0000000000000000, 1.0000000000000000, 0.0000000000000000, 3.5240000000000000, -4.0667080000000000, 0.5427080000000000, 0.1990760000000000, 1.0967990000000000, -1.2958750000000000], COLOR_SPACE_CAM.PQ_LUMINANCE_SCALE)[0] - ACHROMATIC_WHITE_RESPONSE_OFFSET; return {achromaticWhiteResponse: ACHROMATIC_WHITE_RESPONSE, achromaticWhiteResponseOffset: ACHROMATIC_WHITE_RESPONSE_OFFSET, adaptationsRGB: null, backgroundBrightnessInduction: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION, backgroundChromaticInduction: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION, backgroundLuminance: BACKGROUND_FACTOR, baseExponential: COLOR_SPACE_CAM.BASE_EXPONENTIAL, brightnessWhiteResponse: spow(ACHROMATIC_WHITE_RESPONSE, (SURROUND * 1.6) / Math.pow(BACKGROUND_FACTOR, 0.12)) * (Math.pow(SURROUND, 2.2) * Math.pow(BACKGROUND_FACTOR, 0.5) * Math.pow(LUMINANCE_ADAPTATION, 0.2)) * 2700, chromaticInduction: COLOR_SPACE_CAM.CHROMATIC_INDUCTION, format: COLOR_FORMAT_ZCAM, luminanceAdaptation: LUMINANCE_ADAPTATION, pqLuminanceScale: COLOR_SPACE_CAM.PQ_LUMINANCE_SCALE, responseRGBToXYZ: null, surround: SURROUND, surroundImpact: COLOR_SPACE_CAM.SURROUND_IMPACT, xyzToResponseRGB: null} },
+
+    unadaptResponse: function(adapted, luminanceAdaptation) {
+      var unadapted = [], channelIndex, channel, absoluteChannel;
+      for (channelIndex = 0; channelIndex < 3; channelIndex++) {
+        channel = adapted[channelIndex]; absoluteChannel = Math.abs(channel);
+        unadapted[channelIndex] = (channel < 0 ? -1 : 1) * (100 / luminanceAdaptation) * Math.pow((27.13 * absoluteChannel) / (400 - absoluteChannel), 1.00 / 0.42);
+      }
+
+      return unadapted
     }
-  })();
+  }, COLOR_SPACE_CAM = {
+    ADAPTING_LUMINANCE  : COLOR_SPACE_CAM.ADAPTING_LUMINANCE,
+    BACKGROUND_LUMINANCE: COLOR_SPACE_CAM.BACKGROUND_LUMINANCE,
+    BASE_EXPONENTIAL    : COLOR_SPACE_CAM.BASE_EXPONENTIAL,
+    BRIGHTNESS_INDUCTION: COLOR_SPACE_CAM.BRIGHTNESS_INDUCTION,
+    CHROMATIC_INDUCTION : COLOR_SPACE_CAM.CHROMATIC_INDUCTION,
+    ENVIRONMENT_2002    : COLOR_SPACE_CAM.createCIEEnvironment(COLOR_FORMAT_CAM2002, [0.7328000000, 0.4296000000, -0.1624000000, -0.7036000000, 1.6975000000, 0.0061000000,  0.0030000000, 0.0136000000, 0.9834000000], [1.0961238208, -0.2788690002, 0.1827451794, 0.4543690420, 0.4735331543,  0.0720978037, -0.0096276087, -0.0056980312, 1.0153256400]),
+    ENVIRONMENT_2016    : COLOR_SPACE_CAM.createCIEEnvironment(COLOR_FORMAT_CAM2016, [0.4012880000, 0.6501730000, -0.0514610000, -0.2502680000, 1.2044140000, 0.0458540000, -0.0020790000, 0.0489520000, 0.9531270000], [1.8620678551, -1.0112546305, 0.1491867754, 0.3875265432, 0.6214474419, -0.0089739852, -0.0158414988, -0.0341229380, 1.0499644369]),
+    ENVIRONMENT_ZCAM    : COLOR_SPACE_CAM.createZhaiEnvironment(), // -@> Qiyan Zhai’s “Study of Chromatic Adaptation using Memory Color Matches (Part 1: Neutral Illuminants)”
+    PQ_LUMINANCE_SCALE  : COLOR_SPACE_CAM.PQ_LUMINANCE_SCALE,
+    SURROUND_IMPACT     : COLOR_SPACE_CAM.SURROUND_IMPACT,
+    WHITE_LUMINANCE     : COLOR_SPACE_CAM.WHITE_LUMINANCE,
+
+    adaptResponse  : COLOR_SPACE_CAM.adaptResponse,
+    unadaptResponse: COLOR_SPACE_CAM.unadaptResponse
+  };
 
   /* Class > Color
     --- NOTE (Lapys) ---
@@ -368,11 +400,10 @@
       }
       return result;
     }
-    function hsluvRay(theta, line) { return line.intercept / (Math.sin(theta) - line.slope * Math.cos(theta)); }
     function hsluvMaxChroma(lightness, hue) {
       var theta = rad(hue), lines = hsluvGetBounds(lightness), minLength = Infinity, rayLength, lineIndex;
       for (lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-        rayLength = hsluvRay(theta, lines[lineIndex]);
+        rayLength = (function hsluvRay(theta, line) { return line.intercept / (Math.sin(theta) - line.slope * Math.cos(theta)); })(theta, lines[lineIndex]);
         if (rayLength >= 0 && rayLength < minLength) minLength = rayLength;
       }
       return minLength;
@@ -424,7 +455,7 @@
       return [normalize(hue), saturation, lightness];
     }
 
-    function din99oFromLabD65(lab) {
+    function labD65ToDin99o(lab) {
       var RADS = rad(26), FACTOR = 0.83, C1 = 100 / Math.log(1.39), C2 = 0.0039, C3 = 0.075, C4 = 0.0435;
       var labLightness = lab[0], labA = lab[1], labB = lab[2];
       var l99 = C1 * Math.log(Math.max(1 + C2 * labLightness, Number.MIN_VALUE));
@@ -436,7 +467,7 @@
       var h99 = Math.atan2(rotatedB, rotatedA) + RADS;
       return [l99, c99 * Math.cos(h99), c99 * Math.sin(h99)];
     }
-    function labD65FromDin99o(din) {
+    function din99oToLabD65(din) {
       var RADS = rad(26), FACTOR = 0.83, C1 = 100 / Math.log(1.39), C2 = 0.0039, C3 = 0.075, C4 = 0.0435;
       var dinLightness = din[0], dinChroma = Math.sqrt(Math.pow(din[1], 2) + Math.pow(din[2], 2)), dinHueRadians = Math.atan2(din[2], din[1]);
       var rotatedChroma = (Math.exp(C4 * dinChroma) - 1) / C3;
@@ -445,11 +476,11 @@
       return [(Math.exp(dinLightness / C1) - 1) / C2, rotatedA * Math.cos(RADS) - (rotatedB / FACTOR) * Math.sin(RADS), rotatedA * Math.sin(RADS) + (rotatedB / FACTOR) * Math.cos(RADS)];
     }
 
-    function hunterFromXyz(xyz) {
+    function xyzToHunter(xyz) {
       var relativeY = xyz[1] / WHITE_D65[1], sqrtRelativeY = Math.sqrt(Math.max(relativeY, 0));
       return [100 * sqrtRelativeY, sqrtRelativeY === 0 ? 0 : 172.30 * ((xyz[0] / WHITE_D65[0]) - relativeY) / sqrtRelativeY, sqrtRelativeY === 0 ? 0 : 67.20 * (relativeY - (xyz[2] / WHITE_D65[2])) / sqrtRelativeY];
     }
-    function xyzFromHunter(lab) {
+    function hunterToXyz(lab) {
       var relativeY = Math.pow(lab[0] / 100, 2), sqrtRelativeY = Math.sqrt(Math.max(relativeY, 0));
       return [((lab[1] / 172.30) * sqrtRelativeY + relativeY) * WHITE_D65[0], relativeY * WHITE_D65[1], (relativeY - (lab[2] / 67.20) * sqrtRelativeY) * WHITE_D65[2]];
     }
@@ -521,37 +552,19 @@
       return multiply3x3([11.0315669046, -9.8669439081, -0.1646229965, -3.2541473811, 4.4187703776, -0.1646229965, -3.6588512867, 2.7129230459, 1.9459282408], biasedRoots);
     }
 
-    function camAdaptResponse(coords, luminanceAdaptation) {
-      var adapted = [], channelIndex, channel, response;
-      for (channelIndex = 0; channelIndex < 3; channelIndex++) {
-        channel = coords[channelIndex];
-        response = Math.pow(luminanceAdaptation * Math.abs(channel) * 0.01, 0.42);
-        adapted[channelIndex] = 400 * (channel < 0 ? -x : response) / (response + 27.13);
-      }
-      return adapted;
-    }
-    function camUnadaptResponse(adapted, luminanceAdaptation) {
-      var unadapted = [], channelIndex, channel, absoluteChannel;
-      for (channelIndex = 0; channelIndex < 3; channelIndex++) {
-        channel = adapted[channelIndex]; absoluteChannel = Math.abs(channel);
-        unadapted[channelIndex] = (channel < 0 ? -1 : 1) * (100 / luminanceAdaptation) * Math.pow((27.13 * absoluteChannel) / (400 - absoluteChannel), 1.00 / 0.42);
-      }
-      return unadapted;
-    }
-    function camEccentricity(hueRadians) { return 0.25 * (Math.cos(hueRadians + 2) + 3.8); }
     function xyzToCam(xyz, environment) {
       var scaled = [xyz[0] * 100, xyz[1] * 100, xyz[2] * 100];
       var coneResponse = multiply3x3(environment.xyzToResponseRGB, scaled);
       var channelIndex;
       for (channelIndex = 0; channelIndex < 3; channelIndex++) coneResponse[channelIndex] *= environment.adaptationsRGB[channelIndex];
       var postAdaptationConeResponse = COLOR_FORMAT_CAM2002 === environment.format ? multiply3x3(multiply9x9(CAM_HUNT_POINTER_ESTEVEZ_XYZ_TO_LMS, environment.responseRGBToXYZ), coneResponse) : coneResponse;
-      var adaptedResponse = camAdaptResponse(postAdaptationConeResponse, environment.luminanceAdaptation);
+      var adaptedResponse = COLOR_SPACE_CAM.adaptResponse(postAdaptationConeResponse, environment.luminanceAdaptation);
       var achromaticNumerator = 2 * adaptedResponse[0] + adaptedResponse[1] + 0.05 * adaptedResponse[2];
       var redGreenOpponent = adaptedResponse[0] + (-12 * adaptedResponse[1] + adaptedResponse[2]) / 11;
       var yellowBlueOpponent = (adaptedResponse[0] + adaptedResponse[1] - 2 * adaptedResponse[2]) / 9;
       var hueComposition = adaptedResponse[0] + adaptedResponse[1] + 1.05 * adaptedResponse[2];
       var hueRadians = Math.atan2(yellowBlueOpponent, redGreenOpponent);
-      var eccentricity = camEccentricity(hueRadians);
+      var eccentricity = (Math.cos(hueRadians + 2) + 3.8) * 0.25;
       var hueMagnitudeFactor = 50000 / 13 * environment.chromaticInduction * environment.backgroundChromaticInduction * eccentricity;
       var temporaryMagnitude = ckd_div(hueMagnitudeFactor * Math.sqrt(Math.pow(redGreenOpponent, 2) + Math.pow(yellowBlueOpponent, 2)), hueComposition + 0.305);
       var chromaFactor = spow(temporaryMagnitude, 0.9) * Math.pow(1.64 - Math.pow(0.29, environment.backgroundLuminance), 0.73);
@@ -568,7 +581,7 @@
       var lightnessRoot = Math.sqrt(Math.max(lightness, 1e-12)) * 0.1;
       var chromaFactor = colorfulness / Math.pow(environment.luminanceAdaptation, 0.25) / lightnessRoot;
       var temporaryMagnitude = spow(chromaFactor * Math.pow(1.64 - Math.pow(0.29, environment.backgroundLuminance), -0.73), 10 / 9);
-      var eccentricity = camEccentricity(hueRadians);
+      var eccentricity = (Math.cos(hueRadians + 2) + 3.8) * 0.25;
       var achromaticResponse = environment.achromaticWhiteResponse * spow(lightnessRoot, 2 / environment.surroundImpact / environment.baseExponential);
       var cosHue = Math.cos(hueRadians), sinHue = Math.sin(hueRadians);
       var hueMagnitudeFactor = 50000 / 13 * environment.chromaticInduction * environment.backgroundChromaticInduction * eccentricity;
@@ -577,7 +590,7 @@
       var redGreenOpponent = opponentRadius * cosHue, yellowBlueOpponent = opponentRadius * sinHue;
       var adaptedResponse = multiply3x3(CAM_OPPONENT_TO_ADAPTED_RGB, [achromaticNumerator, redGreenOpponent, yellowBlueOpponent]);
       adaptedResponse = [adaptedResponse[0] / 1403, adaptedResponse[1] / 1403, adaptedResponse[2] / 1403];
-      var postAdaptationConeResponse = camUnadaptResponse(adaptedResponse, environment.luminanceAdaptation), coneResponse, channelIndex;
+      var postAdaptationConeResponse = COLOR_SPACE_CAM.unadaptResponse(adaptedResponse, environment.luminanceAdaptation), coneResponse, channelIndex;
       coneResponse = COLOR_FORMAT_CAM2002 === environment.format ? multiply3x3(multiply9x9(environment.xyzToResponseRGB, CAM_HUNT_POINTER_ESTEVEZ_LMS_TO_XYZ), postAdaptationConeResponse) : postAdaptationConeResponse;
       for (channelIndex = 0; channelIndex < 3; channelIndex++) coneResponse[channelIndex] *= 1.0 / environment.adaptationsRGB[channelIndex];
       var xyz = multiply3x3(environment.responseRGBToXYZ, coneResponse);
@@ -596,31 +609,29 @@
       return [lightness, colorfulness, deg(Math.atan2(ucsB, ucsA))];
     }
 
-    function hellwigHueDep(h) { return -0.160 * Math.cos(h) + 0.132 * Math.cos(2 * h) - 0.405 * Math.sin(h) + 0.080 * Math.sin(2 * h) + 0.792; }
-    function hellwigEcc(h) { return -0.0582 * Math.cos(h) - 0.0258 * Math.cos(2 * h) - 0.1347 * Math.cos(3 * h) + 0.0289 * Math.cos(4 * h) - 0.1475 * Math.sin(h) - 0.0308 * Math.sin(2 * h) + 0.0385 * Math.sin(3 * h) + 0.0096 * Math.sin(4 * h) + 1; }
     function xyzToHellwig(xyz) {
       var environment = COLOR_SPACE_CAM.ENVIRONMENT_2016;
       var scaled = [xyz[0] * 100, xyz[1] * 100, xyz[2] * 100];
       var coneResponse = multiply3x3(environment.xyzToResponseRGB, scaled), channelIndex;
       for (channelIndex = 0; channelIndex < 3; channelIndex++) coneResponse[channelIndex] *= environment.adaptationsRGB[channelIndex];
-      var adaptedResponse = camAdaptResponse(coneResponse, environment.luminanceAdaptation);
+      var adaptedResponse = COLOR_SPACE_CAM.adaptResponse(coneResponse, environment.luminanceAdaptation);
       var achromaticNumerator = 2 * adaptedResponse[0] + adaptedResponse[1] + 0.05 * adaptedResponse[2];
       var redGreenOpponent = adaptedResponse[0] + (-12 * adaptedResponse[1] + adaptedResponse[2]) / 11;
       var yellowBlueOpponent = (adaptedResponse[0] + adaptedResponse[1] - 2 * adaptedResponse[2]) / 9;
-      var hueRadians = Math.atan2(yellowBlueOpponent, redGreenOpponent);
+      var hue = Math.atan2(yellowBlueOpponent, redGreenOpponent), hueEccentricity = (function(hue) { return -0.0582 * Math.cos(hue) - 0.0258 * Math.cos(2 * hue) - 0.1347 * Math.cos(3 * hue) + 0.0289 * Math.cos(4 * hue) - 0.1475 * Math.sin(hue) - 0.0308 * Math.sin(2 * hue) + 0.0385 * Math.sin(3 * hue) + 0.0096 * Math.sin(4 * hue) + 1; })(hue);
       var lightness = 100 * spow(achromaticNumerator / (environment.achromaticWhiteResponse / environment.backgroundBrightnessInduction), environment.surroundImpact * environment.baseExponential);
-      var colorfulness = 43 * environment.chromaticInduction * hellwigEcc(hueRadians) * Math.sqrt(Math.pow(redGreenOpponent, 2) + Math.pow(yellowBlueOpponent, 2));
-      return [lightness, colorfulness, deg(hueRadians)];
+      var colorfulness = 43 * environment.chromaticInduction * hueEccentricity * Math.sqrt(Math.pow(redGreenOpponent, 2) + Math.pow(yellowBlueOpponent, 2));
+      return [lightness, colorfulness, deg(hue)];
     }
     function hellwigToXyz(jmh) {
-      var environment = COLOR_SPACE_CAM.ENVIRONMENT_2016, lightness = jmh[0], colorfulness = jmh[1], hueRadians = rad(jmh[2]);
+      var environment = COLOR_SPACE_CAM.ENVIRONMENT_2016, lightness = jmh[0], colorfulness = jmh[1], hue = rad(jmh[2]), hueEccentricity = (function(hue) { return -0.0582 * Math.cos(hue) - 0.0258 * Math.cos(2 * hue) - 0.1347 * Math.cos(3 * hue) + 0.0289 * Math.cos(4 * hue) - 0.1475 * Math.sin(hue) - 0.0308 * Math.sin(2 * hue) + 0.0385 * Math.sin(3 * hue) + 0.0096 * Math.sin(4 * hue) + 1; })(hue);
       if (lightness === 0 && colorfulness === 0) return [0, 0, 0];
       var achromaticNumerator = (environment.achromaticWhiteResponse / environment.backgroundBrightnessInduction) * spow(lightness / 100, 1.0 / (environment.surroundImpact * environment.baseExponential));
-      var opponentRadius = ckd_div(colorfulness, 43 * environment.chromaticInduction * hellwigEcc(hueRadians));
-      var redGreenOpponent = opponentRadius * Math.cos(hueRadians), yellowBlueOpponent = opponentRadius * Math.sin(hueRadians);
+      var opponentRadius = ckd_div(colorfulness, 43 * environment.chromaticInduction * hueEccentricity);
+      var redGreenOpponent = opponentRadius * Math.cos(hue), yellowBlueOpponent = opponentRadius * Math.sin(hue);
       var adaptedResponse = multiply3x3(CAM_OPPONENT_TO_ADAPTED_RGB, [achromaticNumerator, redGreenOpponent, yellowBlueOpponent]);
       adaptedResponse = [adaptedResponse[0] / 1403, adaptedResponse[1] / 1403, adaptedResponse[2] / 1403];
-      var coneResponse = camUnadaptResponse(adaptedResponse, environment.luminanceAdaptation), channelIndex;
+      var coneResponse = COLOR_SPACE_CAM.unadaptResponse(adaptedResponse, environment.luminanceAdaptation), channelIndex;
       for (channelIndex = 0; channelIndex < 3; channelIndex++) coneResponse[channelIndex] *= 1.0 / environment.adaptationsRGB[channelIndex];
       var xyz = multiply3x3(environment.responseRGBToXYZ, coneResponse);
       return [xyz[0] / 100, xyz[1] / 100, xyz[2] / 100];
@@ -644,8 +655,8 @@
     function xyzToHct(xyz) { var cam2016 = xyzToCam(xyz, COLOR_SPACE_CAM.ENVIRONMENT_2016); return [cam2016[2], cam2016[1], COLOR_SPACE_LAB.luminanceToLightness(xyz[1])]; }
 
     function sucsToXyz(ich) {
-      var intensity = ich[0], chroma = (Math.exp(0.0252 * ich[1]) - 1) / 0.0447, hueRadians = rad(ich[2]);
-      var opponentA = chroma * Math.cos(hueRadians), opponentB = chroma * Math.sin(hueRadians);
+      var intensity = ich[0], chroma = (Math.exp(0.0252 * ich[1]) - 1) / 0.0447, hue = rad(ich[2]);
+      var opponentA = chroma * Math.cos(hue), opponentB = chroma * Math.sin(hue);
       var responses = multiply3x3([0.01, 0.0007468124, 0.0004721014, 0.01, -0.0014754098, -0.0004349281, 0.01, -0.0003642987, -0.0101854950], [intensity, opponentA, opponentB]);
       return multiply3x3(IPT_LMS_TO_XYZ, [spow(responses[0], 1.0 / 0.43), spow(responses[1], 1.0 / 0.43), spow(responses[2], 1.0 / 0.43)]);
     }
@@ -680,16 +691,14 @@
     }
 
     /* Helmgen and Helmlab Metric, ported from the public Helmlab/ColorAide formulas. */
-    function depressedCubicForward(sourceValue) {
-      var normalizedValue = sourceValue / (Math.pow(HELMGEN_SATURATION_SCALE, 3) * 2), rootEstimate = 2 * HELMGEN_SATURATION_SCALE * Math.sinh(Math.asinh(normalizedValue) / 3);
-      var residual = rootEstimate * rootEstimate * rootEstimate + HELMGEN_ALPHA * rootEstimate - sourceValue, firstDerivative = 3 * rootEstimate * rootEstimate + HELMGEN_ALPHA, secondDerivative = 6 * rootEstimate, denominator = 2 * firstDerivative * firstDerivative - residual * secondDerivative;
-      if (Math.abs(denominator) > 1e-30) rootEstimate -= 2 * residual * firstDerivative / denominator;
-      return rootEstimate;
-    }
-    function depressedCubicInverse(rootValue) { return rootValue * rootValue * rootValue + HELMGEN_ALPHA * rootValue; }
     function xyzToHelmgen(xyz) {
       var channels = multiply3x3(HELMGEN_XYZ_TO_LMS, xyz), channelIndex, lab, chroma, chromaScale;
-      for (channelIndex = 0; channelIndex < 3; channelIndex++) channels[channelIndex] = depressedCubicForward(Math.max(channels[channelIndex], 0));
+      for (channelIndex = 0; channelIndex < 3; channelIndex++) channels[channelIndex] = (function depressedCubicForward(sourceValue) {
+        var normalizedValue = sourceValue / (Math.pow(HELMGEN_SATURATION_SCALE, 3) * 2), rootEstimate = 2 * HELMGEN_SATURATION_SCALE * Math.sinh(Math.asinh(normalizedValue) / 3);
+        var residual = rootEstimate * rootEstimate * rootEstimate + HELMGEN_ALPHA * rootEstimate - sourceValue, firstDerivative = 3 * rootEstimate * rootEstimate + HELMGEN_ALPHA, secondDerivative = 6 * rootEstimate, denominator = 2 * firstDerivative * firstDerivative - residual * secondDerivative;
+        if (Math.abs(denominator) > 1e-30) rootEstimate -= 2 * residual * firstDerivative / denominator;
+        return rootEstimate;
+      })(Math.max(channels[channelIndex], 0));
       lab = multiply3x3(HELMGEN_LMS_TO_LAB, channels);
       chroma = Math.sqrt(Math.pow(lab[1], 2) + Math.pow(lab[2], 2));
       if (chroma > 1e-12) { chromaScale = Math.pow(chroma, HELMGEN_CHROMA) / chroma; lab[1] *= chromaScale; lab[2] *= chromaScale; }
@@ -699,7 +708,7 @@
       var labLightness = lab[0], labA = lab[1], labB = lab[2], chroma = Math.sqrt(Math.pow(labA, 2) + Math.pow(labB, 2)), chromaScale, lms, channelIndex;
       if (chroma > 1e-12) { chromaScale = Math.pow(chroma, 1.0 / HELMGEN_CHROMA) / chroma; labA *= chromaScale; labB *= chromaScale; }
       lms = multiply3x3(HELMGEN_LAB_TO_LMS, [labLightness, labA, labB]);
-      for (channelIndex = 0; channelIndex < 3; channelIndex++) lms[channelIndex] = depressedCubicInverse(lms[channelIndex]);
+      for (channelIndex = 0; channelIndex < 3; channelIndex++) lms[channelIndex] = (function depressedCubicInverse(rootValue) { return (rootValue * rootValue * rootValue) + (HELMGEN_ALPHA * rootValue) })(lms[channelIndex]);
       return multiply3x3(HELMGEN_LMS_TO_XYZ, lms);
     }
     function xyzToHelmgenLch(xyz) { return COLOR_CONVERTERS["lab"]["lch"](xyzToHelmgen(xyz)); }
@@ -779,14 +788,14 @@
         case COLOR_FORMAT_CAM2016_LCD:                                                                                              return camToXyz(ucsToJmh([this.channels[0], this.channels[1], this.channels[2]], "lcd"), COLOR_SPACE_CAM.ENVIRONMENT_2016);
         case COLOR_FORMAT_CAM2016_SCD:                                                                                              return camToXyz(ucsToJmh([this.channels[0], this.channels[1], this.channels[2]], "scd"), COLOR_SPACE_CAM.ENVIRONMENT_2016);
         case COLOR_FORMAT_CAM2016_UCS:                                                                                              return camToXyz(ucsToJmh([this.channels[0], this.channels[1], this.channels[2]], "ucs"), COLOR_SPACE_CAM.ENVIRONMENT_2016);
-        case COLOR_FORMAT_DIN99_LCH:                                                                                                return COLOR_CONVERTERS["lab-d65"]["xyz-d65"](labD65FromDin99o(COLOR_CONVERTERS["lch"]["lab"]([this.channels[0], this.channels[1], this.channels[2]])));
-        case COLOR_FORMAT_DIN99O:                                                                                                   return COLOR_CONVERTERS["lab-d65"]["xyz-d65"](labD65FromDin99o([this.channels[0], this.channels[1], this.channels[2]]));
+        case COLOR_FORMAT_DIN99_LCH:                                                                                                return COLOR_CONVERTERS["lab-d65"]["xyz-d65"](din99oToLabD65(COLOR_CONVERTERS["lch"]["lab"]([this.channels[0], this.channels[1], this.channels[2]])));
+        case COLOR_FORMAT_DIN99O:                                                                                                   return COLOR_CONVERTERS["lab-d65"]["xyz-d65"](din99oToLabD65([this.channels[0], this.channels[1], this.channels[2]]));
         case COLOR_FORMAT_HCT:                                                                                                      return hctToXyz([this.channels[0], this.channels[1], this.channels[2]]);
         case COLOR_FORMAT_HELLWIG_JMH:                                                                                              return hellwigToXyz([this.channels[0], this.channels[1], this.channels[2]]);
         case COLOR_FORMAT_HELMGEN:                                                                                                  return helmgenToXyz([this.channels[0], this.channels[1], this.channels[2]]);
         case COLOR_FORMAT_HELMGEN_LCH:                                                                                              return helmgenLchToXyz([this.channels[0], this.channels[1], this.channels[2]]);
         case COLOR_FORMAT_HELMLAB_METRIC:                                                                                           return helmlabToXyz([this.channels[0], this.channels[1], this.channels[2]]);
-        case COLOR_FORMAT_HUNTER_LAB:                                                                                               return xyzFromHunter([this.channels[0], this.channels[1], this.channels[2]]);
+        case COLOR_FORMAT_HUNTER_LAB:                                                                                               return hunterToXyz([this.channels[0], this.channels[1], this.channels[2]]);
         case COLOR_FORMAT_ICTCP:                                                                                                    return ictcpToXyz([this.channels[0], this.channels[1], this.channels[2]]);
         case COLOR_FORMAT_IGPGTG:                                                                                                   return igPgTgToXyz([this.channels[0], this.channels[1], this.channels[2]]);
         case COLOR_FORMAT_IPT:                                                                                                      return iptToXyzD65([this.channels[0], this.channels[1], this.channels[2]]);
@@ -847,12 +856,12 @@
     Color.prototype.xyzD50  = function() { var xyzChannels = chromaticAdaptWhite(this._toXYZD65(), WHITE_D65, WHITE_D50); return {x: xyzChannels[0], y: xyzChannels[1], z: xyzChannels[2] } };
     Color.prototype.xyzD65  = function() { var xyzChannels = this._toXYZD65(); return {x: xyzChannels[0], y: xyzChannels[1], z: xyzChannels[2] } };
 
-    Color.prototype.din99Lch      = function() { var din99LchChannels = COLOR_CONVERTERS["lab"]["lch"](din99oFromLabD65(COLOR_CONVERTERS["xyz-d65"]["lab-d65"](this._toXYZD65()))); return {l: din99LchChannels[0], c: din99LchChannels[1], h: din99LchChannels[2] } };
-    Color.prototype.din99o        = function() { var din99Channels = din99oFromLabD65(COLOR_CONVERTERS["xyz-d65"]["lab-d65"](this._toXYZD65())); return {l: din99Channels[0], a: din99Channels[1], b: din99Channels[2] } };
+    Color.prototype.din99Lch      = function() { var din99LchChannels = COLOR_CONVERTERS["lab"]["lch"](labD65ToDin99o(COLOR_CONVERTERS["xyz-d65"]["lab-d65"](this._toXYZD65()))); return {l: din99LchChannels[0], c: din99LchChannels[1], h: din99LchChannels[2] } };
+    Color.prototype.din99o        = function() { var din99Channels = labD65ToDin99o(COLOR_CONVERTERS["xyz-d65"]["lab-d65"](this._toXYZD65())); return {l: din99Channels[0], a: din99Channels[1], b: din99Channels[2] } };
     Color.prototype.helmgen       = function() { var helmgenChannels = xyzToHelmgen(this._toXYZD65()); return {l: helmgenChannels[0], a: helmgenChannels[1], b: helmgenChannels[2] } };
     Color.prototype.helmgenlch    = function() { var helmgenLchChannels = xyzToHelmgenLch(this._toXYZD65()); return {l: helmgenLchChannels[0], c: helmgenLchChannels[1], h: helmgenLchChannels[2] } };
     Color.prototype.helmlabMetric = function() { var helmlabChannels = xyzToHelmlab(this._toXYZD65()); return {l: helmlabChannels[0], a: helmlabChannels[1], b: helmlabChannels[2] } };
-    Color.prototype.hunterLab     = function() { var hunterChannels = hunterFromXyz(this._toXYZD65()); return {l: hunterChannels[0], a: hunterChannels[1], b: hunterChannels[2] } };
+    Color.prototype.hunterLab     = function() { var hunterChannels = xyzToHunter(this._toXYZD65()); return {l: hunterChannels[0], a: hunterChannels[1], b: hunterChannels[2] } };
     Color.prototype.ictcp         = function() { var ictcpChannels = xyzToIctcp(this._toXYZD65()); return {i: ictcpChannels[0], ct: ictcpChannels[1], cp: ictcpChannels[2] } };
     Color.prototype.igpgtg        = function() { var igPgTgChannels = xyzToIgPgTg(this._toXYZD65()); return {ig: igPgTgChannels[0], pg: igPgTgChannels[1], tg: igPgTgChannels[2] } };
     Color.prototype.ipt           = function() { var iptChannels = xyzD65ToIpt(this._toXYZD65()); return {i: iptChannels[0], p: iptChannels[1], t: iptChannels[2] } };
