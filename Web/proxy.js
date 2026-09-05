@@ -15,9 +15,16 @@ var proxy  = new Proxy(object, {
   preventExtensions:        (target)                            => void `@prevent extensibility`, // ->> Must return actual extensibility of `target`?
   set:                      (target, property, value)           => `@set \`"${property}"\``,      //
   setPrototypeOf:           (target, prototype)                 => `@set __proto__`,              //
-});
+}); // -@> [Chrome 49, Edge 12, FF 18, KHTML …, Op 36, Safari 10]
 
-/* ... */
+// ->> Fool-proof solutions
+function A() {} ({'__proto__': A.prototype}) instanceof A; // --> true
+{'__proto__': null};                                       // ->> Can’t inspect prototype, can only set it
+
+/* ...
+  - Proxies cannot be `structuredClone(…)`d (like `Function`s, `HTMLElement`s, e.t.c.)
+  - `new Proxy(RegExp, …).exec(…)` doesn’t work due to incompatible internal `[[RegExpMatcher]]` slot (like `ArrayBuffer`s, `Date`s, `Generator`s, `Map`s, `Promise`s, `Set`s, e.t.c.)
+*/
 console.log("[APPLY]:",     (() => { try { return     proxy() } catch (error) { return error } })());
 console.log("[CONSTRUCT]:", (() => { try { return new proxy }   catch (error) { return error } })());
 console.log("[DEFINE]:",    Object.defineProperty(proxy, 'd', {}));

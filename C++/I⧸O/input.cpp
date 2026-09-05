@@ -5,12 +5,10 @@
 
 /* Main */
 int main(void) {
-  FILE *const file = std::fopen("file.txt", "rb" /* binary read mode */);
-
-  if (NULL == file) std::fputs("[ERROR]: Could not open file for reading" "\r\n", stderr);
-  else while (true) {
+  if (FILE *const file = std::fopen("file.txt", "rb" /* binary read mode */))
+  while (true) /* --> not NULL */ {
     std::size_t count;
-    char text[64];
+    char        text[64];
 
     // read 64 characters at a time
     count = std::fread(text, sizeof(char), 64u - /* NUL character */ 1u, file);
@@ -33,5 +31,5 @@ int main(void) {
       std::fclose(file);
       break;
     }
-  }
+  } else std::fputs("[ERROR]: Could not open file for reading" "\r\n", stderr);
 }

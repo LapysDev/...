@@ -75,17 +75,24 @@
         return element.getBoundingClientRect()
       }
 
-      function getCSSStyleRules(document, strict /* = false */) {
+      function getCSSStyleRules(element, document, strict /* = false */) {
         var TRIM_PASS = "", TRIM_MATCH = /^\s+|\s+$/g;
         var layers = [""]; // --> String[]
         var rules  = [];   // --> {container: {name: String, query: String}*, layer: String, layers: String[], order: Number(Uint32), scope: {end: String, start: String}*, value: CSSStyleRule}[]
         var sheets = [];   // --> {containers: {name: String, query: String}[], layer: String, rules: CSSRuleList | DOMCSSRuleList, scopes: {end: String, start: String}[]}[]
 
         // ...
-        if (typeof getMatchedCSSRules === "function")
-          sheets = [{containers: [], layer: layers[0], rules: getMatchedCSSRules(element, ""), scopes: []}]; // ->> WebKit-specific and non-canonicalized; Gecko-polyfill here: `mozGetMatchedCSSRules(…)` @ `https://gist.github.com/ydaniv/3033012`
+        if (typeof getMatchedCSSRules === "function" && null !== element) {
+          rules  = getMatchedCSSRules(element, "");
+          sheets = [{containers: [], layer: layers[0], rules: rules, scopes: []}]; // ->> WebKit-specific and non-canonicalized; Gecko-polyfill here: `mozGetMatchedCSSRules(…)` @ `https://gist.github.com/ydaniv/3033012` (`https://web.archive.org/web/20240805105725/https://gist.github.com/ydaniv/3033012`)
 
-        else {
+          if (null === rules || 0 === rules.length) {
+            rules  = [];
+            sheets = []
+          }
+        }
+
+        if (0 === sheets.length) {
           if (typeof document.adoptedStyleSheets === "object") // --> … instanceof CSSStyleSheet[]
           for (var index = document.adoptedStyleSheets.length; index; ) {
             var sheet = document.adoptedStyleSheets[--index];
@@ -1301,8 +1308,8 @@
 
         else {
           var document           = element.ownerDocument || (function() { return this || globalThis })().document;
-          var groupingPredicates = arguments.length < 4 || null === groupingPredicates ? getCSSGroupingPredicates()         : groupingPredicates;
-          var styleRules         = arguments.length < 3 || null === styleRules         ? getCSSStyleRules(document, strict) : styleRules;
+          var groupingPredicates = arguments.length < 4 || null === groupingPredicates ? getCSSGroupingPredicates()                  : groupingPredicates;
+          var styleRules         = arguments.length < 3 || null === styleRules         ? getCSSStyleRules(element, document, strict) : styleRules;
           var properties         = cascade(element, propertyName, null, properties = [ /* ... */ ]);
 
           // ...
