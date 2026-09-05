@@ -6,7 +6,7 @@
 #include <clocale>  // --> LC_ALL; ::std::setlocale(…)
 #include <cstdarg>  // --> va_arg(…), va_end(…), va_start(…); ::std::va_list
 #include <cstddef>  // --> ::std::max_align_t, ::std::size_t
-#include <cstdio>   // --> ::std::FILE; EOF, stdout; ::std::fflush(…), ::std::setbuf(…)
+#include <cstdio>   // --> ::std::FILE; EOF, _IOFBF, _IOLBF, stdout; ::std::fflush(…), ::std::setbuf(…), ::std::setvbuf(…)
 #include <cstdlib>  // --> MB_LEN_MAX, NULL; ::std::qsort(…), ::std::rand(…), ::std::srand(…)
 #include <ctime>    // --> ::std::time_t; ::std::time(…)
 #include <cwchar>   // --> WEOF; ::std::mbstate_t; ::std::fputwc(…), ::std::fwide(…), ::std::fwprintf(…), ::std::mbrtowc(…), ::std::mbsrtowcs(…)
@@ -382,7 +382,26 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     }
   } memory = {NULL, 0u};
 
-  struct console /* final */ /* ->> Handles indeterminately-terminated non-formatted text only */ {
+  struct console /* final */ {
+    struct policy /* final */ {
+      enum flag /* : unsigned char */ { FLUSH_ON_NEWLINE, FLUSH_ON_OVERFLOW };
+    };
+
+    /* ... */
+    inline static bool buffer(::std::FILE* const stream, char buffer[], ::std::size_t const size, enum console::policy::flag const policy = console::policy::FLUSH_ON_OVERFLOW) /* noexcept */ {
+      if (NULL == buffer) {
+        ::std::setbuf(stream, static_cast<char*>(NULL)); // --> ::std::setvbuf(stream, static_cast<char*>(NULL), _IONBF, 0u)
+        return true;
+      }
+
+      switch (policy) {
+        case console::policy::FLUSH_ON_NEWLINE:  return 0 == ::std::setvbuf(stream, buffer, _IOLBF, size);
+        case console::policy::FLUSH_ON_OVERFLOW: return 0 == ::std::setvbuf(stream, buffer, _IOFBF, size);
+      }
+
+      return 0 == ::std::setvbuf(stream, buffer, _IONBF, size);
+    }
+
     inline static bool flush(::std::FILE* const stream) /* noexcept */ {
       return 0 == ::std::fflush(stream);
     }
@@ -398,6 +417,10 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       int const count = ::std::vfwprintf(stream, format, arguments); va_end  (arguments);
 
       return count;
+    }
+
+    inline static bool narrow(::std::FILE* const stream) /* noexcept */ {
+      return ::std::fwide(stream, -1) < 0;
     }
 
     static unsigned char text(::std::FILE* const stream, char const character, wchar_t const escape[] = L"") /* noexcept */ {
@@ -417,7 +440,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       ::std::size_t    length = 0u;
       ::std::mbstate_t state  = ::std::mbstate_t();
 
-      // ...
+      // ... ->> Handles indeterminately-terminated text
       for (; '\0' != *text; ++length) {
         wchar_t       character;
         ::std::size_t sublength = 0u;
@@ -466,11 +489,15 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
 
       return length;
     }
+
+    inline static bool widen(::std::FILE* const stream) /* noexcept */ {
+      return ::std::fwide(stream, +1) > 0;
+    }
   } const console = {};
 
   // ... ->> Assume standard file streams as UTF-8 (via functions dependent on `::std::setlocale(…)`)
+  (void) console.buffer(stderr, static_cast<char*>(NULL), 0u);
   (libraries = l) -> load();
-  ::std::setbuf(stderr, static_cast<char*>(NULL));
 
   for (char const *const locales[] = {".UTF-8", ".UTF8", "C.UTF-8", "C.utf8", "en_US.UTF-8", /* ->> User-preferred */ ""}, *const *locale = locales; locale != &locales[sizeof locales / sizeof(char const*)]; ++locale)
   if (static_cast<char*>(NULL) != ::std::setlocale(LC_ALL, *locale)) /* --> LC_ALL == LC_COLLATE | LC_CTYPE | LC_MONETARY | LC_NUMERIC | LC_TIME | … | LC_MESSAGES | … | LC_ADDRESS | LC_IDENTIFICATION | LC_KEYBOARD | LC_MEASUREMENT | LC_NAME | LC_PAPER | LC_TELEPHONE | LC_XLITERATE */ {
@@ -636,7 +663,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       }
     }
 
-    (void) ::std::fwprintf(stdout, L"[%u:%i] \"%hs\" \"%ls\"" "\r\n", index, count, arguments[index], argument.wide);
+    (void) ::std::fwprintf(stdout, L"[%u] \"%hs\" \"%ls\"" "\r\n", index, arguments[index], argument.wide);
   }
 
   // while (true)
