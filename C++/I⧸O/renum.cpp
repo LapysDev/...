@@ -1,19 +1,17 @@
 /* POSIX:   del renum.exe && cls && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic -std=c++98 -Wall -Wextra -Wno-cast-function-type                      renum.cpp -lc -ldl   -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
 /* Windows: del renum.exe && cls && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic -std=c++98 -Wall -Wextra -Wno-cast-function-type -Wno-unknown-pragmas renum.cpp -lkernel32 -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
-#include <cfloat>   // --> LDBL_EPSILON
-#include <ciso646>  // --> and, or, not
-#include <climits>  // --> MB_LEN_MAX
-#include <clocale>  // --> LC_ALL; ::std::setlocale(…)
-#include <cstdarg>  // --> va_arg(…), va_end(…), va_start(…); ::std::va_list
-#include <cstddef>  // --> ::std::max_align_t, ::std::size_t
-#include <cstdio>   // --> ::std::FILE; EOF, _IOFBF, _IOLBF, stdout; ::std::fflush(…), ::std::setbuf(…), ::std::setvbuf(…)
-#include <cstdlib>  // --> MB_LEN_MAX, NULL; ::std::qsort(…), ::std::rand(…), ::std::srand(…)
-#include <ctime>    // --> ::std::time_t; ::std::time(…)
-#include <cwchar>   // --> WEOF; ::std::mbstate_t; ::std::fputwc(…), ::std::fwide(…), ::std::fwprintf(…), ::std::mbrtowc(…), ::std::mbsrtowcs(…)
-#include <new>      // --> ::delete, ::new, ::std::nothrow
-#include <stdint.h> // --> uintptr_t
+#include <ciso646> // --> and, or, not
+#include <climits> // --> MB_LEN_MAX
+#include <clocale> // --> LC_ALL; ::std::setlocale(…)
+#include <cstdarg> // --> va_arg(…), va_end(…), va_start(…); ::std::va_list
+#include <cstddef> // --> ::std::max_align_t, ::std::size_t
+#include <cstdio>  // --> ::std::FILE; _IOFBF, _IOLBF, stdout; ::std::fflush(…), ::std::setbuf(…), ::std::setvbuf(…)
+#include <cstdlib> // --> MB_LEN_MAX, NULL; ::std::qsort(…), ::std::rand(…), ::std::srand(…)
+#include <ctime>   // --> ::std::time_t; ::std::time(…)
+#include <cwchar>  // --> WEOF; ::std::mbstate_t; ::std::fputwc(…), ::std::fwide(…), ::std::fwprintf(…), ::std::mbrtowc(…), ::std::mbsrtowcs(…)
+#include <new>     // --> ::delete[], ::new, ::std::nothrow
 
-#if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+#if defined _WIN32
 # define _CRT_SECURE_NO_WARNINGS
 # define  UNICODE
 # define _UNICODE
@@ -25,9 +23,8 @@
 # include <sal.h>      // --> _Printf_format_string_
 # include <stdio.h>    // --> ::_fileno(…)
 # include <stdlib.h>   // --> ::_get_pgmptr(…)
-# include <windows.h>  // --> ::BOOL, ::DWORD, ::FARPROC, ::HMODULE, ::LPCSTR, ::LPCWSTR, ::LPWSTR, ::PUCHAR, ::PVOID, ::SIZE_T, ::TCHAR, ::UINT, ::ULONG, ::WCHAR; CP_UTF8, FALSE, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, LOAD_LIBRARY_SEARCH_SYSTEM32, LOAD_WITH_ALTERED_SEARCH_PATH, MAX_PATH, WINAPI, SecureZeroMemory(…), ZeroMemory(…); ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
-#   include <bcrypt.h>  // --> ::BCRYPT_ALG_HANDLE
-#   include <strsafe.h> // --> ::StringCbLengthA(…), ::StringCchCatNExW(…), ::StringCchCopyNExW(…), ::StringCchLengthW(…)
+# include <windows.h>  // --> ::BOOL, ::DWORD, ::FARPROC, ::HMODULE, ::LPCCH, ::LPCSTR, ::LPCWSTR, ::LPWSTR, ::PUCHAR, ::PVOID, ::SIZE_T, ::TCHAR, ::UINT, ::ULONG, ::WCHAR; CP_UTF8, FALSE, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, LOAD_LIBRARY_SEARCH_SYSTEM32, LOAD_WITH_ALTERED_SEARCH_PATH, MAX_PATH, WINAPI, SecureZeroMemory(…), ZeroMemory(…); ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
+#   include <bcrypt.h> // --> ::BCRYPT_ALG_HANDLE
 #
 # pragma comment(lib, "kernel32.lib")
 
@@ -35,26 +32,27 @@ extern "C" __declspec(dllimport) ::BOOL                GetModuleHandleExW (::DWO
 extern "C" __declspec(dllimport) ::FARPROC             GetProcAddress     (::HMODULE, ::LPCSTR);
 extern "C" __declspec(dllimport) ::UINT                GetSystemDirectoryW(::LPWSTR, ::UINT);
 extern "C"                       volatile void* WINAPI SecureZeroMemory2  (volatile void*, ::SIZE_T);
-#elif defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
-# include <dirent.h>     // --> ::DIR; dirent; ::closedir(…), ::opendir(…), ::readdir(…)
-# include <dlfcn.h>      // --> RTLD_LOCAL; ::dlerror(…), ::dlopen(…), ::dlsym(…)
-# include <errno.h>      // --> EINTR; errno
-# include <stdint.h>     // --> uint32_t ->> will be defined
-# include <stdlib.h>     // --> ::realpath(…)
-# include <string.h>     // --> ::strlen(…)
-# include <sys/stat.h>   // --> S_ISLNK(…), S_ISREG(…); stat; ::lstat(…)
-# include <sys/types.h>  // --> ::ssize_t
-# include <unistd.h>     // --> ::readlink(…)
+#elif defined __APPLE__ or defined __unix__
+# include <dirent.h>    // --> ::DIR; dirent; ::closedir(…), ::opendir(…), ::readdir(…)
+# include <dlfcn.h>     // --> RTLD_LOCAL; ::dlerror(…), ::dlopen(…), ::dlsym(…)
+# include <errno.h>     // --> EINTR; errno
+# include <iconv.h>     // --> ::iconv_t
+# include <stdint.h>    // --> uint32_t ->> will be defined
+# include <stdlib.h>    // --> ::realpath(…)
+# include <string.h>    // --> ::strlen(…)
+# include <sys/stat.h>  // --> S_ISLNK(…), S_ISREG(…); stat; ::lstat(…)
+# include <sys/types.h> // --> ::ssize_t
+# include <unistd.h>    // --> ::readlink(…)
 
 extern "C" char* dlerror(void);
 extern "C" void* dlopen (char const[], int);
 extern "C" void* dlsym  (void*, char const[]);
-# if defined __APPLE__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __MACH__
+# if (defined __APPLE__ and defined __MACH__) or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__
 #   include <mach-o/dyld.h> // --> ::_NSGetExecutablePath(…)
 # elif defined __FreeBSD__ or defined __FreeBSD_version
 #   include <sys/sysctl.h> // --> ::sysctl(…)
 #   include <sys/types.h>  // --> u_int
-# elif defined __SUNPRO_C or defined __SUNPRO_CC)
+# elif defined __SUNPRO_C or defined __SUNPRO_CC
 #   include <stdlib.h>    // --> ::getexecname()
 #   include <sys/types.h> // --> pid_t
 #   include <unistd.h>    // --> ::getcwd(…), ::getpid()
@@ -115,7 +113,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
 
   static struct library *libraries;
   struct library /* final */ {
-    #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+    #if defined _WIN32
       enum    /* : unsigned char */ { COUNT = 4u };
       enum id /* : unsigned char */ { advapi32, bcrypt, credui, kernel32, ole32, oleaut32, shell32, taskschd /* , ... */ };
 
@@ -142,7 +140,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     }
 
     inline static void load() /* noexcept */ {
-      #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+      #if defined _WIN32
         ::WCHAR path[MAX_PATH + 13]; // --> ::GetSystemDirectoryW(…) + '\\' + libraries[kernel32].name
 
         if (::UINT const pathLength = (::GetSystemDirectoryW(path, sizeof path / sizeof(::TCHAR)) * sizeof(::TCHAR)) / sizeof(::WCHAR)) {
@@ -193,7 +191,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
             return;
           }
         }
-      #elif defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+      #elif defined __APPLE__ or defined __unix__
         libraries -> module.handle = ::dlopen(static_cast<char const*>(NULL), RTLD_LOCAL /* | RTLD_LAZY */);
         if (NULL != libraries -> module.handle) {
           (void) ::dlerror(); // ->> Clear prior linker error diagnostics
@@ -216,12 +214,12 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       libraries = NULL;
     }
   } l[library::COUNT] = {
-    #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+    #if defined _WIN32
       {library::advapi32, L"advapi32" ".dll", {NULL, NULL}},
       {library::bcrypt,   L"bcrypt"   ".dll", {NULL, NULL}},
       {library::kernel32, L"kernel32" ".dll", {NULL, NULL}},
       {library::shell32,  L"shell32"  ".dll", {NULL, NULL}}
-    #elif defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+    #elif defined __APPLE__ or defined __unix__
       {static_cast<enum library::id>(0x00u), L"libdl.so", {NULL, NULL}} // ->> Recently `libc.so` suffices
     #else
       {static_cast<enum library::id>(0x00u), NULL, {NULL, NULL}}
@@ -249,21 +247,21 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
 
     /* ... */
     inline static unsigned char* scramble(unsigned char bytes[], ::std::size_t const size) /* noexcept */ {
-      #if defined __NT__ or defined __TOS_WIN__ or defined __WINDOWS__ or defined _WIN64
+      #if defined _WIN32
         if (struct library *const library = libraries -> get(library::bcrypt))
         if (NULL != library -> module.handle) {
           if (::NTSTATUS (*const BCryptGenRandom)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG) = reinterpret_cast< ::NTSTATUS (*)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG)>(::GetProcAddress(library -> module.handle, "BCryptGenRandom"))) // --> <bcrypt.h> not NULL
           if (STATUS_SUCCESS == BCryptGenRandom(static_cast< ::BCRYPT_ALG_HANDLE>(NULL), static_cast< ::PUCHAR>(bytes), static_cast< ::ULONG>(size), 0x00000000uL))
           return bytes;
         }
-      #elif defined __WIN32__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE
+
         if (struct library *const library = libraries -> get(library::advapi32))
         if (NULL != library -> module.handle) {
           if (::BOOLEAN (*const RtlGenRandom)(::PVOID, ::ULONG) = reinterpret_cast< ::BOOLEAN (*)(::PVOID, ::ULONG)>(::GetProcAddress(library -> module.handle, "SystemFunction036"))) // --> <ntsecapi.h> not NULL
           if (FALSE != RtlGenRandom(static_cast< ::PVOID>(buffer), static_cast< ::ULONG>(size)))
           return bytes;
         }
-      #elif defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+      #elif defined __APPLE__ or defined __unix__
         if (int (*const getentropy)(void*, ::std::size_t) = reinterpret_cast<int (*)(void*, ::std::size_t)>(::dlerror(), ::dlsym(libraries -> module.handle, "getentropy"))) // --> <sys/random.h> not NULL
         if (static_cast<char*>(NULL) == ::dlerror()) {
           ::std::size_t index = 0u;
@@ -278,7 +276,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
           return bytes;
         }
 
-        if (::ssize_t (*const getrandom)(void*, ::std::size_t, unsigned) = reinterpret_cast<::ssize_t (*)(void*, ::std::size_t, unsigned)>(::dlerror(), ::dlsym(libraries -> module.handle, "getrandom"))) // --> <sys/random.h> not NULL
+        if (::ssize_t (*const getrandom)(void*, ::std::size_t, unsigned) = reinterpret_cast< ::ssize_t (*)(void*, ::std::size_t, unsigned)>(::dlerror(), ::dlsym(libraries -> module.handle, "getrandom"))) // --> <sys/random.h> not NULL
         if (static_cast<char*>(NULL) == ::dlerror()) {
           ::std::size_t index = 0u;
 
@@ -352,7 +350,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     }
 
     inline static unsigned char* zero(unsigned char bytes[], ::std::size_t const size) /* noexcept */ {
-      #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+      #if defined _WIN32
         #if defined _MSC_VER and defined NTDDI_VERSION ? NTDDI_VERSION >= 0x0A000010 : false              //
           #pragma comment(lib, "volatileaccessu.lib")                                                     //
           return const_cast<unsigned char*>(SecureZeroMemory2(static_cast<void volatile*>(bytes), size)); // --> RtlSecureZeroMemory2(…)
@@ -361,7 +359,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
         #elif defined ZeroMemory                       //
           ZeroMemory(static_cast<void*>(bytes), size); // --> RtlZeroMemory(…)
         #endif
-      #elif defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+      #elif defined __APPLE__ or defined __unix__
         if (void (*const explicit_bzero)(void*, ::std::size_t) = reinterpret_cast<void (*)(void*, ::std::size_t)>(::dlerror(), ::dlsym(libraries -> module.handle, "explicit_bzero"))) // --> <string.h> not NULL
         if (static_cast<char*>(NULL) == ::dlerror()) {
           explicit_bzero(bytes, size);
@@ -406,7 +404,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       return 0 == ::std::fflush(stream);
     }
 
-    #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+    #if defined _WIN32
       static int (format)(::std::FILE* const stream, _Printf_format_string_ wchar_t const* const format, ...) /* noexcept */
     #else
       /* [[gnu::format(wprintf, 2, 3)]] */
@@ -507,7 +505,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     break;
   }
 
-  #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+  #if defined _WIN32
     if (struct library *const library = libraries -> get(library::kernel32))
     if (NULL != library -> module.handle) {
       if (::BOOL WINAPI (*const SetConsoleOutputCP)(::UINT) = reinterpret_cast< ::BOOL WINAPI (*)(::UINT)>(::GetProcAddress(library -> module.handle, "SetConsoleOutputCP"))) // --> <windows.h> not NULL
@@ -529,75 +527,18 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
   for (unsigned index = 1u; index < static_cast<unsigned>(count > 0 ? count : 0); ++index) {
     struct /* final */ { char const *multibyte; wchar_t *wide; } argument = {arguments[index], NULL};
 
-    // ... ->> Ignore text encoding is capable
-    #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-      // use MultiByteWideChar if available
-      // for (unsigned index = 1u; index < static_cast<unsigned>(count > 0 ? count : 0); ++index) {
-      //   int const length = ::MultiByteToWideChar(
-      //     CP_UTF8,
-      //     MB_ERR_INVALID_CHARS,
-      //     argument.multibyte,
-      //     -1,
-      //     NULL,
-      //     0
-      //   );
-      //
-      //   argument.wide = 0 < length
-      //     ? reinterpret_cast<wchar_t*>(
-      //         memory.reserve(
-      //           static_cast< ::std::size_t>(length) * sizeof(wchar_t),
-      //           memory::policy::RAW_MEMORY
-      //         )
-      //       )
-      //     : NULL;
-      //
-      //   argument.wide = NULL != argument.wide
-      //     ? ::new (argument.wide) wchar_t[length]
-      //     : NULL;
-      //
-      //   if (
-      //     NULL == argument.wide or
-      //     0 == ::MultiByteToWideChar(
-      //       CP_UTF8,
-      //       MB_ERR_INVALID_CHARS,
-      //       argument.multibyte,
-      //       -1,
-      //       argument.wide,
-      //       length
-      //     )
-      //   ) {
-      //     (void) console.format(
-      //       stderr,
-      //       L"%lc%ls%lc%1.2ls%1.50ls",
-      //       L'[',
-      //       renum.name,
-      //       L']',
-      //       L": ",
-      //       L"Aborting; Unable to parse command-line option \u2014 " "\r\n"
-      //     );
-      //
-      //     (void) console.text(stderr, argument.multibyte);
-      //     return EXIT_FAILURE;
-      //   }
-      //
-      //   (void) ::std::fwprintf(
-      //     stdout,
-      //     L"[%u:%i] \"%hs\" \"%ls\"" "\r\n",
-      //     index,
-      //     count,
-      //     arguments[index],
-      //     argument.wide
-      //   );
-      // }
-    #elif defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
-      // POSIX maybe
-      // #include <iconv.h>
-      //
-      // wchar_t* utf8towide(char const *source)
-      // {
-      //   if (NULL == source)
-      //     return NULL;
-      //
+    // ...
+    #if defined _WIN32
+      if (struct library *const library = libraries -> get(library::kernel32))
+      if (NULL != library -> module.handle) {
+        if (int (*const MultiByteToWideChar)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int) = reinterpret_cast<int (*)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int)>(::GetProcAddress(library -> module.handle, "MultiByteToWideChar"))) /* --> <windows.h> not NULL */ {
+          int const length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, argument.multibyte, -1, static_cast< ::LPWSTR>(NULL), 0);
+
+          argument.wide = length > 0 ? reinterpret_cast<wchar_t*>(memory.reserve(length + sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL;
+          argument.wide = NULL != argument.wide and MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, argument.multibyte, -1, static_cast< ::LPWSTR>(argument.wide), length) > 0 ? argument.wide : NULL;
+        }
+      }
+    #elif defined __APPLE__ or defined __unix__
       //   ::iconv_t const converter = ::iconv_open("WCHAR_T", "UTF-8");
       //
       //   if (static_cast< ::iconv_t>(-1) == converter)
@@ -641,28 +582,28 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       //
       //   (void) ::iconv_close(converter);
       //   return wide;
-      // }
     #endif
 
-    // console.buffer(…) and use earlier
-    // console.widen(…) but don't use earlier
     if (NULL == argument.wide) {
       ::std::mbstate_t    state  = ::std::mbstate_t();
       ::std::size_t const length = ::std::mbsrtowcs(static_cast<wchar_t*>(NULL), &argument.multibyte, 0u, &state);
 
       // ...
-      state              = ::std::mbstate_t();
-      argument.wide      = length != static_cast< ::std::size_t>(-1) ? reinterpret_cast<wchar_t*>(memory.reserve((length + 1u) * sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL; // ->> Placement-new unneeded for implicit lifetime `wchar_t`
       argument.multibyte = arguments[index];
+      state              = ::std::mbstate_t();
 
-      if (NULL == argument.wide or ::std::mbsrtowcs(argument.wide, &argument.multibyte, length + 1u, &state) == static_cast< ::std::size_t>(-1)) {
-        (void) console.format(stderr, L"%lc%ls%lc%1.2ls%1.50ls", L'[', renum.name, L']', L": ", L"Aborting; Unable to parse command-line option \u2014 " "\r\n");
-        (void) console.text  (stderr, argument.multibyte);
-
-        return EXIT_FAILURE;
-      }
+      argument.wide = length != static_cast< ::std::size_t>(-1) ? reinterpret_cast<wchar_t*>(memory.reserve((length + 1u) * sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL; // ->> Placement-new unneeded for implicit lifetime `wchar_t`
+      argument.wide = NULL != argument.wide and ::std::mbsrtowcs(argument.wide, &argument.multibyte, length + 1u, &state) != static_cast< ::std::size_t>(-1) ? argument.wide : NULL;
     }
 
+    if (NULL == argument.wide) {
+      (void) console.format(stderr, L"%lc%ls%lc%1.2ls%1.50ls", L'[', renum.name, L']', L": ", L"Aborting; Unable to parse command-line option \u2014 " "\r\n");
+      (void) console.text  (stderr, argument.multibyte);
+
+      return EXIT_FAILURE;
+    }
+
+    // ...
     (void) ::std::fwprintf(stdout, L"[%u] \"%hs\" \"%ls\"" "\r\n", index, arguments[index], argument.wide);
   }
 
@@ -1054,7 +995,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       }
 
       // ... ->> Convert NUL-terminated paths in `filePaths` to usable values for some file renaming function
-      #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+      #if defined _WIN32
         inline static wchar_t const* renamableof(wchar_t const filePath[], std::size_t* const size) /* noexcept */ {
           *size = std::wcslen(filePath);
           return filePath;
@@ -1464,7 +1405,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     }
 
     // ... ->> Must declare `executableFilePath`, `executableFilePathLength`, `renumerationAbsolutePath`, `renumerationAbsolutePathLength`, `renumerationDirectory`, and `renumerationDirectoryLength` variables; See `else` case
-    #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+    #if defined _WIN32
       struct renum /* final */ {
         inline static int sort(void const* const filePathA, void const* const filePathB) /* noexcept */ {
           switch (::CompareStringEx(LOCALE_NAME_USER_DEFAULT /* --> L"en-US" */, SORT_DIGITSASNUMBERS | SORT_STRINGSORT, *static_cast<wchar_t* const*>(filePathA), -1, *static_cast<wchar_t* const*>(filePathB), -1, static_cast<LPNLSVERSIONINFO>(NULL), static_cast<LPVOID>(NULL), static_cast<LPARAM>(0x00))) {
@@ -1981,7 +1922,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       // ... ->> Ideally successfully evaluates not to `FALSE` (for both function calls)
       if (filesystemRedirectionDisabled)                           (void) ::Wow64RevertWow64FsRedirection(filesystemRedirection);
       if (INVALID_HANDLE_VALUE != renumerationDirectoryFindHandle) (void) ::FindClose(renumerationDirectoryFindHandle);
-    #elif defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+    #elif defined __APPLE__ or defined __unix__
       struct renum /* final */ {
         inline static int sort(void const* const filePathA, void const* const filePathB) /* noexcept */ {
           int const comparison = std::wcscoll(*static_cast<wchar_t* const*>(filePathA), *static_cast<wchar_t* const*>(filePathB));
@@ -2674,7 +2615,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
 
             // ... ->> Ensure that all enumerated files are renamable
             for (wchar_t **paths = filePaths; filePathsLength != static_cast<std::size_t>(paths - filePaths); ++paths) {
-              #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+              #if defined _WIN32
                 // --> break
               #else
                 std::size_t renamableFilePathLength = 0u;
@@ -2722,7 +2663,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
 
             for (wchar_t **paths = filePaths; filePathsLength != static_cast<std::size_t>(paths - filePaths); ++paths, ++renameIndex) {
               wchar_t const filePathDelimiter =
-                #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+                #if defined _WIN32
                   L'\\'
                 #else
                   L'/'
@@ -2822,7 +2763,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
               }
 
               // ... ->> Rename file
-              #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+              #if defined _WIN32
                 struct renumerator_rename /* final */ {
                   wchar_t const *filePath;
                   wchar_t const *renamePath;
