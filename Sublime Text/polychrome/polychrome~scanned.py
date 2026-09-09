@@ -1,13 +1,6 @@
 # %AppData%/Sublime Text/Packages/Polychrome/polychrome.py
-import io
-import json
-import os
-import re
-import threading
-import uuid
-
-import sublime
-import sublime_plugin
+import io, json, os, re
+import sublime, sublime_plugin
 
 # ...
 BUFFER_CHARACTER_LIMIT    = 67108864 # --> 64M characters
@@ -24,7 +17,7 @@ HAS_TEXT_CHANGE_LISTENER  = hasattr(sublime_plugin, "TextChangeListener")
 IGNORED_SCOPE_SELECTOR    = "comment, constant, string"
 NESTING_DEPTH_LIMIT       = 65536
 PACKAGE_NAME              = "Polychrome"
-PACKAGE_VERSION           = "2.0.2"
+PACKAGE_VERSION           = "2.0.3"
 PAINT_BATCH_SIZE          = 2048
 POLYCHROME_SCOPES         = tuple("polychrome.depth." + str(depth) for depth in range(len(COLORS)))
 REGION_FLAGS              = sublime.DRAW_NO_OUTLINE | getattr(sublime, "HIDE_ON_MINIMAP", 0)
@@ -161,6 +154,7 @@ def _clear_current_regions(view, state, generation, change_count, syntax, erase_
 
     with state.lock:
       state.active_region_keys.difference_update(region_keys[erase_index:end_index])
+      _store_region_keys(view, state.active_region_keys)
   except Exception as error:
     print("Polychrome: Region cleanup failed - " + str(error))
     return
@@ -196,6 +190,7 @@ def _discard_paint_job_regions(paint_job, erase_index=0, region_keys=None):
 
   with paint_job.state.lock:
     paint_job.state.active_region_keys.difference_update(region_keys[erase_index:end_index])
+    _store_region_keys(paint_job.view, paint_job.state.active_region_keys)
 
   if end_index < len(region_keys):
     sublime.set_timeout_async(lambda: _discard_paint_job_regions(paint_job, end_index, region_keys), 0)
@@ -343,6 +338,7 @@ def _paint_continue(paint_job):
             paint_job.view.add_regions(region_key, [sublime.Region(point, point + 1) for point in points[paint_job.region_index:end_index]], scopes[paint_job.depth], "", REGION_FLAGS)
             paint_job.new_region_keys.add(region_key)
             paint_job.state.active_region_keys.add(region_key)
+            _store_region_keys(paint_job.view, paint_job.state.active_region_keys)
   except Exception as error:
     print("Polychrome: Painting failed - " + str(error))
     _clear_current_regions(paint_job.view, paint_job.state, paint_job.generation, paint_job.change_count, paint_job.syntax)
@@ -367,20 +363,23 @@ def _reset_repaint(view, commanded=True, delay=0):
   view_id = view.id()
 
   with STATE_DICTIONARY_LOCK:
-    old_state = STATES.get(view_id)
+    old_state   = STATES.get(view_id)
+    region_keys = set(view.settings().get("polychrome.region_keys", []))
 
-    if old_state is None:
-      region_keys = []
-    else:
+    if old_state is not None:
       with old_state.lock:
         # ->> Invalidate every queued/running job before replacing its state.
         old_state.generation += 1
-        region_keys           = sorted(old_state.active_region_keys)
+        region_keys.update(old_state.active_region_keys)
         old_state.active_region_keys.clear()
 
+    region_keys     = sorted(region_keys)
     state           = ViewState()
     STATES[view_id] = state
 
+  # ->> Keep the complete cleanup manifest until each key has actually been erased.
+  # This lets a later commanded repaint recover even if a reset is interrupted.
+  _store_region_keys(view, region_keys)
   sublime.set_timeout_async(lambda: _reset_region_cleanup_continue(view, state, region_keys, commanded, delay), 0)
 
 def _reset_region_cleanup_continue(view, state, region_keys, commanded, delay, erase_index=0):
@@ -397,11 +396,14 @@ def _reset_region_cleanup_continue(view, state, region_keys, commanded, delay, e
     sublime.status_message("Polychrome: Repaint aborted - reset cleanup failed")
     return
 
+  _store_region_keys(view, region_keys[end_index:])
+
   if end_index < len(region_keys):
     sublime.set_timeout_async(lambda: _reset_region_cleanup_continue(view, state, region_keys, commanded, delay, end_index), 0)
     return
 
-  # ->> A reset starts from generation zero. Any intervening repaint request or newer reset supersedes it.
+  # ->> Do not scan until every previous Polychrome region key has been erased.
+  # A reset starts from generation zero; any intervening repaint request or newer reset supersedes it.
   with STATE_DICTIONARY_LOCK:
     if STATES.get(view.id()) is not state:
       return
@@ -492,6 +494,14 @@ def _schedule_repaint(view, delay=REPAINT_DELAY, commanded=False):
 
   sublime.set_timeout_async(lambda: _start_repaint(view, state, generation, commanded), delay)
 
+def _store_region_keys(view, region_keys):
+  region_keys = sorted(region_keys)
+
+  if region_keys:
+    view.settings().set("polychrome.region_keys", region_keys)
+  else:
+    view.settings().erase("polychrome.region_keys")
+
 def _stale_region_cleanup_continue(paint_job):
   if not _job_is_current(paint_job):
     _discard_paint_job_regions(paint_job)
@@ -505,6 +515,7 @@ def _stale_region_cleanup_continue(paint_job):
 
     with paint_job.state.lock:
       paint_job.state.active_region_keys.difference_update(paint_job.stale_region_keys[paint_job.erase_index:end_index])
+      _store_region_keys(paint_job.view, paint_job.state.active_region_keys)
       generation_is_current = paint_job.state.generation == paint_job.generation
 
     if not generation_is_current:
@@ -610,20 +621,9 @@ def plugin_loaded():
     ], indent=2, sort_keys=True) + "\n"
   )
 
-  _write_text_if_changed(
-    os.path.join(package_directory, "package-metadata.json"),
-    json.dumps({
-      "description" : "Performant rainbow nesting for Sublime Text 3 and later",
-      "name"        : PACKAGE_NAME,
-      "platforms"   : ["*"],
-      "sublime_text": ">=3148",
-      "version"     : PACKAGE_VERSION
-    }, indent=2, sort_keys=True) + "\n"
-  )
-
   for window in sublime.windows():
     for view in window.views():
-      _schedule_repaint(view, 0)
+      _reset_repaint(view, False)
 
 def plugin_unloaded():
   with COLOR_SCHEME_LOCK:
@@ -635,16 +635,18 @@ def plugin_unloaded():
 
   for window in sublime.windows():
     for view in window.views():
-      state = states.get(view.id())
-      if state is None:
-        continue
+      region_keys = set(view.settings().get("polychrome.region_keys", []))
+      state       = states.get(view.id())
 
-      with state.lock:
-        region_keys = list(state.active_region_keys)
-        state.active_region_keys.clear()
+      if state is not None:
+        with state.lock:
+          region_keys.update(state.active_region_keys)
+          state.active_region_keys.clear()
 
       for region_key in region_keys:
         view.erase_regions(region_key)
+
+      _store_region_keys(view, [])
 
 # ...
 if HAS_TEXT_CHANGE_LISTENER:

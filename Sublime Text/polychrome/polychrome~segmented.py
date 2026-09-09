@@ -1,12 +1,6 @@
 # %AppData%/Sublime Text/Packages/Polychrome
-import io
-import json
-import os
-import re
-import threading
-
-import sublime
-import sublime_plugin
+import io, json, os, re
+import sublime, sublime_plugin
 
 # ...
 CHECKPOINT_INTERVAL         = 16384 # --> 16KB
@@ -594,17 +588,6 @@ def plugin_loaded():
     json.dumps([
       {"caption": "Polychrome: Repaint", "command": "polychrome_repaint"}
     ], indent=2, sort_keys=True) + "\n"
-  )
-
-  _write_text_if_changed(
-    os.path.join(package_directory, "package-metadata.json"),
-    json.dumps({
-      "description" : "Performant rainbow nesting for Sublime Text 3 and later",
-      "name"        : PACKAGE_NAME,
-      "platforms"   : ["*"],
-      "sublime_text": ">=3148",
-      "version"     : PACKAGE_VERSION
-    }, indent=2, sort_keys=True) + "\n"
   )
 
   for window in sublime.windows():

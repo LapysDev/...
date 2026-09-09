@@ -1,5 +1,5 @@
-/* POSIX:   del renum.exe && cls && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic -std=c++98 -Wall -Wextra -Wno-cast-function-type                      renum.cpp -lc -ldl   -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
-/* Windows: del renum.exe && cls && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic -std=c++98 -Wall -Wextra -Wno-cast-function-type -Wno-unknown-pragmas renum.cpp -lkernel32 -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
+/* POSIX:   del renum.exe && cls && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic-errors -std=c++98 -Wall -Wextra -Wno-cast-function-type                      renum.cpp -lc -ldl   -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
+/* Windows: del renum.exe && cls && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic-errors -std=c++98 -Wall -Wextra -Wno-cast-function-type -Wno-unknown-pragmas renum.cpp -lkernel32 -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
 #include <ciso646> // --> and, or, not
 #include <climits> // --> MB_LEN_MAX
 #include <clocale> // --> LC_ALL; ::std::setlocale(…)

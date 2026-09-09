@@ -1,0 +1,7 @@
+{
+  "description": "🖌️ Performant rainbow nesting for Sublime Text 3 and later",
+  "name": "Polychrome", 
+  "platforms": ["*"],
+  "sublime_text": ">=3148", 
+  "version": "3.0.0"
+}
