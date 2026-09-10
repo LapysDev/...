@@ -27,7 +27,7 @@ struct jit /* final */ {
   }
 };
 
-PTHREAD_JIT_WRITE_ALLOW_CALLBACKS_NP(jit::write); // ->> Registers at most one callback
+PTHREAD_JIT_WRITE_ALLOW_CALLBACKS_NP(::jit::write); // ->> Registers at most one callback
 #elif defined __unix__
 # include <stdint.h>   // --> ::uintptr_t
 # include <sys/mman.h> // --> MAP_ANONYMOUS, MAP_FAILED, MAP_PRIVATE, PROT_EXEC, PROT_WRITE; ::mmap(…), ::mprotect(…), ::munmap(…)
@@ -172,7 +172,7 @@ int main(int, char*[]) /* noexcept */ {
         #if __has_builtin(__builtin___clear_cache)
         __builtin___clear_cache(static_cast<char*>(reinterpret_cast<void*>(reinterpret_cast< ::uintptr_t>(function))), reinterpret_cast<char*>(&static_cast<unsigned char*>(reinterpret_cast<void*>(reinterpret_cast< ::uintptr_t>(function)))[length]));
         #endif
-      #elif defined __GNUC__ and not defined __clang__ // --> __builtin___clear_cache(void*, void*)
+      #elif defined __GNUC__ and not defined __clang__
         __builtin___clear_cache(reinterpret_cast<void*>(reinterpret_cast< ::uintptr_t>(function)), static_cast<void*>(&static_cast<unsigned char*>(reinterpret_cast<void*>(reinterpret_cast< ::uintptr_t>(function)))[length]));
       #endif
     #endif

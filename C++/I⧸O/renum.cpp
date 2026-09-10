@@ -1,12 +1,12 @@
-/* POSIX:   del renum.exe && cls && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic-errors -std=c++98 -Wall -Wextra -Wno-cast-function-type                      renum.cpp -lc -ldl   -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
-/* Windows: del renum.exe && cls && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic-errors -std=c++98 -Wall -Wextra -Wno-cast-function-type -Wno-unknown-pragmas renum.cpp -lkernel32 -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
+/* POSIX:   rm -f ./renum;   clear && clang++ -ffast-math                -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic-errors -std=c++98 -Wall -Wextra                      renum.cpp -lc -ldl   -o renum     && ./renum   "  A " "👋" C;  rm -f ./renum */
+/* Windows: del renum.exe && cls   && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic-errors -std=c++98 -Wall -Wextra -Wno-unknown-pragmas renum.cpp -lkernel32 -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
 #include <ciso646> // --> and, or, not
 #include <climits> // --> MB_LEN_MAX
 #include <clocale> // --> LC_ALL; ::std::setlocale(…)
 #include <cstdarg> // --> va_arg(…), va_end(…), va_start(…); ::std::va_list
 #include <cstddef> // --> ::std::max_align_t, ::std::size_t
-#include <cstdio>  // --> ::std::FILE; _IOFBF, _IOLBF, stdout; ::std::fflush(…), ::std::setbuf(…), ::std::setvbuf(…)
-#include <cstdlib> // --> MB_LEN_MAX, NULL; ::std::qsort(…), ::std::rand(…), ::std::srand(…)
+#include <cstdio>  // --> ::std::FILE; _IOFBF, _IOLBF, _IONBF, stdout; ::std::fflush(…), ::std::setbuf(…), ::std::setvbuf(…)
+#include <cstdlib> // --> NULL; ::std::qsort(…), ::std::rand(…), ::std::srand(…)
 #include <ctime>   // --> ::std::time_t; ::std::time(…)
 #include <cwchar>  // --> WEOF; ::std::mbstate_t; ::std::fputwc(…), ::std::fwide(…), ::std::fwprintf(…), ::std::mbrtowc(…), ::std::mbsrtowcs(…)
 #include <new>     // --> ::delete[], ::new, ::std::nothrow
@@ -18,11 +18,9 @@
 # undef  _MBCS
 #
 # include <fcntl.h>    // --> _O_BINARY, _O_U8TEXT, _O_U16TEXT, _O_WTEXT
-# include <io.h>       // --> ::_setmode(…)
+# include <mbctype.h>  // --> _MB_CP_UTF8
 # include <ntstatus.h> // --> ::NTSTATUS; STATUS_SUCCESS
 # include <sal.h>      // --> _Printf_format_string_
-# include <stdio.h>    // --> ::_fileno(…)
-# include <stdlib.h>   // --> ::_get_pgmptr(…)
 # include <windows.h>  // --> ::BOOL, ::DWORD, ::FARPROC, ::HMODULE, ::LPCCH, ::LPCSTR, ::LPCWSTR, ::LPWSTR, ::PUCHAR, ::PVOID, ::SIZE_T, ::TCHAR, ::UINT, ::ULONG, ::WCHAR; CP_UTF8, FALSE, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, LOAD_LIBRARY_SEARCH_SYSTEM32, LOAD_WITH_ALTERED_SEARCH_PATH, MAX_PATH, WINAPI, SecureZeroMemory(…), ZeroMemory(…); ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
 #   include <bcrypt.h> // --> ::BCRYPT_ALG_HANDLE
 #
@@ -37,7 +35,8 @@ extern "C"                       volatile void* WINAPI SecureZeroMemory2  (volat
 # include <dlfcn.h>     // --> RTLD_LOCAL; ::dlerror(…), ::dlopen(…), ::dlsym(…)
 # include <errno.h>     // --> EINTR; errno
 # include <iconv.h>     // --> ::iconv_t
-# include <stdint.h>    // --> uint32_t ->> will be defined
+# include <locale.h>    // --> ::locale_t
+# include <stdint.h>    // --> ::uintptr_t
 # include <stdlib.h>    // --> ::realpath(…)
 # include <string.h>    // --> ::strlen(…)
 # include <sys/stat.h>  // --> S_ISLNK(…), S_ISREG(…); stat; ::lstat(…)
@@ -67,323 +66,18 @@ struct renum /* final */ {
 
 /* Main */
 int main(int count, char* arguments[] /* , char* environment[] */) {
-  struct option /* final */ {
-    enum flag /* : unsigned char */ {
-      DIGITS,       // ->> Indexing characters e.g. `10.png`, `11.jpg`, and so on from arabic numerals --> "0123456789"
-      HELP,         // ->> Script information                                                          --> true
-      HIDDEN_FILES, // ->> Renumerate hidden files                                                     --> false
-      INDEX,        // ->> Index start                                                                 --> "1"
-      INPUT,        // ->> `printf(…)`-formatted filter for indexed files                              --> "%s"
-      OUTPUT,       // ->> `printf(…)`-formatted filter for renamed files                              --> "%u"
-      PADDING,      // ->> Padding character to format indexes to the same length (NUL does not pad)   --> '0'
-      REVERSE,      // ->> Reversed indexing                                                           --> false
-      SYSTEM_FILES  // ->> Renumerate system files                                                     --> false
-    };
+  struct console /* final */ {
+    typedef union delimiters {
+      inline static wchar_t const* nounicode() /* noexcept */ { return L"\""     L"\""; }
+      inline static wchar_t const* unicode  () /* noexcept */ { return L"\u201C" L"\u201D"; }
+    } delimiters;
 
-    struct namelist /* final */ { char const *pre, *values; };
-    struct nameset  /* final */ {
-      union { struct namelist full,  longname,  verbose; };     // --> "--"
-      union { struct namelist alias, shortname, abbreviated; }; // --> "-"
-      struct namelist extended;                                 // --> "/", …
-    };
-
-    enum option::flag const flag;                           // ->> There can be multiple switches per flag rather than overriding prior switches
-    union { struct nameset name; struct namelist *names; }; // ->> Exclusively initialize either pre-/ user-allocated names (explicit tagging required)
-    union /* --> alignas(std::max_align_t) */ {
-      unsigned char address[/* --> max(…) */ sizeof(long double) | sizeof(std::size_t) | sizeof(void*) | sizeof(void (*)(...)) | sizeof(void (option::*)(...))];
-      #if defined _MSVC_LANG /* --> 201402L+ */ or __cplusplus >= 201103L
-        ::std::max_align_t const _0;
-      #endif
-      long double   const _1;
-      ::std::size_t const _2;
-      void         *const _3, (*const _4)(...), (option:: *const _5)(...);
-    }     memory;
-    void *value; // ->> Blessed versatile representation of `memory`
-  } options[] = {
-    {option::DIGITS,       {{{{"/" "\0" "--" "\0", "digits"       "\0"}},               {{"/" "\0" "-" "\0", "d"  "\0"}},          {}}}, {{}}, ::new (options[0].memory.address) char const*("0123456789")},
-    {option::HELP,         {{{{"/" "\0" "--" "\0", "help"         "\0"}},               {{"/" "\0",          "?"  "\0"}},          {}}}, {{}}, ::new (options[1].memory.address) bool       (true)},
-    {option::HIDDEN_FILES, {{{{"/" "\0" "--" "\0", "hidden-files" "\0"}},               {{"/" "\0" "-" "\0", "hf" "\0"}},          {}}}, {{}}, ::new (options[2].memory.address) bool       (false)},
-    {option::INDEX,        {{{{"/" "\0" "--" "\0", "index"        "\0"}},               {{"/" "\0" "-" "\0", "s"  "\0"}},          {}}}, {{}}, ::new (options[3].memory.address) char const*("1")},
-    {option::INPUT,        {{{{"/" "\0" "--" "\0", "input"        "\0" "filter" "\0"}}, {{"/" "\0" "-" "\0", "i"  "\0" "f" "\0"}}, {}}}, {{}}, ::new (options[4].memory.address) char const*("%s")},
-    {option::OUTPUT,       {{{{"/" "\0" "--" "\0", "output"       "\0" "rename" "\0"}}, {{"/" "\0" "-" "\0", "o"  "\0"}},          {}}}, {{}}, ::new (options[5].memory.address) char const*("%u")},
-    {option::PADDING,      {{{{"/" "\0" "--" "\0", "padding"      "\0"}},               {{"/" "\0" "-" "\0", "p"  "\0"}},          {}}}, {{}}, ::new (options[6].memory.address) char       ('0')},
-    {option::REVERSE,      {{{{"/" "\0" "--" "\0", "reverse"      "\0"}},               {{"/" "\0" "-" "\0", "r"  "\0"}},          {}}}, {{}}, ::new (options[7].memory.address) bool       (false)},
-    {option::SYSTEM_FILES, {{{{"/" "\0" "--" "\0", "system-files" "\0"}},               {{"/" "\0" "-" "\0", "sf" "\0"}},          {}}}, {{}}, ::new (options[8].memory.address) bool       (false)}
-  };
-
-  static struct library *libraries;
-  struct library /* final */ {
-    #if defined _WIN32
-      enum    /* : unsigned char */ { COUNT = 4u };
-      enum id /* : unsigned char */ { advapi32, bcrypt, credui, kernel32, ole32, oleaut32, shell32, taskschd /* , ... */ };
-
-      enum library::id                                                  const id;
-      ::LPCWSTR                                                         const name; // ->> Case-insensitive
-      struct /* final */ { ::HMODULE handle; ::BOOL (*unloader)(::HMODULE); } module;
-    #else
-      enum    /* : unsigned char */ { COUNT = 1u };
-      enum id /* : unsigned char */ {};
-
-      enum library::id                                       const id;
-      wchar_t const                                         *const name;
-      struct /* final */ { void *handle; int (*unloader)(void*); } module;
-    #endif
-
-    /* ... */
-    inline static struct library* get(enum library::id const id) /* noexcept */ {
-      for (struct library const *library = libraries; library != &libraries[library::COUNT]; ++library) {
-        if (id == library -> id)
-        return const_cast<struct library*>(library);
-      }
-
-      return NULL;
-    }
-
-    inline static void load() /* noexcept */ {
-      #if defined _WIN32
-        ::WCHAR path[MAX_PATH + 13]; // --> ::GetSystemDirectoryW(…) + '\\' + libraries[kernel32].name
-
-        if (::UINT const pathLength = (::GetSystemDirectoryW(path, sizeof path / sizeof(::TCHAR)) * sizeof(::TCHAR)) / sizeof(::WCHAR)) {
-          // ... ->> More robust than destructor function
-          (void) ::std::atexit(&libraries -> unload);
-          #if __cplusplus >= 201103L
-            (void) ::std::at_quick_exit(&libraries -> unload);
-          #endif
-
-          // ... ->> Load the userland `kernel32` library first
-          path[pathLength] = L'\\';
-
-          if (struct library *const kernel32Library = libraries -> get(library::kernel32)) {
-            for (std::size_t index = 0u; ; ++index) {
-              path[index + pathLength + 1u] = kernel32Library -> name[index];
-              if (L'\0' == kernel32Library -> name[index]) break;
-            }
-
-            if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, path, &kernel32Library -> module.handle))
-            if (NULL != kernel32Library -> module.handle) {
-              ::BOOL    (*const FreeLibrary)   (::HMODULE)                    = reinterpret_cast< ::BOOL    (*)(::HMODULE)>                   (::GetProcAddress(kernel32Library -> module.handle, "FreeLibrary"));    // --> <windows.h>
-              ::HMODULE (*const LoadLibraryExW)(::LPCWSTR, ::HANDLE, ::DWORD) = reinterpret_cast< ::HMODULE (*)(::LPCWSTR, ::HANDLE, ::DWORD)>(::GetProcAddress(kernel32Library -> module.handle, "LoadLibraryExW")); // --> <windows.h>
-
-              // ... ->> Load remaining Windows API libraries —
-              if (::BOOL (*const SetDefaultDllDirectories)(::DWORD) = reinterpret_cast< ::BOOL (*)(::DWORD)>(::GetProcAddress(kernel32Library -> module.handle, "SetDefaultDllDirectories"))) // --> <windows.h> not NULL
-              (void) SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32); // --> %SystemRoot%\System32
-
-              for (struct library *library = libraries; library != &libraries[library::COUNT]; ++library) {
-                if (kernel32Library == library)
-                continue;
-
-                // ... ->> — except the already loaded userland `kernel32` library
-                for (std::size_t index = 0u; ; ++index) {
-                  path[index + pathLength + 1u] = library -> name[index];
-                  if (L'\0' == library -> name[index]) break;
-                }
-
-                if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, path, &library -> module.handle)) {
-                  if (NULL != library -> module.handle)
-                  continue; // --> library -> module.unloader = NULL;
-                }
-
-                library -> module.handle   = LoadLibraryExW(path, static_cast< ::HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
-                library -> module.unloader = NULL == library -> module.handle ? NULL : FreeLibrary;
-              }
-            }
-
-            return;
-          }
-        }
-      #elif defined __APPLE__ or defined __unix__
-        libraries -> module.handle = ::dlopen(static_cast<char const*>(NULL), RTLD_LOCAL /* | RTLD_LAZY */);
-        if (NULL != libraries -> module.handle) {
-          (void) ::dlerror(); // ->> Clear prior linker error diagnostics
-
-          libraries -> module.unloader = reinterpret_cast<int (*)(void*)>(::dlsym(libraries -> module.handle, "dlclose"));
-          libraries -> module.unloader = static_cast<char*>(NULL) != ::dlerror() ? NULL : libraries -> module.unloader;
-        }
-      #endif
-    }
-
-    static void unload() /* extern "C" */ {
-      if (NULL == libraries)
-      return;
-
-      for (struct library *library = libraries; library != &libraries[library::COUNT]; ++library) {
-        if (NULL != library -> module.handle and NULL != library -> module.unloader)
-        library -> module.unloader(library -> module.handle); // --> FreeLibrary(…)
-      }
-
-      libraries = NULL;
-    }
-  } l[library::COUNT] = {
-    #if defined _WIN32
-      {library::advapi32, L"advapi32" ".dll", {NULL, NULL}},
-      {library::bcrypt,   L"bcrypt"   ".dll", {NULL, NULL}},
-      {library::kernel32, L"kernel32" ".dll", {NULL, NULL}},
-      {library::shell32,  L"shell32"  ".dll", {NULL, NULL}}
-    #elif defined __APPLE__ or defined __unix__
-      {static_cast<enum library::id>(0x00u), L"libdl.so", {NULL, NULL}} // ->> Recently `libc.so` suffices
-    #else
-      {static_cast<enum library::id>(0x00u), NULL, {NULL, NULL}}
-    #endif
-  };
-
-  struct memory /* final */ {
-    typedef struct /* final */ {
+    typedef union {
       enum flag /* : unsigned char */ {
-        PRESERVE_MEMORY = 0x1u, // ->> Destroys prior objects contained in `.value`
-        RAW_MEMORY      = 0x2u, //
-        SCRAMBLE_MEMORY = 0x4u, // ->> Needn’t be cryptographically secure
-        ZERO_MEMORY     = 0x8u  //
+        FLUSH_ON_NEWLINE,
+        FLUSH_ON_OVERFLOW
       };
     } policy;
-
-    /* ... */
-    unsigned char *value; // ->> Not copy-safe
-    ::std::size_t  capacity;
-
-    /* ... */
-    ~memory() {
-      ::delete[] this -> value;
-    }
-
-    /* ... */
-    inline static unsigned char* scramble(unsigned char bytes[], ::std::size_t const size) /* noexcept */ {
-      #if defined _WIN32
-        if (struct library *const library = libraries -> get(library::bcrypt))
-        if (NULL != library -> module.handle) {
-          if (::NTSTATUS (*const BCryptGenRandom)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG) = reinterpret_cast< ::NTSTATUS (*)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG)>(::GetProcAddress(library -> module.handle, "BCryptGenRandom"))) // --> <bcrypt.h> not NULL
-          if (STATUS_SUCCESS == BCryptGenRandom(static_cast< ::BCRYPT_ALG_HANDLE>(NULL), static_cast< ::PUCHAR>(bytes), static_cast< ::ULONG>(size), 0x00000000uL))
-          return bytes;
-        }
-
-        if (struct library *const library = libraries -> get(library::advapi32))
-        if (NULL != library -> module.handle) {
-          if (::BOOLEAN (*const RtlGenRandom)(::PVOID, ::ULONG) = reinterpret_cast< ::BOOLEAN (*)(::PVOID, ::ULONG)>(::GetProcAddress(library -> module.handle, "SystemFunction036"))) // --> <ntsecapi.h> not NULL
-          if (FALSE != RtlGenRandom(static_cast< ::PVOID>(buffer), static_cast< ::ULONG>(size)))
-          return bytes;
-        }
-      #elif defined __APPLE__ or defined __unix__
-        if (int (*const getentropy)(void*, ::std::size_t) = reinterpret_cast<int (*)(void*, ::std::size_t)>(::dlerror(), ::dlsym(libraries -> module.handle, "getentropy"))) // --> <sys/random.h> not NULL
-        if (static_cast<char*>(NULL) == ::dlerror()) {
-          ::std::size_t index = 0u;
-
-          // ...
-          for (::std::size_t count; index != size; index += count) {
-            count = size - index < 256u ? size - index : 256u;
-            if (getentropy(&bytes[index], count) == -1) break;
-          }
-
-          if (index == size)
-          return bytes;
-        }
-
-        if (::ssize_t (*const getrandom)(void*, ::std::size_t, unsigned) = reinterpret_cast< ::ssize_t (*)(void*, ::std::size_t, unsigned)>(::dlerror(), ::dlsym(libraries -> module.handle, "getrandom"))) // --> <sys/random.h> not NULL
-        if (static_cast<char*>(NULL) == ::dlerror()) {
-          ::std::size_t index = 0u;
-
-          // ...
-          for (::ssize_t count; index != size; index += static_cast< ::std::size_t>(count)) {
-            count = getrandom(&bytes[index], size - index, 0x00u);
-
-            if      (count == -1 and EINTR == errno) count = 0;
-            else if (count <= 0)                     break;
-          }
-
-          if (index == size)
-          return bytes;
-        }
-      #endif
-      unsigned seed = 0u;
-
-      // ...
-      for (unsigned char const volatile *byte = &reinterpret_cast<unsigned char const volatile*>(&bytes)[sizeof(unsigned char*)]; byte != reinterpret_cast<unsigned char*>(&bytes); )
-      seed = *--byte | (seed << 8u); // ->> `CHAR_BIT` minimum
-
-      #if __STDC_HOSTED__
-        ::std::srand(seed); // ->> Seed with `bytes`
-
-        for (unsigned char volatile *byte = &bytes[size]; byte != bytes; )
-        *--byte = ::std::rand();
-      #else
-        for (unsigned char volatile *byte = &bytes[size]; byte != bytes; ) {
-          seed = (seed * 25173u) + 13849u;                                                                // ->> Linear Congruential Generator
-          *--byte = static_cast<unsigned char>(seed /* >> ((CHAR_BIT * sizeof(unsigned)) - CHAR_BIT) */); // ->> The high-end is more cryptographically sound
-        }
-      #endif
-
-      return bytes;
-    }
-
-    unsigned char* reserve(::std::size_t const capacity, enum memory::policy::flag const policy = static_cast<enum memory::policy::flag>(memory::policy::PRESERVE_MEMORY | memory::policy::ZERO_MEMORY)) /* ->> Aligned to `__STDCPP_DEFAULT_NEW_ALIGNMENT__` (since C++17) or `alignof(::std::max_align_t)` (since C++11) */ {
-      if (capacity > this -> capacity) {
-        if (unsigned char *const allocation = ::new (::std::nothrow) unsigned char[capacity]) /* --> not NULL */ {
-          if (not (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::RAW_MEMORY))) {
-            if      (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::ZERO_MEMORY))     (void) memory::zero    (allocation, capacity);
-            else if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::SCRAMBLE_MEMORY)) (void) memory::scramble(allocation, capacity);
-          }
-
-          if (NULL != this -> value) {
-            // ... --> ::std::memcpy(allocation, this -> value, this -> capacity)
-            if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::PRESERVE_MEMORY)) {
-              for (unsigned char *destination = &allocation[this -> capacity], *source = &this -> value[this -> capacity]; source != this -> value; )
-              *--destination = *--source;
-            }
-
-            // ... ->> In case `.value` can be inspected after deletion/ release
-            if (not (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::RAW_MEMORY))) {
-              if      (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::ZERO_MEMORY))     (void) memory::zero    (this -> value, this -> capacity);
-              else if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::SCRAMBLE_MEMORY)) (void) memory::scramble(this -> value, this -> capacity);
-            }
-          }
-
-          ::delete[] this -> value;
-
-          this -> capacity = capacity;
-          this -> value    = allocation;
-
-          return this -> value;
-        }
-
-        return NULL;
-      }
-
-      return this -> value;
-    }
-
-    inline static unsigned char* zero(unsigned char bytes[], ::std::size_t const size) /* noexcept */ {
-      #if defined _WIN32
-        #if defined _MSC_VER and defined NTDDI_VERSION ? NTDDI_VERSION >= 0x0A000010 : false              //
-          #pragma comment(lib, "volatileaccessu.lib")                                                     //
-          return const_cast<unsigned char*>(SecureZeroMemory2(static_cast<void volatile*>(bytes), size)); // --> RtlSecureZeroMemory2(…)
-        #elif defined SecureZeroMemory                                       //
-          return static_cast<unsigned char*>(SecureZeroMemory(bytes, size)); // --> RtlSecureZeroMemory(…)
-        #elif defined ZeroMemory                       //
-          ZeroMemory(static_cast<void*>(bytes), size); // --> RtlZeroMemory(…)
-        #endif
-      #elif defined __APPLE__ or defined __unix__
-        if (void (*const explicit_bzero)(void*, ::std::size_t) = reinterpret_cast<void (*)(void*, ::std::size_t)>(::dlerror(), ::dlsym(libraries -> module.handle, "explicit_bzero"))) // --> <string.h> not NULL
-        if (static_cast<char*>(NULL) == ::dlerror()) {
-          explicit_bzero(bytes, size);
-          return bytes;
-        }
-
-        if (void (*const bzero)(void*, ::std::size_t) = reinterpret_cast<void (*)(void*, ::std::size_t)>(::dlerror(), ::dlsym(libraries -> module.handle, "bzero"))) // --> <strings.h> not NULL
-        if (static_cast<char*>(NULL) == ::dlerror()) {
-          bzero(bytes, size);
-          return bytes;
-        }
-      #endif
-
-      for (unsigned char volatile *byte = &bytes[size]; byte != bytes; )
-      *--byte = 0x00u; // --> ::std::memset_explicit(allocation, 0x00, capacity)
-
-      return bytes;
-    }
-  } memory = {NULL, 0u};
-
-  struct console /* final */ {
-    struct policy /* final */ {
-      enum flag /* : unsigned char */ { FLUSH_ON_NEWLINE, FLUSH_ON_OVERFLOW };
-    };
 
     /* ... */
     inline static bool buffer(::std::FILE* const stream, char buffer[], ::std::size_t const size, enum console::policy::flag const policy = console::policy::FLUSH_ON_OVERFLOW) /* noexcept */ {
@@ -421,7 +115,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       return ::std::fwide(stream, -1) < 0;
     }
 
-    static unsigned char text(::std::FILE* const stream, char const character, wchar_t const escape[] = L"") /* noexcept */ {
+    static unsigned char text(::std::FILE* const stream, char const character, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0") /* noexcept */ {
       ::std::mbstate_t state = ::std::mbstate_t();
       wchar_t          subcharacter;
 
@@ -431,15 +125,22 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
         case static_cast< ::std::size_t>(-1): return 0u; // ->> Invalid
       }
 
-      return console::text(stream, subcharacter, escape);
+      return console::text(stream, subcharacter, escape, delimiters);
     }
 
-    static ::std::size_t text(::std::FILE* const stream, char const* text, wchar_t const escape[] = L"") /* noexcept */ {
+    static ::std::size_t text(::std::FILE* const stream, char const* text, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0") /* noexcept */ {
       ::std::size_t    length = 0u;
       ::std::mbstate_t state  = ::std::mbstate_t();
 
       // ... ->> Handles indeterminately-terminated text
-      for (; '\0' != *text; ++length) {
+      if (L'\0' != delimiters[0]) {
+        if (not console::text(stream, delimiters[0], L"", L"\0"))
+        return 0u;
+
+        ++length;
+      }
+
+      while ('\0' != *text) {
         wchar_t       character;
         ::std::size_t sublength = 0u;
 
@@ -455,35 +156,43 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
           case 0x00u:                           return length; // ->> NUL-terminated
         }
 
-        if (not console::text(stream, character, escape))
+        if (not console::text(stream, character, escape, L"\0"))
         return 0u;
 
+        length++;
         text += sublength;
+      }
+
+      if (L'\0' != delimiters[0] and L'\0' != delimiters[1]) {
+        if (not console::text(stream, delimiters[1], L"", L"\0"))
+        return 0u;
+
+        ++length;
       }
 
       return length;
     }
 
-    inline static unsigned char text(::std::FILE* const stream, wchar_t const character, wchar_t const* escape = L"") /* noexcept */ {
-      for (; L'\0' != *escape; ++escape)
-      if (character == *escape or character == L'\\') {
-        (void) ::std::fputwc(L'\\', stream);
-        break;
-      }
-
-      return WEOF != ::std::fputwc(character, stream) ? 1u : 0u;
-    }
-
-    static ::std::size_t text(::std::FILE* const stream, wchar_t const* text, wchar_t const escape[] = L"") /* noexcept */ {
-      ::std::size_t length = 0u;
+    inline static unsigned char text(::std::FILE* const stream, wchar_t const character, wchar_t const* escape = L"", wchar_t const delimiters[2] = L"\0") /* noexcept */ {
+      unsigned char length /* : 3 */ = 0u;
 
       // ...
-      for (; L'\0' != *text; ++length) {
-        if (not console::text(stream, *text, escape))
-        return 0u;
+      if    (L'\0' != delimiters[0])                                               { length += WEOF != ::std::fputwc(delimiters[0], stream); }
+      while (L'\0' != *escape) if (character == L'\\' or character == *(escape++)) { length += WEOF != ::std::fputwc(L'\\',         stream); break; }
 
-        ++text;
-      }
+      if (WEOF == ::std::fputwc(character, stream)) return 0u; length += 1u;
+      if (L'\0' != delimiters[0] and L'\0' != delimiters[1]) { length += WEOF != ::std::fputwc(delimiters[1], stream); }
+
+      return length;
+    }
+
+    static ::std::size_t text(::std::FILE* const stream, wchar_t const* text, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0") /* noexcept */ {
+      ::std::size_t length = 0u;
+
+      // ... ->> Handles indeterminately-terminated text
+      if    (L'\0' != delimiters[0])                           { if (not console::text(stream, delimiters[0], L"",    L"\0")) return 0u; ++length; }
+      while (L'\0' != *text)                                   { if (not console::text(stream, *(text++),     escape, L"\0")) return 0u; ++length; }
+      if    (L'\0' != delimiters[0] and '\0' != delimiters[1]) { if (not console::text(stream, delimiters[1], L"",    L"\0")) return 0u; ++length; }
 
       return length;
     }
@@ -493,35 +202,782 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     }
   } const console = {};
 
-  // ... ->> Assume standard file streams as UTF-8 (via functions dependent on `::std::setlocale(…)`)
-  (void) console.buffer(stderr, static_cast<char*>(NULL), 0u);
-  (libraries = l) -> load();
+  wchar_t const *delimiters = console::delimiters::nounicode();
 
-  for (char const *const locales[] = {".UTF-8", ".UTF8", "C.UTF-8", "C.utf8", "en_US.UTF-8", /* ->> User-preferred */ ""}, *const *locale = locales; locale != &locales[sizeof locales / sizeof(char const*)]; ++locale)
-  if (static_cast<char*>(NULL) != ::std::setlocale(LC_ALL, *locale)) /* --> LC_ALL == LC_COLLATE | LC_CTYPE | LC_MONETARY | LC_NUMERIC | LC_TIME | … | LC_MESSAGES | … | LC_ADDRESS | LC_IDENTIFICATION | LC_KEYBOARD | LC_MEASUREMENT | LC_NAME | LC_PAPER | LC_TELEPHONE | LC_XLITERATE */ {
-    (void) ::std::fwide(stderr, +1);
-    (void) ::std::fwide(stdout, +1);
+  struct library /* final */ {
+    #if defined _WIN32
+      enum    /* : unsigned char */ { COUNT = 5u };
+      enum id /* : unsigned char */ { advapi32, bcrypt, kernel32, shell32, ucrtbase, /* , … */ credui, ole32, oleaut32, taskschd };
 
-    break;
-  }
+      enum library::id                                                  const id;
+      ::LPCWSTR                                                         const name; // ->> Case-insensitive
+      struct /* final */ { ::HMODULE handle; ::BOOL (*unloader)(::HMODULE); } module;
+    #else
+      enum    /* : unsigned char */ { COUNT = 1u };
+      enum id /* : unsigned char */ {};
 
-  #if defined _WIN32
-    if (struct library *const library = libraries -> get(library::kernel32))
-    if (NULL != library -> module.handle) {
-      if (::BOOL WINAPI (*const SetConsoleOutputCP)(::UINT) = reinterpret_cast< ::BOOL WINAPI (*)(::UINT)>(::GetProcAddress(library -> module.handle, "SetConsoleOutputCP"))) // --> <windows.h> not NULL
-      (void) SetConsoleOutputCP(CP_UTF8); // --> 65001 "utf-8"
+      enum library::id                                       const id;
+      wchar_t const                                         *const name;
+      struct /* final */ { void *handle; int (*unloader)(void*); } module;
+    #endif
+
+    /* ... */
+    ~library() /* noexcept */ {
+      if (NULL != this -> module.handle and NULL != this -> module.unloader)
+      this -> module.unloader(this -> module.handle); // --> dlclose(…) | FreeLibrary(…)
     }
 
-    for (::std::FILE *const streams[] = {stdout, stderr}, *const *stream = streams; stream != &streams[sizeof streams / sizeof(::std::FILE*)]; ++stream) {
-      int const descriptor = (::_fileno)(*stream);
+    /* ... */
+    inline static void load(struct library (&libraries)[library::COUNT]) /* noexcept */ {
+      #if defined _WIN32
+        ::WCHAR path[MAX_PATH + 13]; // --> ::GetSystemDirectoryW(…) + '\\' + libraries[kernel32].name
 
-      if (descriptor != -1 and 0 == ::std::fflush(*stream))
-      for (int const translations[] = {_O_U8TEXT, _O_WTEXT, _O_U16TEXT, _O_BINARY}, *translation = translations; translation != &translations[sizeof translations / sizeof(int)]; ++translation) {
-        if ((::_setmode)(descriptor, *translation) != -1)
+        // ... ->> Load the userland `kernel32` library first
+        if (::UINT const pathLength = (::GetSystemDirectoryW(path, sizeof path / sizeof(::TCHAR)) * sizeof(::TCHAR)) / sizeof(::WCHAR)) {
+          path[pathLength] = L'\\';
+
+          for (::std::size_t index = 0u; ; ++index) {
+            path[index + pathLength + 1u] = libraries[library::kernel32].name[index];
+            if (L'\0' == libraries[library::kernel32].name[index]) break;
+          }
+
+          if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, path, &libraries[library::kernel32].module.handle))
+          if (NULL != libraries[library::kernel32].module.handle) {
+            ::BOOL    (WINAPI *const FreeLibrary)   (::HMODULE)                    = reinterpret_cast< ::BOOL    WINAPI (*)(::HMODULE)>                   (::GetProcAddress(libraries[library::kernel32].module.handle, "FreeLibrary"));    // --> <windows.h>
+            ::HMODULE (WINAPI *const LoadLibraryExW)(::LPCWSTR, ::HANDLE, ::DWORD) = reinterpret_cast< ::HMODULE WINAPI (*)(::LPCWSTR, ::HANDLE, ::DWORD)>(::GetProcAddress(libraries[library::kernel32].module.handle, "LoadLibraryExW")); // --> <windows.h>
+
+            // ... ->> Load remaining Windows API libraries —
+            if (::BOOL (WINAPI *const SetDefaultDllDirectories)(::DWORD) = reinterpret_cast< ::BOOL (WINAPI*)(::DWORD)>(::GetProcAddress(libraries[library::kernel32].module.handle, "SetDefaultDllDirectories"))) // --> <windows.h> not NULL
+            (void) SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32); // --> %SystemRoot%\System32
+
+            for (struct library *library = libraries; library != &libraries[library::COUNT]; ++library)
+            if (library != &libraries[library::kernel32]) /* ->> — except the already loaded userland `kernel32` library */ {
+              for (::std::size_t index = 0u; ; ++index) {
+                path[index + pathLength + 1u] = library -> name[index];
+                if (L'\0' == library -> name[index]) break;
+              }
+
+              if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, path, &library -> module.handle)) {
+                if (NULL != library -> module.handle)
+                continue; // --> library -> module.unloader = NULL;
+              }
+
+              library -> module.handle   = LoadLibraryExW(path, static_cast< ::HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
+              library -> module.unloader = NULL == library -> module.handle ? NULL : FreeLibrary;
+            }
+          }
+        }
+      #elif defined __APPLE__ or defined __unix__
+        libraries -> module.handle = ::dlopen(static_cast<char const*>(NULL), RTLD_LOCAL /* | RTLD_LAZY */);
+        if (NULL != libraries -> module.handle) {
+          (void) ::dlerror(); // ->> Clear prior linker error diagnostics
+
+          libraries -> module.unloader = reinterpret_cast<int (*)(void*)>(reinterpret_cast< ::uintptr_t>(::dlsym(libraries -> module.handle, "dlclose")));
+          libraries -> module.unloader = static_cast<char*>(NULL) != ::dlerror() ? NULL : libraries -> module.unloader;
+        }
+      #endif
+    }
+  } libraries[library::COUNT] = {
+    // ->> In enumeration order
+    #if defined _WIN32
+      {library::advapi32, L"advapi32" L".dll", {NULL, NULL}},
+      {library::bcrypt,   L"bcrypt"   L".dll", {NULL, NULL}},
+      {library::kernel32, L"kernel32" L".dll", {NULL, NULL}},
+      {library::shell32,  L"shell32"  L".dll", {NULL, NULL}},
+      {library::ucrtbase, L"ucrtbase" L".dll", {NULL, NULL}}
+    #elif defined __APPLE__ or defined __unix__
+      {static_cast<enum library::id>(0x00u), L"libdl.so", {NULL, NULL}} // ->> Recently `libc.so` suffices
+    #else
+      {static_cast<enum library::id>(0x00u), NULL, {NULL, NULL}}
+    #endif
+  };
+
+  struct memory /* final */ {
+    typedef union {
+      enum flag /* : unsigned char */ {
+        PRESERVE_MEMORY = 0x1u, // ->> Destroys objects contained in `.value` prior
+        RAW_MEMORY      = 0x2u, //
+        SCRAMBLE_MEMORY = 0x4u, // ->> Needn’t be cryptographically secure
+        ZERO_MEMORY     = 0x8u  //
+      };
+    } policy;
+
+    /* ... */
+    unsigned char         *value; // ->> Not copy-safe
+    ::std::size_t          capacity;
+    struct library const (&libraries)[library::COUNT];
+
+    /* ... */
+    ~memory() /* noexcept */ {
+      ::delete[] this -> value;
+    }
+
+    /* ... */
+    inline unsigned char* scramble(unsigned char bytes[], ::std::size_t const size) const /* noexcept */ {
+      #if defined _WIN32
+        if (NULL != libraries[library::bcrypt].module.handle)
+        if (::NTSTATUS (WINAPI *const BCryptGenRandom)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG) = reinterpret_cast< ::NTSTATUS (WINAPI*)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG)>(::GetProcAddress(libraries[library::bcrypt].module.handle, "BCryptGenRandom"))) /* --> <bcrypt.h> not NULL */ {
+          if (STATUS_SUCCESS == BCryptGenRandom(static_cast< ::BCRYPT_ALG_HANDLE>(NULL), static_cast< ::PUCHAR>(bytes), static_cast< ::ULONG>(size), 0x00000000uL))
+          return bytes;
+        }
+
+        if (NULL != libraries[library::advapi32].module.handle)
+        if (::BOOLEAN (WINAPI *const RtlGenRandom)(::PVOID, ::ULONG) = reinterpret_cast< ::BOOLEAN (WINAPI*)(::PVOID, ::ULONG)>(::GetProcAddress(libraries[library::advapi32].module.handle, "SystemFunction036"))) /* --> <ntsecapi.h> not NULL */ {
+          if (FALSE != RtlGenRandom(static_cast< ::PVOID>(bytes), static_cast< ::ULONG>(size)))
+          return bytes;
+        }
+      #elif defined __APPLE__ or defined __unix__
+        if (int (*const getentropy)(void*, ::std::size_t) = reinterpret_cast<int (*)(void*, ::std::size_t)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "getentropy")))) // --> <sys/random.h> not NULL
+        if (static_cast<char*>(NULL) == ::dlerror()) {
+          ::std::size_t index = 0u;
+
+          // ...
+          for (::std::size_t count; index != size; index += count) {
+            count = size - index < 256u ? size - index : 256u;
+            if (getentropy(&bytes[index], count) == -1) break;
+          }
+
+          if (index == size)
+          return bytes;
+        }
+
+        if (::ssize_t (*const getrandom)(void*, ::std::size_t, unsigned) = reinterpret_cast< ::ssize_t (*)(void*, ::std::size_t, unsigned)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "getrandom")))) // --> <sys/random.h> not NULL
+        if (static_cast<char*>(NULL) == ::dlerror()) {
+          ::std::size_t index = 0u;
+
+          // ...
+          for (::ssize_t count; index != size; index += static_cast< ::std::size_t>(count)) {
+            count = getrandom(&bytes[index], size - index, 0x00u /* | GRND_NONBLOCK | GRND_RANDOM */);
+
+            if      (count == -1 and EINTR == errno) count = 0;
+            else if (count <= 0)                     break;
+          }
+
+          if (index == size)
+          return bytes;
+        }
+      #endif
+      unsigned seed = 0u;
+
+      // ...
+      for (unsigned char const volatile *byte = &reinterpret_cast<unsigned char const volatile*>(&bytes)[sizeof(unsigned char*)]; byte != reinterpret_cast<unsigned char*>(&bytes); )
+      seed = *--byte | (seed << 8u); // ->> `CHAR_BIT` minimum
+
+      #if __STDC_HOSTED__
+        ::std::srand(seed); // ->> Seed with `bytes`
+
+        for (unsigned char volatile *byte = &bytes[size]; byte != bytes; )
+        *--byte = ::std::rand();
+      #else
+        for (unsigned char volatile *byte = &bytes[size]; byte != bytes; ) {
+          seed = (seed * 25173u) + 13849u;                                                                // ->> Linear Congruential Generator
+          *--byte = static_cast<unsigned char>(seed /* >> ((CHAR_BIT * sizeof(unsigned)) - CHAR_BIT) */); // ->> The high-end is more cryptographically sound
+        }
+      #endif
+
+      return bytes;
+    }
+
+    unsigned char* reserve(::std::size_t const capacity, enum memory::policy::flag const policy = static_cast<enum memory::policy::flag>(memory::policy::PRESERVE_MEMORY | memory::policy::ZERO_MEMORY)) /* ->> Aligned to `__STDCPP_DEFAULT_NEW_ALIGNMENT__` (since C++17) or `alignof(::std::max_align_t)` (since C++11) */ {
+      if (capacity > this -> capacity) {
+        if (unsigned char *const allocation = ::new (::std::nothrow) unsigned char[capacity]) /* --> not NULL */ {
+          if (not (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::RAW_MEMORY))) {
+            if      (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::ZERO_MEMORY))     (void) this -> zero    (allocation, capacity);
+            else if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::SCRAMBLE_MEMORY)) (void) this -> scramble(allocation, capacity);
+          }
+
+          if (NULL != this -> value) {
+            // ... --> ::std::memcpy(allocation, this -> value, this -> capacity)
+            if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::PRESERVE_MEMORY)) {
+              for (unsigned char volatile *destination = &allocation[this -> capacity], *source = &this -> value[this -> capacity]; source != this -> value; )
+              *--destination = *--source;
+            }
+
+            // ... ->> In case `.value` can be inspected after deletion/ release
+            if (not (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::RAW_MEMORY))) {
+              if      (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::ZERO_MEMORY))     (void) this -> zero    (this -> value, this -> capacity);
+              else if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::SCRAMBLE_MEMORY)) (void) this -> scramble(this -> value, this -> capacity);
+            }
+          }
+
+          ::delete[] this -> value;
+
+          this -> capacity = capacity;
+          this -> value    = allocation;
+
+          return this -> value;
+        }
+
+        return NULL;
+      }
+
+      return this -> value;
+    }
+
+    inline unsigned char* zero(unsigned char bytes[], ::std::size_t const size) const /* noexcept */ {
+      #if defined _WIN32
+        #if defined _MSC_VER and defined NTDDI_VERSION ? NTDDI_VERSION >= 0x0A000010 : false              //
+          #pragma comment(lib, "volatileaccessu.lib")                                                     //
+          return const_cast<unsigned char*>(SecureZeroMemory2(static_cast<void volatile*>(bytes), size)); // --> RtlSecureZeroMemory2(…)
+        #elif defined SecureZeroMemory                                       //
+          return static_cast<unsigned char*>(SecureZeroMemory(bytes, size)); // --> RtlSecureZeroMemory(…)
+        #elif defined ZeroMemory                       //
+          ZeroMemory(static_cast<void*>(bytes), size); // --> RtlZeroMemory(…)
+        #endif
+      #elif defined __APPLE__ or defined __unix__
+        if (void (*const explicit_bzero)(void*, ::std::size_t) = reinterpret_cast<void (*)(void*, ::std::size_t)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "explicit_bzero")))) // --> <string.h> not NULL
+        if (static_cast<char*>(NULL) == ::dlerror()) {
+          explicit_bzero(bytes, size);
+          return bytes;
+        }
+
+        if (void (*const bzero)(void*, ::std::size_t) = reinterpret_cast<void (*)(void*, ::std::size_t)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "bzero")))) // --> <strings.h> not NULL
+        if (static_cast<char*>(NULL) == ::dlerror()) {
+          bzero(bytes, size);
+          return bytes;
+        }
+      #endif
+
+      for (unsigned char volatile *byte = &bytes[size]; byte != bytes; ) // -|> Consider environment-dependent wider strides (e.g. `unsigned char[8]`/ `unsigned long` zeroing) where all bits participate in value representation
+      *--byte = 0x00u;                                                   // --> ::std::memset_explicit(allocation, 0x00, capacity)
+
+      return bytes;
+    }
+  } memory = {NULL, 0u, libraries};
+
+  struct option /* final */ {
+    enum flag /* : unsigned char */ {
+      DIGITS,       // ->> Indexing characters e.g. `10.png`, `11.jpg`, and so on from arabic numerals --> "0123456789"
+      HELP,         // ->> Script information                                                          --> true
+      HIDDEN_FILES, // ->> Renumerate hidden files                                                     --> false
+      INDEX,        // ->> Index start                                                                 --> "1"
+      INPUT,        // ->> `printf(…)`-formatted filter for indexed files                              --> "%s"
+      OUTPUT,       // ->> `printf(…)`-formatted filter for renamed files                              --> "%u"
+      PADDING,      // ->> Padding character to format indexes to the same length (NUL does not pad)   --> '0'
+      REVERSE,      // ->> Reversed indexing                                                           --> false
+      SYSTEM_FILES  // ->> Renumerate system files                                                     --> false
+    };
+
+    struct namelist /* final */ { char const *pre, *values; };
+    struct nameset  /* final */ {
+      union { struct namelist full,  longname,  verbose; };     // --> "--"
+      union { struct namelist alias, shortname, abbreviated; }; // --> "-"
+      struct namelist extended;                                 // --> "/", …
+    };
+
+    enum option::flag const flag;                           // ->> There can be multiple switches per flag rather than overriding prior switches
+    union { struct nameset name; struct namelist *names; }; // ->> Exclusively initialize either pre-/ user-allocated names (explicit tagging required)
+    union /* --> alignas(std::max_align_t) */ {
+      unsigned char address[/* --> max(…) */ sizeof(long double) | sizeof(std::size_t) | sizeof(void*) | sizeof(void (*)(...)) | sizeof(void (option::*)(...))];
+      #if __cplusplus >= 201103L or defined _MSVC_LANG // --> 201402L+
+        ::std::max_align_t const _0;
+      #endif
+      long double   const _1;
+      ::std::size_t const _2;
+      void         *const _3, (*const _4)(...), (option:: *const _5)(...);
+    }     memory;
+    void *value; // ->> “Blessed” versatile representation of `memory`
+  } options[] = {
+    {option::DIGITS,       {{{{"/" "\0" "--" "\0", "digits"       "\0"}},               {{"/" "\0" "-" "\0", "d"  "\0"}},          {}}}, {{}}, ::new (options[0].memory.address) char const*("0123456789")},
+    {option::HELP,         {{{{"/" "\0" "--" "\0", "help"         "\0"}},               {{"/" "\0",          "?"  "\0"}},          {}}}, {{}}, ::new (options[1].memory.address) bool       (true)},
+    {option::HIDDEN_FILES, {{{{"/" "\0" "--" "\0", "hidden-files" "\0"}},               {{"/" "\0" "-" "\0", "hf" "\0"}},          {}}}, {{}}, ::new (options[2].memory.address) bool       (false)},
+    {option::INDEX,        {{{{"/" "\0" "--" "\0", "index"        "\0"}},               {{"/" "\0" "-" "\0", "s"  "\0"}},          {}}}, {{}}, ::new (options[3].memory.address) char const*("1")},
+    {option::INPUT,        {{{{"/" "\0" "--" "\0", "input"        "\0" "filter" "\0"}}, {{"/" "\0" "-" "\0", "i"  "\0" "f" "\0"}}, {}}}, {{}}, ::new (options[4].memory.address) char const*("%s")},
+    {option::OUTPUT,       {{{{"/" "\0" "--" "\0", "output"       "\0" "rename" "\0"}}, {{"/" "\0" "-" "\0", "o"  "\0"}},          {}}}, {{}}, ::new (options[5].memory.address) char const*("%u")},
+    {option::PADDING,      {{{{"/" "\0" "--" "\0", "padding"      "\0"}},               {{"/" "\0" "-" "\0", "p"  "\0"}},          {}}}, {{}}, ::new (options[6].memory.address) char       ('0')},
+    {option::REVERSE,      {{{{"/" "\0" "--" "\0", "reverse"      "\0"}},               {{"/" "\0" "-" "\0", "r"  "\0"}},          {}}}, {{}}, ::new (options[7].memory.address) bool       (false)},
+    {option::SYSTEM_FILES, {{{{"/" "\0" "--" "\0", "system-files" "\0"}},               {{"/" "\0" "-" "\0", "sf" "\0"}},          {}}}, {{}}, ::new (options[8].memory.address) bool       (false)}
+  };
+
+  // ...
+  (void) console::buffer(stderr, static_cast<char*>(NULL), 0u);
+  (void) library::load  (libraries);
+
+  // ... ->> Assume standard (input/)output as Unicode (UTF-8)
+  #if defined _WIN32
+    enum /* : ::UINT */ {
+      CP_UTF16LE = 1200u, // ->> Wide character representation --> wchar_t
+      CP_UTF16BE = 1201u, CP_UTF32LE = 12000u, CP_UTF32BE = 12001u
+    };
+
+    // ... ->> Can’t assume locale code page with `::SetThreadLocale(…)` from `CP_THREAD_ACP` to Unicode
+    if (NULL != libraries[library::kernel32].module.handle) {
+      // ... ->> Assume standard console output as Unicode (analogous to `::SetConsoleCP(…)` for standard console input)
+      if (::BOOL (WINAPI *const SetConsoleOutputCP)(::UINT) = reinterpret_cast< ::BOOL (WINAPI*)(::UINT)>(::GetProcAddress(libraries[library::kernel32].module.handle, "SetConsoleOutputCP"))) // --> <windows.h> not NULL
+      for (::UINT const pages[] = {CP_UTF8, CP_UTF16LE /* , CP_UTF32LE, CP_UTF7 */}, *page = pages; page != &pages[sizeof pages / sizeof(::UINT)]; ++page) {
+        if (FALSE != SetConsoleOutputCP(*page))
         break;
       }
     }
+
+    if (NULL != libraries[library::ucrtbase].module.handle) {
+      // ... ->> Assume multibyte code page from `::std::setlocale(…)`’s `_MB_CP_LOCALE` to Unicode
+      if (int (__cdecl *const _setmbcp)(int) = reinterpret_cast<int (__cdecl*)(int)>(::GetProcAddress(libraries[library::ucrtbase].module.handle, "_setmbcp"))) // --> <mbctype.h> not NULL
+      (void) _setmbcp(_MB_CP_UTF8);                                                                                                                             // --> static_cast<int>(CP_UTF8)
+
+      // ... ->> Assume standard file stream modes as Unicode character conversion (with CRLF translations)
+      if (int (__cdecl *const _fileno) (::std::FILE*) = reinterpret_cast<int (__cdecl*)(::std::FILE*)>(::GetProcAddress(libraries[library::ucrtbase].module.handle, "_fileno")))  /* --> <stdio.h> not NULL */
+      if (int (__cdecl *const _setmode)(int, int)     = reinterpret_cast<int (__cdecl*)(int, int)>    (::GetProcAddress(libraries[library::ucrtbase].module.handle, "_setmode"))) /* --> <io.h>    not NULL */ {
+        for (::std::FILE *const streams[] = {stdout, stderr}, *const *stream = streams; stream != &streams[sizeof streams / sizeof(::std::FILE*)]; ++stream) {
+          int const descriptor = _fileno(*stream);
+
+          if (descriptor != -1 and 0 == ::std::fflush(*stream))
+          for (int const translations[] = {_O_U8TEXT, _O_WTEXT, _O_U16TEXT, _O_BINARY /* | _O_RAW */}, *translation = translations; translation != &translations[sizeof translations / sizeof(int)]; ++translation) {
+            if (_setmode(descriptor, *translation) != -1)
+            break;
+          }
+        }
+      }
+    }
   #endif
+
+  for (char const *const locales[] = {
+    LC_CTYPE not LC_ALL
+    /* ->> Mac */ "UTF-8", __APPLE__
+    /* ->> Windows: User’s default locale that supports UTF-8 */ ".UTF-8", _WIN32
+    /* ->> GNU C Library: Language-neutral UTF-8 */ "C.UTF-8", __GLIBC__
+    "aa_DJ.UTF-8",
+    "aa_ER.UTF-8",
+    "aa_ET.UTF-8",
+    "af_ZA.UTF-8",
+    "agr_PE.UTF-8",
+    "ak_GH.UTF-8",
+    "am_ET.UTF-8",
+    "an_ES.UTF-8",
+    "anp_IN.UTF-8",
+    "ar_AE.UTF-8",
+    "ar_BH.UTF-8",
+    "ar_DZ.UTF-8",
+    "ar_EG.UTF-8",
+    "ar_IN.UTF-8",
+    "ar_IQ.UTF-8",
+    "ar_JO.UTF-8",
+    "ar_KW.UTF-8",
+    "ar_LB.UTF-8",
+    "ar_LY.UTF-8",
+    "ar_MA.UTF-8",
+    "ar_OM.UTF-8",
+    "ar_QA.UTF-8",
+    "ar_SA.UTF-8",
+    "ar_SD.UTF-8",
+    "ar_SS.UTF-8",
+    "ar_SY.UTF-8",
+    "ar_TN.UTF-8",
+    "ar_YE.UTF-8",
+    "as_IN.UTF-8",
+    "ast_ES.UTF-8",
+    "ayc_PE.UTF-8",
+    "az_AZ.UTF-8",
+    "az_IR.UTF-8",
+    "be_BY.UTF-8",
+    "be_BY.UTF-8@latin",
+    "bem_ZM.UTF-8",
+    "ber_DZ.UTF-8",
+    "ber_MA.UTF-8",
+    "bg_BG.UTF-8",
+    "bhb_IN.UTF-8",
+    "bho_IN.UTF-8",
+    "bho_NP.UTF-8",
+    "bi_VU.UTF-8",
+    "bn_BD.UTF-8",
+    "bn_IN.UTF-8",
+    "bo_CN.UTF-8",
+    "bo_IN.UTF-8",
+    "br_FR.UTF-8",
+    "brx_IN.UTF-8",
+    "bs_BA.UTF-8",
+    "byn_ER.UTF-8",
+    "ca_AD.UTF-8",
+    "ca_ES.UTF-8",
+    "ca_ES.UTF-8@valencia",
+    "ca_FR.UTF-8",
+    "ca_IT.UTF-8",
+    "ce_RU.UTF-8",
+    "chr_US.UTF-8",
+    "ckb_IQ.UTF-8",
+    "cmn_TW.UTF-8",
+    "crh_RU.UTF-8",
+    "crh_UA.UTF-8",
+    "cs_CZ.UTF-8",
+    "csb_PL.UTF-8",
+    "cv_RU.UTF-8",
+    "cy_GB.UTF-8",
+    "da_DK.UTF-8",
+    "de_AT.UTF-8",
+    "de_BE.UTF-8",
+    "de_CH.UTF-8",
+    "de_DE.UTF-8",
+    "de_IT.UTF-8",
+    "de_LI.UTF-8",
+    "de_LU.UTF-8",
+    "doi_IN.UTF-8",
+    "dsb_DE.UTF-8",
+    "dv_MV.UTF-8",
+    "dz_BT.UTF-8",
+    "el_CY.UTF-8",
+    "el_GR.UTF-8",
+    "en_AG.UTF-8",
+    "en_AU.UTF-8",
+    "en_BW.UTF-8",
+    "en_CA.UTF-8",
+    "en_DK.UTF-8",
+    "en_GB.UTF-8",
+    "en_HK.UTF-8",
+    "en_IE.UTF-8",
+    "en_IL.UTF-8",
+    "en_IN.UTF-8",
+    "en_NG.UTF-8",
+    "en_NZ.UTF-8",
+    "en_PH.UTF-8",
+    "en_SC.UTF-8",
+    "en_SE.UTF-8",
+    "en_SG.UTF-8",
+    "en_US.UTF-8",
+    "en_ZA.UTF-8",
+    "en_ZM.UTF-8",
+    "en_ZW.UTF-8",
+    "eo.UTF-8",
+    "es_AR.UTF-8",
+    "es_BO.UTF-8",
+    "es_CL.UTF-8",
+    "es_CO.UTF-8",
+    "es_CR.UTF-8",
+    "es_CU.UTF-8",
+    "es_DO.UTF-8",
+    "es_EC.UTF-8",
+    "es_ES.UTF-8",
+    "es_GT.UTF-8",
+    "es_HN.UTF-8",
+    "es_MX.UTF-8",
+    "es_NI.UTF-8",
+    "es_PA.UTF-8",
+    "es_PE.UTF-8",
+    "es_PR.UTF-8",
+    "es_PY.UTF-8",
+    "es_SV.UTF-8",
+    "es_US.UTF-8",
+    "es_UY.UTF-8",
+    "es_VE.UTF-8",
+    "et_EE.UTF-8",
+    "eu_ES.UTF-8",
+    "fa_IR.UTF-8",
+    "ff_SN.UTF-8",
+    "fi_FI.UTF-8",
+    "fil_PH.UTF-8",
+    "fo_FO.UTF-8",
+    "fr_BE.UTF-8",
+    "fr_CA.UTF-8",
+    "fr_CH.UTF-8",
+    "fr_FR.UTF-8",
+    "fr_LU.UTF-8",
+    "fur_IT.UTF-8",
+    "fy_DE.UTF-8",
+    "fy_NL.UTF-8",
+    "ga_IE.UTF-8",
+    "gbm_IN.UTF-8",
+    "gd_GB.UTF-8",
+    "gez_ER.UTF-8",
+    "gez_ER.UTF-8@abegede",
+    "gez_ET.UTF-8",
+    "gez_ET.UTF-8@abegede",
+    "gl_ES.UTF-8",
+    "gu_IN.UTF-8",
+    "gv_GB.UTF-8",
+    "ha_NG.UTF-8",
+    "hak_TW.UTF-8",
+    "he_IL.UTF-8",
+    "hi_IN.UTF-8",
+    "hif_FJ.UTF-8",
+    "hne_IN.UTF-8",
+    "hr_HR.UTF-8",
+    "hrx_BR.UTF-8",
+    "hsb_DE.UTF-8",
+    "ht_HT.UTF-8",
+    "hu_HU.UTF-8",
+    "hy_AM.UTF-8",
+    "ia_FR.UTF-8",
+    "id_ID.UTF-8",
+    "ig_NG.UTF-8",
+    "ik_CA.UTF-8",
+    "is_IS.UTF-8",
+    "it_CH.UTF-8",
+    "it_IT.UTF-8",
+    "iu_CA.UTF-8",
+    "ja_JP.UTF-8",
+    "ka_GE.UTF-8",
+    "kab_DZ.UTF-8",
+    "kk_KZ.UTF-8",
+    "kl_GL.UTF-8",
+    "km_KH.UTF-8",
+    "kn_IN.UTF-8",
+    "ko_KR.UTF-8",
+    "kok_IN.UTF-8",
+    "ks_IN.UTF-8",
+    "ks_IN.UTF-8@devanagari",
+    "ku_TR.UTF-8",
+    "kv_RU.UTF-8",
+    "kw_GB.UTF-8",
+    "ky_KG.UTF-8",
+    "lb_LU.UTF-8",
+    "lg_UG.UTF-8",
+    "li_BE.UTF-8",
+    "li_NL.UTF-8",
+    "lij_IT.UTF-8",
+    "ln_CD.UTF-8",
+    "lo_LA.UTF-8",
+    "lt_LT.UTF-8",
+    "ltg_LV.UTF-8",
+    "lv_LV.UTF-8",
+    "lzh_TW.UTF-8",
+    "mag_IN.UTF-8",
+    "mai_IN.UTF-8",
+    "mai_NP.UTF-8",
+    "mdf_RU.UTF-8",
+    "mfe_MU.UTF-8",
+    "mg_MG.UTF-8",
+    "mhr_RU.UTF-8",
+    "mi_NZ.UTF-8",
+    "miq_NI.UTF-8",
+    "mjw_IN.UTF-8",
+    "mk_MK.UTF-8",
+    "ml_IN.UTF-8",
+    "mn_MN.UTF-8",
+    "mni_IN.UTF-8",
+    "mnw_MM.UTF-8",
+    "mr_IN.UTF-8",
+    "ms_MY.UTF-8",
+    "mt_MT.UTF-8",
+    "my_MM.UTF-8",
+    "nan_TW.UTF-8",
+    "nan_TW.UTF-8@latin",
+    "nb_NO.UTF-8",
+    "nds_DE.UTF-8",
+    "nds_NL.UTF-8",
+    "ne_NP.UTF-8",
+    "nhn_MX.UTF-8",
+    "niu_NU.UTF-8",
+    "niu_NZ.UTF-8",
+    "nl_AW.UTF-8",
+    "nl_BE.UTF-8",
+    "nl_NL.UTF-8",
+    "nn_NO.UTF-8",
+    "nr_ZA.UTF-8",
+    "nso_ZA.UTF-8",
+    "oc_FR.UTF-8",
+    "om_ET.UTF-8",
+    "om_KE.UTF-8",
+    "or_IN.UTF-8",
+    "os_RU.UTF-8",
+    "pa_IN.UTF-8",
+    "pa_PK.UTF-8",
+    "pap_AW.UTF-8",
+    "pap_CW.UTF-8",
+    "pl_PL.UTF-8",
+    "ps_AF.UTF-8",
+    "pt_BR.UTF-8",
+    "pt_PT.UTF-8",
+    "quz_PE.UTF-8",
+    "raj_IN.UTF-8",
+    "rif_MA.UTF-8",
+    "ro_RO.UTF-8",
+    "ru_RU.UTF-8",
+    "ru_UA.UTF-8",
+    "rw_RW.UTF-8",
+    "sa_IN.UTF-8",
+    "sah_RU.UTF-8",
+    "sat_IN.UTF-8",
+    "sc_IT.UTF-8",
+    "scn_IT.UTF-8",
+    "sd_IN.UTF-8",
+    "sd_IN.UTF-8@devanagari",
+    "se_NO.UTF-8",
+    "sgs_LT.UTF-8",
+    "shn_MM.UTF-8",
+    "shs_CA.UTF-8",
+    "si_LK.UTF-8",
+    "sid_ET.UTF-8",
+    "sk_SK.UTF-8",
+    "sl_SI.UTF-8",
+    "sm_WS.UTF-8",
+    "so_DJ.UTF-8",
+    "so_ET.UTF-8",
+    "so_KE.UTF-8",
+    "so_SO.UTF-8",
+    "sq_AL.UTF-8",
+    "sq_MK.UTF-8",
+    "sr_ME.UTF-8",
+    "sr_RS.UTF-8",
+    "sr_RS.UTF-8@latin",
+    "ss_ZA.UTF-8",
+    "ssy_ER.UTF-8",
+    "st_ZA.UTF-8",
+    "su_ID.UTF-8",
+    "sv_FI.UTF-8",
+    "sv_SE.UTF-8",
+    "sw_KE.UTF-8",
+    "sw_TZ.UTF-8",
+    "syr.UTF-8",
+    "szl_PL.UTF-8",
+    "ta_IN.UTF-8",
+    "ta_LK.UTF-8",
+    "tcy_IN.UTF-8",
+    "te_IN.UTF-8",
+    "tg_TJ.UTF-8",
+    "th_TH.UTF-8",
+    "the_NP.UTF-8",
+    "ti_ER.UTF-8",
+    "ti_ET.UTF-8",
+    "tig_ER.UTF-8",
+    "tk_TM.UTF-8",
+    "tl_PH.UTF-8",
+    "tn_ZA.UTF-8",
+    "to_TO.UTF-8",
+    "tok.UTF-8",
+    "tpi_PG.UTF-8",
+    "tr_CY.UTF-8",
+    "tr_TR.UTF-8",
+    "ts_ZA.UTF-8",
+    "tt_RU.UTF-8",
+    "tt_RU.UTF-8@iqtelif",
+    "ug_CN.UTF-8",
+    "uk_UA.UTF-8",
+    "unm_US.UTF-8",
+    "ur_IN.UTF-8",
+    "ur_PK.UTF-8",
+    "uz_UZ.UTF-8",
+    "uz_UZ.UTF-8@cyrillic",
+    "ve_ZA.UTF-8",
+    "vi_VN.UTF-8",
+    "wa_BE.UTF-8",
+    "wae_CH.UTF-8",
+    "wal_ET.UTF-8",
+    "wo_SN.UTF-8",
+    "xh_ZA.UTF-8",
+    "yi_US.UTF-8",
+    "yo_NG.UTF-8",
+    "yue_HK.UTF-8",
+    "yuw_PG.UTF-8",
+    "zgh_MA.UTF-8",
+    "zh_CN.UTF-8",
+    "zh_HK.UTF-8",
+    "zh_SG.UTF-8",
+    "zh_TW.UTF-8",
+    "zu_ZA.UTF-8"
+    "" // ->> User-preferred (ideally Unicode)
+  }, *const *locale = locales; locale != &locales[sizeof locales / sizeof(char const*)]; ++locale) {
+    #if defined __APPLE__ or defined __unix__
+      static struct l /* final */ {
+        void     (*release)(::locale_t);
+        ::locale_t value;
+
+        ~l() /* noexcept */ {
+          if (NULL != this -> release and NULL != this -> value)
+          this -> release(this -> value);
+        }
+      } unicode = {NULL, NULL};
+
+      // ...
+      if (void       (*const freelocale)(::locale_t)                    = reinterpret_cast<void        (*)(::locale_t)>                   (reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "freelocale")))) if (static_cast<char*>(NULL) == ::dlerror()) // --> <locale.h> not NULL
+      if (::locale_t (*const newlocale) (int, char const[], ::locale_t) = reinterpret_cast< ::locale_t (*)(int, char const[], ::locale_t)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "newlocale"))))  if (static_cast<char*>(NULL) == ::dlerror()) {
+        locale -> release = freelocale;
+        locale -> value   = newlocale;
+      }
+
+      LC_ADDRESS_MASK, LC_CTYPE_MASK,
+       LC_COLLATE_MASK, LC_IDENTIFICATION_MASK, LC_MEASUREMENT_MASK,
+       LC_MESSAGES_MASK, LC_MONETARY_MASK, LC_NUMERIC_MASK, LC_NAME_MASK,
+       LC_PAPER_MASK, LC_TELEPHONE_MASK, and LC_TIME_MASK.
+       Alternatively, the mask can be specified as LC_ALL_MASK
+      // ::locale_t utf8Locale = ::newlocale(LC_CTYPE_MASK, "C.UTF-8", static_cast< ::locale_t>(NULL));
+      //
+      // if (static_cast< ::locale_t>(NULL) == utf8Locale)
+      // return 1;
+      //
+      // ::locale_t previousLocale = ::uselocale(utf8Locale);
+      // ::std::printf("%s\n", ::nl_langinfo(CODESET)); // typically "UTF-8"
+      // ::uselocale(previousLocale);
+      // ::freelocale(utf8Locale);
+    #endif
+
+    if (static_cast<char*>(NULL) != ::std::setlocale(LC_ALL, *locale)) /* --> LC_ALL == LC_CTYPE | … | LC_COLLATE | LC_MONETARY | LC_NUMERIC | LC_TIME | … | LC_MESSAGES | … | LC_ADDRESS | LC_IDENTIFICATION | LC_KEYBOARD | LC_MEASUREMENT | LC_NAME | LC_PAPER | LC_TELEPHONE | LC_XLITERATE */ {
+      if ('\0' != *locale) {
+        (void) ::std::fwide(stderr, +1);
+        (void) ::std::fwide(stdout, +1);
+      }
+
+      break;
+    }
+  }
+
+  #if defined _WIN32
+    // switch (_getmbcp()) {
+    //   case CP_UTF7:
+    //   case CP_UTF8: {
+    //     // 1200/1201 UTF-16 LE?
+    //     // 12000/12001 UTF-32 LE?
+    //   } break;
+    //   default: ??? /* UTF-8 - don’t forget the others */
+    //   goto locale;
+    // }
+  #elif defined __APPLE__ or defined __unix__
+    // char const *const codeset = ::nl_langinfo(CODESET);
+    // // contests with std::setlocale()?
+    //   // test for UTF-7
+    //   // UTF-8
+    //   // UTF-16
+    //   // UTF-16BE
+    //   // UTF-16LE
+    //   // UTF-32
+    //   // UTF-32BE
+    //   // UTF-32LE
+    // /* Test codeset for UTF-8 here. */
+  #endif
+  for (struct locale /* final */ { char *const current; char const *const target; } locales[] = {
+    {::std::setlocale(LC_ALL, static_cast<char const*>(NULL)), NULL},
+    {locales -> current,                                       "UTF"},
+    {locales -> current,                                       "Unicode"}
+  }, *locale = locales; ; ++locale) {
+    // ... ->> Announce whether Unicode or otherwise
+    if (locale == &locales[sizeof locales / sizeof(struct locale)])
+    locale: {
+      (void) console.format(stderr, L"%lc%ls%lc%.2ls%.4ls%.26ls", L'[', renum.name, L']', L": ", console::delimiters::nounicode() == delimiters ? L"Non-" : L"", L"Unicode locale detected \u2014 ");
+      (void) console.text  (stderr, locales -> current, delimiters, delimiters);
+      (void) console.format(stderr, L"%.2ls", L"\r\n");
+
+      break;
+    }
+
+    // ... ->> Case-insensitive `::std::strstr(.current, .target)` e.g. `::strcasestr(…)` (except empty `.current` never matches)
+    if (static_cast<char const*>(NULL) == locale -> target)
+    continue;
+
+    for (::std::size_t index    = 0u; '\0' != locale -> current[index]; ++index)
+    for (::std::size_t subindex = 0u; ; ++subindex) {
+      char  characters[] = {locale -> current[index + subindex], locale -> target[subindex]};
+      char &current      = characters[0], &target = characters[1]; // ->> In lieu of `union { char characters[]; struct { char current, target; }; };`
+
+      // ...
+      if ('\0' == target) { delimiters = console::delimiters::unicode(); goto locale; }
+      if ('\0' == current) break;
+
+      for (char *character = characters; character != &characters[sizeof characters / sizeof(char)]; ++character)
+      switch (*character) {
+        case 'C': *character = 'c'; break;
+        case 'D': *character = 'd'; break;
+        case 'E': *character = 'e'; break;
+        case 'F': *character = 'f'; break;
+        case 'I': *character = 'i'; break;
+        case 'N': *character = 'n'; break;
+        case 'O': *character = 'o'; break;
+        case 'T': *character = 't'; break;
+        case 'U': *character = 'u'; break;
+        default:; // --> `::std::tolower(…)` (as per default `"C"` locale)
+      }
+
+      if (current != target)
+      break;
+    }
+  }
 
   // ... ->> Parse arguments
   for (unsigned index = 1u; index < static_cast<unsigned>(count > 0 ? count : 0); ++index) {
@@ -529,14 +985,12 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
 
     // ...
     #if defined _WIN32
-      if (struct library *const library = libraries -> get(library::kernel32))
-      if (NULL != library -> module.handle) {
-        if (int (*const MultiByteToWideChar)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int) = reinterpret_cast<int (*)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int)>(::GetProcAddress(library -> module.handle, "MultiByteToWideChar"))) /* --> <windows.h> not NULL */ {
-          int const length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, argument.multibyte, -1, static_cast< ::LPWSTR>(NULL), 0);
+      if (NULL != libraries[library::kernel32].module.handle)
+      if (int (*const MultiByteToWideChar)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int) = reinterpret_cast<int (*)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int)>(::GetProcAddress(libraries[library::kernel32].module.handle, "MultiByteToWideChar"))) /* --> <windows.h> not NULL */ {
+        int const length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, argument.multibyte, -1, static_cast< ::LPWSTR>(NULL), 0);
 
-          argument.wide = length > 0 ? reinterpret_cast<wchar_t*>(memory.reserve(length + sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL;
-          argument.wide = NULL != argument.wide and MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, argument.multibyte, -1, static_cast< ::LPWSTR>(argument.wide), length) > 0 ? argument.wide : NULL;
-        }
+        argument.wide = length > 0 ? reinterpret_cast<wchar_t*>(memory.reserve(length + sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL;
+        argument.wide = NULL != argument.wide and MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, argument.multibyte, -1, static_cast< ::LPWSTR>(argument.wide), length) > 0 ? argument.wide : NULL;
       }
     #elif defined __APPLE__ or defined __unix__
       //   ::iconv_t const converter = ::iconv_open("WCHAR_T", "UTF-8");
@@ -584,27 +1038,27 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       //   return wide;
     #endif
 
+    // if (NULL == argument.wide) {
+    //   ::std::mbstate_t    state  = ::std::mbstate_t();
+    //   ::std::size_t const length = ::std::mbsrtowcs(static_cast<wchar_t*>(NULL), &argument.multibyte, 0u, &state);
+
+    //   // ...
+    //   argument.multibyte = arguments[index];
+    //   state              = ::std::mbstate_t();
+
+    //   argument.wide = length != static_cast< ::std::size_t>(-1) ? reinterpret_cast<wchar_t*>(memory.reserve((length + 1u) * sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL; // ->> Placement-new unneeded for implicit lifetime `wchar_t`
+    //   argument.wide = NULL != argument.wide and ::std::mbsrtowcs(argument.wide, &argument.multibyte, length + 1u, &state) != static_cast< ::std::size_t>(-1) ? argument.wide : NULL;
+    // }
+
     if (NULL == argument.wide) {
-      ::std::mbstate_t    state  = ::std::mbstate_t();
-      ::std::size_t const length = ::std::mbsrtowcs(static_cast<wchar_t*>(NULL), &argument.multibyte, 0u, &state);
-
-      // ...
-      argument.multibyte = arguments[index];
-      state              = ::std::mbstate_t();
-
-      argument.wide = length != static_cast< ::std::size_t>(-1) ? reinterpret_cast<wchar_t*>(memory.reserve((length + 1u) * sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL; // ->> Placement-new unneeded for implicit lifetime `wchar_t`
-      argument.wide = NULL != argument.wide and ::std::mbsrtowcs(argument.wide, &argument.multibyte, length + 1u, &state) != static_cast< ::std::size_t>(-1) ? argument.wide : NULL;
-    }
-
-    if (NULL == argument.wide) {
-      (void) console.format(stderr, L"%lc%ls%lc%1.2ls%1.50ls", L'[', renum.name, L']', L": ", L"Aborting; Unable to parse command-line option \u2014 " "\r\n");
+      (void) console.format(stderr, L"%lc%ls%lc%.2ls%.50ls", L'[', renum.name, L']', L": ", L"Aborting; Unable to parse command-line option \u2014 " L"\r\n");
       (void) console.text  (stderr, argument.multibyte);
 
       return EXIT_FAILURE;
     }
 
     // ...
-    (void) ::std::fwprintf(stdout, L"[%u] \"%hs\" \"%ls\"" "\r\n", index, arguments[index], argument.wide);
+    (void) ::std::fwprintf(stdout, L"[%u] \"%hs\" \"%ls\"" L"\r\n", index, arguments[index], argument.wide);
   }
 
   // while (true)
@@ -2911,4 +3365,3 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     return executableExitCode;
   }
 #endif
-
