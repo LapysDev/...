@@ -1,18 +1,19 @@
 /* POSIX:   rm -f ./renum;   clear && clang++ -ffast-math                -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic-errors -std=c++98 -Wall -Wextra                      renum.cpp -lc -ldl   -o renum     && ./renum   "  A " "👋" C;  rm -f ./renum */
 /* Windows: del renum.exe && cls   && clang++ -ffast-math -ffreestanding -fno-exceptions -fno-rtti -fomit-frame-pointer -march=native -O3 -pedantic-errors -std=c++98 -Wall -Wextra -Wno-unknown-pragmas renum.cpp -lkernel32 -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
 #include <ciso646> // --> and, or, not
-#include <climits> // --> MB_LEN_MAX
-#include <clocale> // --> LC_ALL; ::std::setlocale(…)
+#include <climits> // --> INT_MAX, MB_LEN_MAX, ULONG_MAX, USHRT_MAX
+#include <clocale> // --> LC_CTYPE; ::std::setlocale(…)
 #include <cstdarg> // --> va_arg(…), va_end(…), va_start(…); ::std::va_list
 #include <cstddef> // --> ::std::max_align_t, ::std::size_t
-#include <cstdio>  // --> ::std::FILE; _IOFBF, _IOLBF, _IONBF, stdout; ::std::fflush(…), ::std::setbuf(…), ::std::setvbuf(…)
+#include <cstdio>  // --> ::std::FILE; _IOFBF, _IOLBF, _IONBF, stdout; ::std::fflush(…), ::std::fwrite(…), ::std::setbuf(…), ::std::setvbuf(…)
 #include <cstdlib> // --> NULL; ::std::qsort(…), ::std::rand(…), ::std::srand(…)
 #include <ctime>   // --> ::std::time_t; ::std::time(…)
-#include <cwchar>  // --> WEOF; ::std::mbstate_t; ::std::fputwc(…), ::std::fwide(…), ::std::fwprintf(…), ::std::mbrtowc(…), ::std::mbsrtowcs(…)
+#include <cwchar>  // --> WEOF; ::std::mbstate_t; ::std::fputwc(…), ::std::fwide(…), ::std::mbrtowc(…), ::std::mbsrtowcs(…), ::std::wcrtomb(…)
 #include <new>     // --> ::delete[], ::new, ::std::nothrow
 
 #if defined _WIN32
-# define _CRT_SECURE_NO_WARNINGS
+# define _CRT_RAND_S             // --> ::rand_s(…)
+# define _CRT_SECURE_NO_WARNINGS // ->> Suppress “deprecated/ unsafe function” warnings e.g. C4996
 # define  UNICODE
 # define _UNICODE
 # undef  _MBCS
@@ -21,21 +22,23 @@
 # include <mbctype.h>  // --> _MB_CP_UTF8
 # include <ntstatus.h> // --> ::NTSTATUS; STATUS_SUCCESS
 # include <sal.h>      // --> _Printf_format_string_
-# include <windows.h>  // --> ::BOOL, ::DWORD, ::FARPROC, ::HMODULE, ::LPCCH, ::LPCSTR, ::LPCWSTR, ::LPWSTR, ::PUCHAR, ::PVOID, ::SIZE_T, ::TCHAR, ::UINT, ::ULONG, ::WCHAR; CP_UTF8, FALSE, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, LOAD_LIBRARY_SEARCH_SYSTEM32, LOAD_WITH_ALTERED_SEARCH_PATH, MAX_PATH, WINAPI, SecureZeroMemory(…), ZeroMemory(…); ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
-#   include <bcrypt.h> // --> ::BCRYPT_ALG_HANDLE
+# include <windows.h>  // --> ::BOOL, ::DWORD, ::FARPROC, ::HMODULE, ::INT_PTR, ::LPCCH, ::LPCSTR, ::LPCWSTR, ::LPWSTR, ::PUCHAR, ::PVOID, ::SIZE_T, ::UINT, ::ULONG, ::WCHAR; __cdecl, CALLBACK, CP_UTF8, FALSE, FAR, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, LOAD_LIBRARY_SEARCH_SYSTEM32, LOAD_WITH_ALTERED_SEARCH_PATH, WINAPI, SecureZeroMemory(…), ZeroMemory(…); ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
+#   include <bcrypt.h>  // --> ::BCRYPT_ALG_HANDLE; BCRYPT_USE_SYSTEM_PREFERRED_RNG
+#   include <winbase.h> // --> ::SecureZeroMemory2(…)
 #
 # pragma comment(lib, "kernel32.lib")
+# pragma comment(lib, "kernelbase.lib")
 
 extern "C" __declspec(dllimport) ::BOOL                GetModuleHandleExW (::DWORD, ::LPCWSTR, ::HMODULE*);
 extern "C" __declspec(dllimport) ::FARPROC             GetProcAddress     (::HMODULE, ::LPCSTR);
 extern "C" __declspec(dllimport) ::UINT                GetSystemDirectoryW(::LPWSTR, ::UINT);
-extern "C"                       volatile void* WINAPI SecureZeroMemory2  (volatile void*, ::SIZE_T);
+extern "C"                       void volatile* WINAPI SecureZeroMemory2  (void volatile*, ::SIZE_T);
 #elif defined __APPLE__ or defined __unix__
 # include <dirent.h>    // --> ::DIR; dirent; ::closedir(…), ::opendir(…), ::readdir(…)
 # include <dlfcn.h>     // --> RTLD_LOCAL; ::dlerror(…), ::dlopen(…), ::dlsym(…)
 # include <errno.h>     // --> EINTR; errno
 # include <iconv.h>     // --> ::iconv_t
-# include <locale.h>    // --> ::locale_t
+# include <locale.h>    // --> LC_CTYPE_MASK, LC_GLOBAL_LOCALE; ::locale_t
 # include <stdint.h>    // --> ::uintptr_t
 # include <stdlib.h>    // --> ::realpath(…)
 # include <string.h>    // --> ::strlen(…)
@@ -60,24 +63,202 @@ extern "C" void* dlsym  (void*, char const[]);
 
 /* Renumerator */
 struct renum /* final */ {
-  wchar_t const *const name; // --> wchar_t const[]
-  wchar_t const       *directory;
+  wchar_t const  name[448]; // --> wchar_t const[]
+  wchar_t const *directory;
 } renum = {L"renum", NULL};
 
 /* Main */
-int main(int count, char* arguments[] /* , char* environment[] */) {
-  struct console /* final */ {
-    typedef union delimiters {
-      inline static wchar_t const* nounicode() /* noexcept */ { return L"\""     L"\""; }
-      inline static wchar_t const* unicode  () /* noexcept */ { return L"\u201C" L"\u201D"; }
-    } delimiters;
+int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept */ {
+  struct library /* final */ {
+    #if defined _WIN32
+      static ::INT_PTR FAR CALLBACK UNRESOLVED(/* ... */) /* noexcept */ { return 00; } // --> ::FARPROC {…}
 
+      enum    /* : ::std::size_t:3 */ { COUNT = 5u };
+      enum id /* : unsigned char:4 */ { advapi32, bcrypt, cng = bcrypt, kernel32, kernelbase = kernel32, shell32, ucrtbase, /* , … */ credui, ole32, oleaut32, taskschd };
+
+      enum library::id                                                         const id : 4;
+      ::WCHAR                                                                  const name[13]; // ->> Case-insensitive --> ::LPCWSTR
+      struct /* final */ { ::HMODULE handle; ::BOOL (WINAPI *unloader)(::HMODULE); } module;
+    #else // --> defined __APPLE__ or defined __unix__
+      static void UNRESOLVED() /* noexcept */ {}
+
+      enum    /* : ::std::size_t:1 */ { COUNT = 1u };
+      enum id /* : unsigned char:1 */ { libc, libdl = libc };
+
+      enum library::id                                        const id : 1;
+      wchar_t const                                          *const name;
+      struct /* final */ { void *address; int (*unloader)(void*); } value;
+    #endif
+
+    /* ... */
+    ~library() /* noexcept */ {
+      #if defined _WIN32
+        if (NULL != this -> module.handle and reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED) != this -> module.unloader)
+        (void) this -> module.unloader(this -> module.handle); // --> FreeLibrary(…)
+      #elif defined __APPLE__ or defined __unix__
+        if (NULL != this -> value.address and reinterpret_cast<int (*)(void*)>(&library::UNRESOLVED) != this -> value.unloader)
+        (void) this -> value.unloader(this -> value.address); // --> dlclose(…)
+      #endif
+    }
+
+    /* ... */
+    inline static void load(struct library (&libraries)[library::COUNT]) /* noexcept */ {
+      #if defined _WIN32
+        enum /* : ::std::size_t:16 */ { EXTENDED_MAX_PATH = static_cast< ::USHORT>(USHRT_MAX) / sizeof(::WCHAR) };
+        ::WCHAR      path[EXTENDED_MAX_PATH + (sizeof libraries -> name / sizeof(::WCHAR))];  // ->> Overkill to `MAX_PATH` for most environments                                   --> ::GetSystemDirectoryW(…) + '\\' + libraries[::kernelbase].name
+        ::UINT const pathLength = ::GetSystemDirectoryW(path, sizeof path / sizeof(::WCHAR)); // ->> Microsoft Developer Network (MSDN) documentation uses `::TCHAR` as a shorthand --> %SystemRoot%\System32
+
+        // ... ->> Load the kernel base library first
+        if (0u != pathLength and pathLength /* + '\\' + .name */ <= EXTENDED_MAX_PATH) {
+          libraries[library::kernelbase].module.unloader = reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED);
+          path     [pathLength]                          = L'\\';
+
+          for (::std::size_t index = 0u; ; ++index) {
+            path[index + pathLength + 1u] = libraries[library::kernelbase].name[index];
+            if (L'\0' == libraries[library::kernelbase].name[index]) break;
+          }
+
+          if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, path, &libraries[library::kernelbase].module.handle))
+          if (NULL != libraries[library::kernelbase].module.handle) {
+            ::BOOL    (WINAPI *const FreeLibrary)             (::HMODULE)                    = reinterpret_cast< ::BOOL    (WINAPI*)(::HMODULE)>                   (libraries[library::kernelbase].resolve("FreeLibrary"));              // --> <windows.h>
+            ::HMODULE (WINAPI *const LoadLibraryExW)          (::LPCWSTR, ::HANDLE, ::DWORD) = reinterpret_cast< ::HMODULE (WINAPI*)(::LPCWSTR, ::HANDLE, ::DWORD)>(libraries[library::kernelbase].resolve("LoadLibraryExW"));           // --> <windows.h>
+            ::BOOL    (WINAPI *const SetDefaultDllDirectories)(::DWORD)                      = reinterpret_cast< ::BOOL    (WINAPI*)(::DWORD)>                     (libraries[library::kernelbase].resolve("SetDefaultDllDirectories")); // --> <windows.h>
+
+            // ... ->> Load remaining Windows API libraries —
+            if (reinterpret_cast< ::BOOL (WINAPI*)(::DWORD)>(&library::UNRESOLVED) != SetDefaultDllDirectories)
+            (void) SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32); // --> %SystemRoot%\System32
+
+            for (struct library *library = libraries; library != &libraries[library::COUNT]; ++library)
+            if (library != &libraries[library::kernelbase]) /* ->> — except the already loaded userland `kernelbase` library */ {
+              for (::std::size_t index = 0u; ; ++index) {
+                path[index + pathLength + 1u] = library -> name[index];
+                if (L'\0' == library -> name[index]) break;
+              }
+
+              // ...
+              if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, path, &library -> module.handle))
+              if (NULL != library -> module.handle) {
+                library -> module.unloader = reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED);
+                continue;
+              }
+
+              if (reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED) != FreeLibrary and reinterpret_cast< ::HMODULE (WINAPI*)(::LPCWSTR, ::HANDLE, ::DWORD)>(&library::UNRESOLVED) != LoadLibraryExW) {
+                library -> module.handle   = LoadLibraryExW(path, static_cast< ::HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
+                library -> module.unloader = FreeLibrary;
+              }
+            }
+          }
+        }
+      #elif defined __APPLE__ or defined __unix__
+        libraries -> value.address  = ::dlopen(static_cast<char const*>(NULL), RTLD_LOCAL /* | RTLD_LAZY */);
+        libraries -> value.unloader = reinterpret_cast<int (*)(void*)>(NULL != libraries -> value.address ? libraries -> resolve("dlclose") : &library::UNRESOLVED); // --> <dlfcn.h>
+      #endif
+    }
+
+    #if defined _WIN32
+      inline ::FARPROC resolve(char const name[]) const /* noexcept */ {
+        if (NULL != this -> module.handle) {
+          ::FARPROC const procedure = ::GetProcAddress(this -> module.handle, name);
+          if (NULL != procedure) return procedure;
+        }
+
+        return &library::UNRESOLVED;
+      }
+    #elif defined __APPLE__ or defined __unix__
+      inline void (*resolve(char const name[]) const /* noexcept */)() {
+        if (NULL != this -> value.address) {
+          void *const symbol = (void) ::dlerror(), ::dlsym(this -> value.address, name);            // ->> Clear prior linker error diagnostics, then runtime linkage
+          if (static_cast<char*>(NULL) == ::dlerror()) return reinterpret_cast<void (*)()>(symbol); // ->> `::uintptr_t` indirect unneeded
+        }
+
+        return &library::UNRESOLVED;
+      }
+    #endif
+  } libraries[library::COUNT] = {
+    // ->> In enumeration order
+    #if defined _WIN32
+      {library::advapi32,   L"advapi32" L".dll", {NULL, reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED)}},
+      {library::bcrypt,     L"bcrypt"   L".dll", {NULL, reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED)}},
+      {library::kernelbase, L"kernel32" L".dll", {NULL, reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED)}},
+      {library::shell32,    L"shell32"  L".dll", {NULL, reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED)}},
+      {library::ucrtbase,   L"ucrtbase" L".dll", {NULL, reinterpret_cast< ::BOOL (WINAPI*)(::HMODULE)>(&library::UNRESOLVED)}}
+    #else // --> defined __APPLE__ or defined __unix__
+      {static_cast<enum library::id>(0x00u), NULL, {NULL, reinterpret_cast<int (*)(void*)>(&library::UNRESOLVED)}}
+    #endif
+  };
+
+  struct console /* final */ {
     typedef union {
-      enum flag /* : unsigned char */ {
-        FLUSH_ON_NEWLINE,
-        FLUSH_ON_OVERFLOW
+      enum flag /* : signed char:2 */ {
+        FLUSH_ON_NEWLINE,                  FLUSH_ON_OVERFLOW,
+        NO_ORIENTATION = FLUSH_ON_NEWLINE, MULTIBYTE_ORIENTATION = -1, WIDE_ORIENTATION = 1
       };
     } policy;
+
+    typedef union orientation {
+      static enum console::policy::flag get(::std::FILE* const stream) /* noexcept */ {
+        int const streamOrientation = ::std::fwide(stream, 0);
+        return streamOrientation > 0 ? console::policy::WIDE_ORIENTATION : streamOrientation < 0 ? console::policy::MULTIBYTE_ORIENTATION : console::policy::NO_ORIENTATION;
+      }
+
+      static enum console::policy::flag set(::std::FILE* const stream, enum console::policy::flag const orientation) /* noexcept */ {
+        switch (orientation) {
+          case console::policy::MULTIBYTE_ORIENTATION: if (int const streamOrientation = ::std::fwide(stream, -1)) { return streamOrientation < 0 ? console::policy::MULTIBYTE_ORIENTATION : console::policy::WIDE_ORIENTATION; } break;
+          case console::policy::WIDE_ORIENTATION:      if (int const streamOrientation = ::std::fwide(stream, +1)) { return streamOrientation > 0 ? console::policy::WIDE_ORIENTATION : console::policy::MULTIBYTE_ORIENTATION; } break;
+          default:;
+        }
+
+        return console::policy::NO_ORIENTATION;
+      }
+    } orientation;
+
+    /* ... */
+    struct locale /* final */ {
+      struct quotes /* final */ {
+        inline static wchar_t const* nounicode() /* noexcept */ { return reinterpret_cast<wchar_t const (&)[/*2*/]>(L"\""     L"\""); } // ->> Risks undefined behaviour pre-C++20
+        inline static wchar_t const* unicode  () /* noexcept */ { return reinterpret_cast<wchar_t const (&)[/*2*/]>(L"\u201C" L"\u201D"); }
+      };
+
+      wchar_t const *quotes;
+      #if defined __APPLE__ or defined __unix__
+        ::locale_t value, prior; // ->> Mutually-exclusive ownership
+      #endif
+    } locale;
+
+    struct /* final */ {
+      #if _WIN32
+        int    (__cdecl *_fileno)           (::std::FILE*);
+        int    (__cdecl *_setmbcp)          (int);
+        int    (__cdecl *_setmode)          (int, int);
+        ::BOOL (WINAPI  *SetConsoleOutputCP)(::UINT);
+      #elif defined __APPLE__ or defined __unix__
+        void       (*freelocale)(::locale_t);
+        ::locale_t (*newlocale) (int, char const[], ::locale_t)
+        ::locale_t (*uselocale) (::locale_t);
+      #endif
+    } extensions;
+
+    /* ... */
+    ~console() /* noexcept */ {
+      #if defined __APPLE__ or defined __unix__
+        if (reinterpret_cast<void (*)(::locale_t)>(&library::UNRESOLVED) != this -> extensions.freelocale and reinterpret_cast< ::locale_t (*)(::locale_t)>(&library::UNRESOLVED) != this -> extensions.uselocale) {
+          if (static_cast< ::locale_t>(0) != this -> locale.prior and this -> locale.prior != this -> locale.value ? static_cast< ::locale_t>(0) != this -> extensions.uselocale(this -> locale.prior) : false) {
+            if (static_cast< ::locale_t>(0) != this -> locale.value and LC_GLOBAL_LOCALE != this -> locale.value)
+              this -> extensions.freelocale(this -> locale.value);
+
+            this -> locale.value = this -> locale.prior;
+            this -> locale.prior = static_cast< ::locale_t>(0); // ->> or `LC_GLOBAL_LOCALE` logically
+          }
+
+          else if (this -> locale.value == this -> extensions.uselocale(static_cast< ::locale_t>(0)) ? static_cast< ::locale_t>(0) != this -> extensions.uselocale(LC_GLOBAL_LOCALE) : true) {
+            if (static_cast< ::locale_t>(0) != this -> locale.value and LC_GLOBAL_LOCALE != this -> locale.value)
+              this -> extensions.freelocale(this -> locale.value);
+
+            this -> locale.value = static_cast< ::locale_t>(0);
+          }
+        }
+      #endif
+    }
 
     /* ... */
     inline static bool buffer(::std::FILE* const stream, char buffer[], ::std::size_t const size, enum console::policy::flag const policy = console::policy::FLUSH_ON_OVERFLOW) /* noexcept */ {
@@ -89,9 +270,8 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       switch (policy) {
         case console::policy::FLUSH_ON_NEWLINE:  return 0 == ::std::setvbuf(stream, buffer, _IOLBF, size);
         case console::policy::FLUSH_ON_OVERFLOW: return 0 == ::std::setvbuf(stream, buffer, _IOFBF, size);
+        default:                                 return 0 == ::std::setvbuf(stream, buffer, _IONBF, size);
       }
-
-      return 0 == ::std::setvbuf(stream, buffer, _IONBF, size);
     }
 
     inline static bool flush(::std::FILE* const stream) /* noexcept */ {
@@ -99,291 +279,356 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     }
 
     #if defined _WIN32
-      static int (format)(::std::FILE* const stream, _Printf_format_string_ wchar_t const* const format, ...) /* noexcept */
+      static int (format)(::std::FILE* const stream, _Printf_format_string_ wchar_t const* format, ...) /* noexcept */
     #else
       /* [[gnu::format(wprintf, 2, 3)]] */
-      static int (format)(::std::FILE* const stream, wchar_t const format[], ...) /* noexcept */
+      static int (format)(::std::FILE* const stream, wchar_t const* format, ...) /* noexcept */
     #endif
     {
-      ::std::va_list arguments;                                      va_start(arguments, format);
-      int const count = ::std::vfwprintf(stream, format, arguments); va_end  (arguments);
+      ::std::va_list arguments;
+      int            count = 0; // ->> Logically, `count > INT_MAX` is Undefined Behaviour
 
-      return count;
-    }
+      // ... ->> Pessimizes multibyte orientation
+      va_start(arguments, format);
 
-    inline static bool narrow(::std::FILE* const stream) /* noexcept */ {
-      return ::std::fwide(stream, -1) < 0;
-    }
-
-    static unsigned char text(::std::FILE* const stream, char const character, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0") /* noexcept */ {
-      ::std::mbstate_t state = ::std::mbstate_t();
-      wchar_t          subcharacter;
-
-      // ...
-      switch (::std::mbrtowc(&subcharacter, &character, 1u, &state)) {
-        case static_cast< ::std::size_t>(-2):            // ->> Incomplete
-        case static_cast< ::std::size_t>(-1): return 0u; // ->> Invalid
+      if (console::policy::MULTIBYTE_ORIENTATION != console::orientation::get(stream)) {
+        count = ::std::vfwprintf(stream, format, arguments);
+        return va_end(arguments), count;
       }
 
-      return console::text(stream, subcharacter, escape, delimiters);
-    }
+      for (::std::size_t index = 0u; ; )
+      switch (format[index]) {
+        case L'\0': {
+          if (index > INT_MAX - count)                                                                   return va_end(arguments), -1; // --> EOVERFLOW
+          if (not console::text(stream, format, &format[index], console::policy::MULTIBYTE_ORIENTATION)) return va_end(arguments), -1; // --> EILSEQ
 
-    static ::std::size_t text(::std::FILE* const stream, char const* text, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0") /* noexcept */ {
-      ::std::size_t    length = 0u;
-      ::std::mbstate_t state  = ::std::mbstate_t();
-
-      // ... ->> Handles indeterminately-terminated text
-      if (L'\0' != delimiters[0]) {
-        if (not console::text(stream, delimiters[0], L"", L"\0"))
-        return 0u;
-
-        ++length;
-      }
-
-      while ('\0' != *text) {
-        wchar_t       character;
-        ::std::size_t sublength = 0u;
-
-        // ...
-        while (static_cast< ::std::size_t>(MB_LEN_MAX) != ++sublength) {
-          if ('\0' == text[sublength])
-          break;
+          return count + index;
         }
 
-        switch (sublength = ::std::mbrtowc(&character, text, sublength, &state)) {
-          case static_cast< ::std::size_t>(-2):
-          case static_cast< ::std::size_t>(-1): return 0u;
-          case 0x00u:                           return length; // ->> NUL-terminated
-        }
+        case L'%': switch (format[++index]) {
+          case L'%': {
+            if (index > INT_MAX - count)                                                                   return va_end(arguments), -1; // --> EOVERFLOW
+            if (not console::text(stream, format, &format[index], console::policy::MULTIBYTE_ORIENTATION)) return va_end(arguments), -1; // --> EILSEQ
 
-        if (not console::text(stream, character, escape, L"\0"))
-        return 0u;
+            count  += index;
+            format += index + 1u;
+            index   = 0u;
+          } break;
 
-        length++;
-        text += sublength;
-      }
+          default: {
+            struct modifier /* final */ {
+              enum /* : unsigned char */ {
+                h,  l,  L,           // ->> C++98       --> short,      long,            long double
+                hh, j,  ll, t,   z,  // ->> C++11       --> […] char,   ::std::intmax_t, long long,  ::std::ptrdiff_t,   ::std::size_t
+                D,  DD, H,  wfN, wN, // ->> C++26 (C23) --> _Decimal64, _Decimal128,     _Decimal32, ::std::int_fastN_t, ::std::intN_t
+              }              id : 4;
+              wchar_t const *value; // --> wchar_t const[4]
+            } const          modifiers[] = {{modifier::hh, L"hh"}, {modifier::h, L"h"}, {modifier::j, L"j"}, {modifier::L, L"L"}, {modifier::ll, L"ll"}, {modifier::l, L"l"}, {modifier::t, L"t"}, {modifier::z, L"z"}};
+            char             specifier[/* --> max(…) */ (MB_LEN_MAX | 11u) + 1u]; // ->> Maximum length sans flags, precision, and width (e.g. `"%0- +*.*lld"`, `"%#0- +*.*Lf"`, …)
+            ::std::mbstate_t state = ::std::mbstate_t();
+            wchar_t const   *terminator;
+            wchar_t const    terminators[] = L"\0" L"cdEefGginopsuXx" L"AaF" L"Bb"; // ->> C++98; C++11; C++26
 
-      if (L'\0' != delimiters[0] and L'\0' != delimiters[1]) {
-        if (not console::text(stream, delimiters[1], L"", L"\0"))
-        return 0u;
+            // ...
+            if (index - 1u > INT_MAX - count)                                                                   return va_end(arguments), -1; // --> EOVERFLOW
+            if (not console::text(stream, format, &format[index - 1u], console::policy::MULTIBYTE_ORIENTATION)) return va_end(arguments), -1; // --> EILSEQ
 
-        ++length;
-      }
+            count  += index - 1u;
+            format += index - 1u;
+            index   = 1u;
 
-      return length;
-    }
+            // ...
+            do for (terminator = terminators; terminator != &terminators[sizeof terminators / sizeof(wchar_t)]; ++terminator) {
+              if (format[index] == *terminator)
+              break;
+            } while (++index, terminator == &terminators[sizeof terminators / sizeof(wchar_t)]);
 
-    inline static unsigned char text(::std::FILE* const stream, wchar_t const character, wchar_t const* escape = L"", wchar_t const delimiters[2] = L"\0") /* noexcept */ {
-      unsigned char length /* : 3 */ = 0u;
-
-      // ...
-      if    (L'\0' != delimiters[0])                                               { length += WEOF != ::std::fputwc(delimiters[0], stream); }
-      while (L'\0' != *escape) if (character == L'\\' or character == *(escape++)) { length += WEOF != ::std::fputwc(L'\\',         stream); break; }
-
-      if (WEOF == ::std::fputwc(character, stream)) return 0u; length += 1u;
-      if (L'\0' != delimiters[0] and L'\0' != delimiters[1]) { length += WEOF != ::std::fputwc(delimiters[1], stream); }
-
-      return length;
-    }
-
-    static ::std::size_t text(::std::FILE* const stream, wchar_t const* text, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0") /* noexcept */ {
-      ::std::size_t length = 0u;
-
-      // ... ->> Handles indeterminately-terminated text
-      if    (L'\0' != delimiters[0])                           { if (not console::text(stream, delimiters[0], L"",    L"\0")) return 0u; ++length; }
-      while (L'\0' != *text)                                   { if (not console::text(stream, *(text++),     escape, L"\0")) return 0u; ++length; }
-      if    (L'\0' != delimiters[0] and '\0' != delimiters[1]) { if (not console::text(stream, delimiters[1], L"",    L"\0")) return 0u; ++length; }
-
-      return length;
-    }
-
-    inline static bool widen(::std::FILE* const stream) /* noexcept */ {
-      return ::std::fwide(stream, +1) > 0;
-    }
-  } const console = {};
-
-  wchar_t const *delimiters = console::delimiters::nounicode();
-
-  struct library /* final */ {
-    #if defined _WIN32
-      enum    /* : unsigned char */ { COUNT = 5u };
-      enum id /* : unsigned char */ { advapi32, bcrypt, kernel32, shell32, ucrtbase, /* , … */ credui, ole32, oleaut32, taskschd };
-
-      enum library::id                                                  const id;
-      ::LPCWSTR                                                         const name; // ->> Case-insensitive
-      struct /* final */ { ::HMODULE handle; ::BOOL (*unloader)(::HMODULE); } module;
-    #else
-      enum    /* : unsigned char */ { COUNT = 1u };
-      enum id /* : unsigned char */ {};
-
-      enum library::id                                       const id;
-      wchar_t const                                         *const name;
-      struct /* final */ { void *handle; int (*unloader)(void*); } module;
-    #endif
-
-    /* ... */
-    ~library() /* noexcept */ {
-      if (NULL != this -> module.handle and NULL != this -> module.unloader)
-      this -> module.unloader(this -> module.handle); // --> dlclose(…) | FreeLibrary(…)
-    }
-
-    /* ... */
-    inline static void load(struct library (&libraries)[library::COUNT]) /* noexcept */ {
-      #if defined _WIN32
-        ::WCHAR path[MAX_PATH + 13]; // --> ::GetSystemDirectoryW(…) + '\\' + libraries[kernel32].name
-
-        // ... ->> Load the userland `kernel32` library first
-        if (::UINT const pathLength = (::GetSystemDirectoryW(path, sizeof path / sizeof(::TCHAR)) * sizeof(::TCHAR)) / sizeof(::WCHAR)) {
-          path[pathLength] = L'\\';
-
-          for (::std::size_t index = 0u; ; ++index) {
-            path[index + pathLength + 1u] = libraries[library::kernel32].name[index];
-            if (L'\0' == libraries[library::kernel32].name[index]) break;
-          }
-
-          if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, path, &libraries[library::kernel32].module.handle))
-          if (NULL != libraries[library::kernel32].module.handle) {
-            ::BOOL    (WINAPI *const FreeLibrary)   (::HMODULE)                    = reinterpret_cast< ::BOOL    WINAPI (*)(::HMODULE)>                   (::GetProcAddress(libraries[library::kernel32].module.handle, "FreeLibrary"));    // --> <windows.h>
-            ::HMODULE (WINAPI *const LoadLibraryExW)(::LPCWSTR, ::HANDLE, ::DWORD) = reinterpret_cast< ::HMODULE WINAPI (*)(::LPCWSTR, ::HANDLE, ::DWORD)>(::GetProcAddress(libraries[library::kernel32].module.handle, "LoadLibraryExW")); // --> <windows.h>
-
-            // ... ->> Load remaining Windows API libraries —
-            if (::BOOL (WINAPI *const SetDefaultDllDirectories)(::DWORD) = reinterpret_cast< ::BOOL (WINAPI*)(::DWORD)>(::GetProcAddress(libraries[library::kernel32].module.handle, "SetDefaultDllDirectories"))) // --> <windows.h> not NULL
-            (void) SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32); // --> %SystemRoot%\System32
-
-            for (struct library *library = libraries; library != &libraries[library::COUNT]; ++library)
-            if (library != &libraries[library::kernel32]) /* ->> — except the already loaded userland `kernel32` library */ {
-              for (::std::size_t index = 0u; ; ++index) {
-                path[index + pathLength + 1u] = library -> name[index];
-                if (L'\0' == library -> name[index]) break;
-              }
-
-              if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, path, &library -> module.handle)) {
-                if (NULL != library -> module.handle)
-                continue; // --> library -> module.unloader = NULL;
-              }
-
-              library -> module.handle   = LoadLibraryExW(path, static_cast< ::HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
-              library -> module.unloader = NULL == library -> module.handle ? NULL : FreeLibrary;
+            if (L'\0' == *terminator) {
+              --index;
+              continue;
             }
-          }
-        }
-      #elif defined __APPLE__ or defined __unix__
-        libraries -> module.handle = ::dlopen(static_cast<char const*>(NULL), RTLD_LOCAL /* | RTLD_LAZY */);
-        if (NULL != libraries -> module.handle) {
-          (void) ::dlerror(); // ->> Clear prior linker error diagnostics
 
-          libraries -> module.unloader = reinterpret_cast<int (*)(void*)>(reinterpret_cast< ::uintptr_t>(::dlsym(libraries -> module.handle, "dlclose")));
-          libraries -> module.unloader = static_cast<char*>(NULL) != ::dlerror() ? NULL : libraries -> module.unloader;
-        }
+            // ::std::fprintf(stream, format[0:index], va_arg(arguments, …))
+            for (char *bytes = specifier; ; ) {
+              ::std::size_t const subcount = ::std::wcrtomb(bytes, *format, &state);
+
+              // ...
+              if (subcount == static_cast< ::std::size_t>(-1) or subcount > &specifier[sizeof specifier / sizeof(char)] - bytes)
+              return va_end(arguments), -1; // --> ENOMEM
+
+              bytes += subcount;
+
+              if (*(format++) == *terminator) {
+                *bytes = '\0';
+                break;
+              }
+            }
+
+            int subcount; // --> ::std::vfprintf(…)
+            subcount = ::std::vfprintf(stream, specifier, arguments); // NO, arguments is indeterminate and subcount is byte-based rather than wide-based
+                                                                      // if windows, %c and %s are wide by default
+                                                                      // consider supporting extended/ vendor specifiers
+                                                                      // let console::text() reuse mbstate_t
+
+            if (subcount < 0)               return va_end(arguments), subcount; // ->> ERROR
+            if (subcount > INT_MAX - count) return va_end(arguments), -1;       // --> EOVERFLOW
+
+            count  += subcount;
+            format += 1;
+            index   = 0u;
+          }
+        } break;
+      }
+    }
+
+    void load(struct library (&libraries)[library::COUNT]) /* noexcept */ {
+      #if _WIN32
+        this -> extensions._fileno            = reinterpret_cast<int     (__cdecl*)(::std::FILE*)>(libraries[library::ucrtbase]  .resolve("_fileno"));            // --> <stdio.h>
+        this -> extensions._setmbcp           = reinterpret_cast<int     (__cdecl*)(int)>         (libraries[library::ucrtbase]  .resolve("_setmbcp"));           // --> <mbctype.h>
+        this -> extensions._setmode           = reinterpret_cast<int     (__cdecl*)(int, int)>    (libraries[library::ucrtbase]  .resolve("_setmode"));           // --> <io.h>
+        this -> extensions.SetConsoleOutputCP = reinterpret_cast< ::BOOL (WINAPI*) (::UINT)>      (libraries[library::kernelbase].resolve("SetConsoleOutputCP")); // --> <windows.h>
+      #elif defined __APPLE__ or defined __unix__
+        this -> locale.prior = static_cast< ::locale_t>(0);
+        this -> locale.value = static_cast< ::locale_t>(0);
+
+        this -> extensions.freelocale = reinterpret_cast<void        (*)(::locale_t)>                   (libraries[library::libc].resolve("freelocale")); // --> <locale.h>
+        this -> extensions.newlocale  = reinterpret_cast< ::locale_t (*)(int, char const[], ::locale_t)>(libraries[library::libc].resolve("newlocale"));  // --> <locale.h>
+        this -> extensions.uselocale  = reinterpret_cast< ::locale_t (*)(::locale_t)>                   (libraries[library::libc].resolve("uselocale"));  // --> <locale.h>
+      #else
+        (void) libraries;
       #endif
     }
-  } libraries[library::COUNT] = {
-    // ->> In enumeration order
-    #if defined _WIN32
-      {library::advapi32, L"advapi32" L".dll", {NULL, NULL}},
-      {library::bcrypt,   L"bcrypt"   L".dll", {NULL, NULL}},
-      {library::kernel32, L"kernel32" L".dll", {NULL, NULL}},
-      {library::shell32,  L"shell32"  L".dll", {NULL, NULL}},
-      {library::ucrtbase, L"ucrtbase" L".dll", {NULL, NULL}}
-    #elif defined __APPLE__ or defined __unix__
-      {static_cast<enum library::id>(0x00u), L"libdl.so", {NULL, NULL}} // ->> Recently `libc.so` suffices
-    #else
-      {static_cast<enum library::id>(0x00u), NULL, {NULL, NULL}}
-    #endif
-  };
+
+    private:
+      static bool text(::std::FILE* const stream, wchar_t const begin[], wchar_t const end[], enum console::policy::flag const) /* noexcept */ {
+        if (begin != end) {
+          char             bytes[MB_LEN_MAX]; // --> char[MB_CUR_MAX]
+          ::std::mbstate_t state;
+
+          // ...
+          state = ::std::mbstate_t();
+
+          for (wchar_t const *text = begin; text != end; ++text) {
+            if (::std::wcrtomb(bytes, *text, &state) == static_cast< ::std::size_t>(-1))
+            return false;
+          }
+
+          state = ::std::mbstate_t();
+
+          for (wchar_t const *text = begin; text != end; ++text) {
+            ::std::size_t const count = ::std::wcrtomb(bytes, *text, &state);
+
+            if (count != ::std::fwrite(bytes, sizeof(char), count, stream))
+            return false;
+          }
+        }
+
+        return true;
+      }
+
+    public:
+      static unsigned char text(::std::FILE* const stream, char const character, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0", enum console::policy::flag const orientation = console::policy::NO_ORIENTATION) /* noexcept [[nonnull]] */ {
+        ::std::mbstate_t state = ::std::mbstate_t();
+        wchar_t          wideCharacter;
+
+        // ...
+        switch (::std::mbrtowc(&wideCharacter, &character, 1u, &state)) {
+          case static_cast< ::std::size_t>(-2):            // ->> Incomplete
+          case static_cast< ::std::size_t>(-1): return 0u; // ->> Invalid
+        }
+
+        return console::text(stream, wideCharacter, escape, delimiters, console::policy::NO_ORIENTATION == orientation ? console::orientation::get(stream) : orientation);
+      }
+
+      static ::std::size_t text(::std::FILE* const stream, char const* text, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0", enum console::policy::flag orientation = console::policy::NO_ORIENTATION) /* noexcept [[nonnull]] */ {
+        ::std::size_t    length = 0u;
+        ::std::mbstate_t state  = ::std::mbstate_t();
+
+        // ... ->> Handles indeterminately-terminated text
+        orientation = console::policy::NO_ORIENTATION == orientation ? console::orientation::get(stream) : orientation;
+
+        if (L'\0' != delimiters[0]) {
+          if (not console::text(stream, delimiters[0], L"", L"\0", orientation))
+          return 0u;
+
+          ++length;
+        }
+
+        while ('\0' != *text) {
+          wchar_t       character;
+          ::std::size_t sublength = 0u;
+
+          // ...
+          while (static_cast< ::std::size_t>(MB_LEN_MAX) != ++sublength) {
+            if ('\0' == text[sublength])
+            break;
+          }
+
+          switch (sublength = ::std::mbrtowc(&character, text, sublength, &state)) {
+            case static_cast< ::std::size_t>(-2):                // ->> Incomplete
+            case static_cast< ::std::size_t>(-1): return 0u;     // ->> Invalid
+            case 0x00u:                           return length; // ->> NUL-terminated
+          }
+
+          if (not console::text(stream, character, escape, L"\0", orientation))
+          return 0u;
+
+          length++;
+          text += sublength;
+        }
+
+        if (L'\0' != delimiters[0] and L'\0' != delimiters[1]) {
+          if (not console::text(stream, delimiters[1], L"", L"\0", orientation))
+          return 0u;
+
+          ++length;
+        }
+
+        return length;
+      }
+
+      static unsigned char text(::std::FILE* const stream, wchar_t const character, wchar_t const* escape = L"", wchar_t const delimiters[2] = L"\0", enum console::policy::flag orientation = console::policy::NO_ORIENTATION) /* noexcept [[nonnull]] */ {
+        unsigned char length /* : 3 */ = 0u;
+
+        // ... ->> Pessimizes multibyte orientation
+        if (console::policy::MULTIBYTE_ORIENTATION != orientation) {
+          if    (L'\0' != delimiters[0])                                               { length += WEOF != ::std::fputwc(delimiters[0], stream); }
+          while (L'\0' != *escape) if (character == L'\\' or character == *(escape++)) { length += WEOF != ::std::fputwc(L'\\',         stream); break; }
+
+          if (WEOF == ::std::fputwc(character, stream)) return 0u; length += 1u;
+          if (L'\0' != delimiters[0] and L'\0' != delimiters[1]) { length += WEOF != ::std::fputwc(delimiters[1], stream); }
+        }
+
+        else {
+          char                                                          bytes[MB_LEN_MAX]; // --> char[MB_CUR_MAX]
+          ::std::size_t                                                 count;
+          struct /* final */ { ::std::mbstate_t character, delimiter; } states = {::std::mbstate_t(), ::std::mbstate_t()};
+
+          // ...
+          if (L'\0' != delimiters[0]) { count = ::std::wcrtomb(bytes, delimiters[0], &states.delimiter); length += count != static_cast< ::std::size_t>(-1) ? count == ::std::fwrite(bytes, sizeof(char), count, stream) : 0u; }
+          while (L'\0' != *escape) if (character == L'\\' or character == *(escape++)) { length += ::std::fwrite(&static_cast<char const&>('\\'), sizeof(char), 1u, stream) == 1u; break; }
+
+          count = ::std::wcrtomb(bytes, character, &states.character);
+
+          if (count == static_cast< ::std::size_t>(-1) or count != ::std::fwrite(bytes, sizeof(char), count, stream)) return 0u;    length += 1u;
+          if (L'\0' != delimiters[0] and L'\0' != delimiters[1]) { count = ::std::wcrtomb(bytes, delimiters[1], &states.delimiter); length += count != static_cast< ::std::size_t>(-1) ? count == ::std::fwrite(bytes, sizeof(char), count, stream) : 0u; }
+        }
+
+        return length;
+      }
+
+      static ::std::size_t text(::std::FILE* const stream, wchar_t const* text, wchar_t const escape[] = L"", wchar_t const delimiters[2] = L"\0", enum console::policy::flag orientation = console::policy::NO_ORIENTATION) /* noexcept [[nonnull]] */ {
+        ::std::size_t length = 0u;
+
+        // ... ->> Handles indeterminately-terminated text
+        orientation = console::policy::NO_ORIENTATION == orientation ? console::orientation::get(stream) : orientation;
+
+        if    (L'\0' != delimiters[0])                           { if (not console::text(stream, delimiters[0], L"",    L"\0", orientation)) return 0u; ++length; }
+        while (L'\0' != *text)                                   { if (not console::text(stream, *(text++),     escape, L"\0", orientation)) return 0u; ++length; }
+        if    (L'\0' != delimiters[0] and '\0' != delimiters[1]) { if (not console::text(stream, delimiters[1], L"",    L"\0", orientation)) return 0u; ++length; }
+
+        return length;
+      }
+  } console = {{console::locale::quotes::nounicode()}, {}};
 
   struct memory /* final */ {
     typedef union {
       enum flag /* : unsigned char */ {
-        PRESERVE_MEMORY = 0x1u, // ->> Destroys objects contained in `.value` prior
-        RAW_MEMORY      = 0x2u, //
-        SCRAMBLE_MEMORY = 0x4u, // ->> Needn’t be cryptographically secure
-        ZERO_MEMORY     = 0x8u  //
+        PRESERVE_MEMORY  = 0x1u, // ->> Destroys objects contained in `.value` prior
+        RANDOMIZE_MEMORY = 0x2u, // ->> Needn’t be Cryptographically Secure (PRNG)
+        RAW_MEMORY       = 0x4u,
+        ZERO_MEMORY      = 0x8u
       };
+
+      enum { BUFFERED };
     } policy;
 
     /* ... */
-    unsigned char         *value; // ->> Not copy-safe
-    ::std::size_t          capacity;
-    struct library const (&libraries)[library::COUNT];
+    unsigned char  buffer[4096]; // ->> Arbitrarily-sized
+    unsigned char *value;        // ->> Unique ownership
+    ::std::size_t  capacity;
+    struct /* final */ {
+      #if defined _WIN32
+        ::NTSTATUS (WINAPI *BCryptGenRandom)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG);
+        ::BOOLEAN  (WINAPI *RtlGenRandom)   (::PVOID, ::ULONG);
+      #elif defined __APPLE__ or defined __unix__
+        void      (*bzero)         (void*, ::std::size_t);
+        void      (*explicit_bzero)(void*, ::std::size_t);
+        int       (*getentropy)    (void*, ::std::size_t);
+        ::ssize_t (*getrandom)     (void*, ::std::size_t, unsigned);
+      #endif
+    } extensions;
 
     /* ... */
     ~memory() /* noexcept */ {
       ::delete[] this -> value;
+      this -> value = NULL;
     }
 
     /* ... */
-    inline unsigned char* scramble(unsigned char bytes[], ::std::size_t const size) const /* noexcept */ {
+    void load(struct library (&libraries)[library::COUNT]) /* noexcept */ {
       #if defined _WIN32
-        if (NULL != libraries[library::bcrypt].module.handle)
-        if (::NTSTATUS (WINAPI *const BCryptGenRandom)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG) = reinterpret_cast< ::NTSTATUS (WINAPI*)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG)>(::GetProcAddress(libraries[library::bcrypt].module.handle, "BCryptGenRandom"))) /* --> <bcrypt.h> not NULL */ {
-          if (STATUS_SUCCESS == BCryptGenRandom(static_cast< ::BCRYPT_ALG_HANDLE>(NULL), static_cast< ::PUCHAR>(bytes), static_cast< ::ULONG>(size), 0x00000000uL))
-          return bytes;
-        }
+        this -> extensions.BCryptGenRandom = reinterpret_cast< ::NTSTATUS (WINAPI*) (::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG)>(libraries[library::bcrypt]  .resolve("BCryptGenRandom"));   // --> <bcrypt.h>
+        this -> extensions.RtlGenRandom    = reinterpret_cast< ::BOOLEAN  (WINAPI*) (::PVOID, ::ULONG)>                               (libraries[library::advapi32].resolve("SystemFunction036")); // --> <ntsecapi.h>
+      #elif defined __APPLE__ or defined __unix__
+        this -> extensions.bzero          = reinterpret_cast<void       (*)(void*, ::std::size_t)>          (libraries[library::libc].resolve("bzero"));          // --> <strings.h>
+        this -> extensions.explicit_bzero = reinterpret_cast<void       (*)(void*, ::std::size_t)>          (libraries[library::libc].resolve("explicit_bzero")); // --> <string.h>
+        this -> extensions.getentropy     = reinterpret_cast<int        (*)(void*, ::std::size_t)>          (libraries[library::libc].resolve("getentropy"));     // --> <sys/random.h>
+        this -> extensions.getrandom      = reinterpret_cast< ::ssize_t (*)(void*, ::std::size_t, unsigned)>(libraries[library::libc].resolve("getrandom"));      // --> <sys/random.h>
+      #else
+        (void) libraries;
+      #endif
+    }
 
-        if (NULL != libraries[library::advapi32].module.handle)
-        if (::BOOLEAN (WINAPI *const RtlGenRandom)(::PVOID, ::ULONG) = reinterpret_cast< ::BOOLEAN (WINAPI*)(::PVOID, ::ULONG)>(::GetProcAddress(libraries[library::advapi32].module.handle, "SystemFunction036"))) /* --> <ntsecapi.h> not NULL */ {
-          if (FALSE != RtlGenRandom(static_cast< ::PVOID>(bytes), static_cast< ::ULONG>(size)))
-          return bytes;
+    void randomize(unsigned char* bytes, ::std::size_t size) const /* noexcept */ {
+      #if defined _WIN32
+        if (reinterpret_cast< ::NTSTATUS (WINAPI*)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG)>(&library::UNRESOLVED) != this -> extensions.BCryptGenRandom)
+        for (::ULONG count; size; (bytes += count), (size -= count)) {
+          count = ULONG_MAX < size ? ULONG_MAX : size; // --> min(…)
+          if (STATUS_SUCCESS != this -> extensions.BCryptGenRandom(static_cast< ::BCRYPT_ALG_HANDLE>(NULL), bytes, count, BCRYPT_USE_SYSTEM_PREFERRED_RNG)) break;
+        } // ->> CTR_DRBG portion of NIST SP800-90 standard (previously used the FIPS 186-2 standard)
+
+        if (reinterpret_cast< ::BOOLEAN (WINAPI*)(::PVOID, ::ULONG)>(&library::UNRESOLVED) != this -> extensions.RtlGenRandom)
+        for (::ULONG count; size; (bytes += count), (size -= count)) {
+          count = ULONG_MAX < size ? ULONG_MAX : size; // --> min(…)
+          if (FALSE == this -> extensions.RtlGenRandom(bytes, count)) break;
         }
       #elif defined __APPLE__ or defined __unix__
-        if (int (*const getentropy)(void*, ::std::size_t) = reinterpret_cast<int (*)(void*, ::std::size_t)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "getentropy")))) // --> <sys/random.h> not NULL
-        if (static_cast<char*>(NULL) == ::dlerror()) {
-          ::std::size_t index = 0u;
-
-          // ...
-          for (::std::size_t count; index != size; index += count) {
-            count = size - index < 256u ? size - index : 256u;
-            if (getentropy(&bytes[index], count) == -1) break;
-          }
-
-          if (index == size)
-          return bytes;
+        if (reinterpret_cast<int (*)(void*, ::std::size_t)>(&library::UNRESOLVED) != this -> extensions.getentropy)
+        for (::std::size_t count; size; (bytes += count), (size -= count)) {
+          count = size < 256u ? size : 256u; // --> min(…)
+          if (this -> extensions.getentropy(bytes, count) == -1) break;
         }
 
-        if (::ssize_t (*const getrandom)(void*, ::std::size_t, unsigned) = reinterpret_cast< ::ssize_t (*)(void*, ::std::size_t, unsigned)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "getrandom")))) // --> <sys/random.h> not NULL
-        if (static_cast<char*>(NULL) == ::dlerror()) {
-          ::std::size_t index = 0u;
+        if (reinterpret_cast< ::ssize_t (*)(void*, ::std::size_t, unsigned)>(&library::UNRESOLVED) != this -> extensions.getrandom)
+        for (::ssize_t count; size; (bytes += count), (size -= count)) {
+          count = this -> extensions.getrandom(bytes, size, 0x00u /* | GRND_NONBLOCK | GRND_RANDOM */);
 
-          // ...
-          for (::ssize_t count; index != size; index += static_cast< ::std::size_t>(count)) {
-            count = getrandom(&bytes[index], size - index, 0x00u /* | GRND_NONBLOCK | GRND_RANDOM */);
-
-            if      (count == -1 and EINTR == errno) count = 0;
-            else if (count <= 0)                     break;
-          }
-
-          if (index == size)
-          return bytes;
+          if      (count == -1 and EINTR == errno) count = 0;
+          else if (count <= 0)                     break;
         }
       #endif
       unsigned seed = 0u;
 
-      // ...
-      for (unsigned char const volatile *byte = &reinterpret_cast<unsigned char const volatile*>(&bytes)[sizeof(unsigned char*)]; byte != reinterpret_cast<unsigned char*>(&bytes); )
-      seed = *--byte | (seed << 8u); // ->> `CHAR_BIT` minimum
+      // ... ->> Seed with `bytes` —
+      for (unsigned char const volatile *byte = &reinterpret_cast<unsigned char const volatile*>(&bytes)[sizeof(unsigned char*)]; byte != reinterpret_cast<unsigned char const*>(&bytes); )
+      seed = *--byte | (seed << 8u); // --> min(CHAR_BIT)
 
       #if __STDC_HOSTED__
-        ::std::srand(seed); // ->> Seed with `bytes`
-
-        for (unsigned char volatile *byte = &bytes[size]; byte != bytes; )
-        *--byte = ::std::rand();
+        for (::std::srand(seed); size--; ) // ->> — process-wide
+        *const_cast<unsigned char volatile*>(bytes++) = ::std::rand(); // --> Windows’ `::rand_s(…)` defers to `::RtlGenRandom(…)`
       #else
-        for (unsigned char volatile *byte = &bytes[size]; byte != bytes; ) {
-          seed = (seed * 25173u) + 13849u;                                                                // ->> Linear Congruential Generator
-          *--byte = static_cast<unsigned char>(seed /* >> ((CHAR_BIT * sizeof(unsigned)) - CHAR_BIT) */); // ->> The high-end is more cryptographically sound
-        }
+        for (; size--; seed = (seed * 25173u) + 13849u)       // ->> 16-bit full-period mixed (affine) Linear Congruential Generator
+        *const_cast<unsigned char volatile*>(bytes++) = seed; // ->> The high-end (`seed >> ((CHAR_BIT * sizeof(unsigned)) - CHAR_BIT)`) has better statistical properties
       #endif
-
-      return bytes;
     }
 
     unsigned char* reserve(::std::size_t const capacity, enum memory::policy::flag const policy = static_cast<enum memory::policy::flag>(memory::policy::PRESERVE_MEMORY | memory::policy::ZERO_MEMORY)) /* ->> Aligned to `__STDCPP_DEFAULT_NEW_ALIGNMENT__` (since C++17) or `alignof(::std::max_align_t)` (since C++11) */ {
       if (capacity > this -> capacity) {
         if (unsigned char *const allocation = ::new (::std::nothrow) unsigned char[capacity]) /* --> not NULL */ {
           if (not (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::RAW_MEMORY))) {
-            if      (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::ZERO_MEMORY))     (void) this -> zero    (allocation, capacity);
-            else if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::SCRAMBLE_MEMORY)) (void) this -> scramble(allocation, capacity);
+            if      (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::ZERO_MEMORY))      this -> zero     (allocation, capacity);
+            else if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::RANDOMIZE_MEMORY)) this -> randomize(allocation, capacity);
           }
 
           if (NULL != this -> value) {
@@ -395,8 +640,8 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
 
             // ... ->> In case `.value` can be inspected after deletion/ release
             if (not (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::RAW_MEMORY))) {
-              if      (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::ZERO_MEMORY))     (void) this -> zero    (this -> value, this -> capacity);
-              else if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::SCRAMBLE_MEMORY)) (void) this -> scramble(this -> value, this -> capacity);
+              if      (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::ZERO_MEMORY))      this -> zero     (this -> value, this -> capacity);
+              else if (static_cast<unsigned char>(policy) & static_cast<unsigned char>(memory::policy::RANDOMIZE_MEMORY)) this -> randomize(this -> value, this -> capacity);
             }
           }
 
@@ -414,36 +659,28 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       return this -> value;
     }
 
-    inline unsigned char* zero(unsigned char bytes[], ::std::size_t const size) const /* noexcept */ {
+    void zero(unsigned char* bytes, ::std::size_t size) const /* noexcept */ {
       #if defined _WIN32
-        #if defined _MSC_VER and defined NTDDI_VERSION ? NTDDI_VERSION >= 0x0A000010 : false              //
-          #pragma comment(lib, "volatileaccessu.lib")                                                     //
-          return const_cast<unsigned char*>(SecureZeroMemory2(static_cast<void volatile*>(bytes), size)); // --> RtlSecureZeroMemory2(…)
-        #elif defined SecureZeroMemory                                       //
-          return static_cast<unsigned char*>(SecureZeroMemory(bytes, size)); // --> RtlSecureZeroMemory(…)
-        #elif defined ZeroMemory                       //
+        #if defined _MSC_VER and defined NTDDI_VERSION ? NTDDI_VERSION+0 >= 0x0A000010 : false
+          #pragma comment(lib, "volatileaccessu.lib")
+          return (void) SecureZeroMemory2(static_cast<void volatile*>(bytes), size); // --> RtlSecureZeroMemory2(…)
+        #elif defined SecureZeroMemory
+          return (void) SecureZeroMemory(bytes, size); // --> RtlSecureZeroMemory(…)
+        #elif defined ZeroMemory
           ZeroMemory(static_cast<void*>(bytes), size); // --> RtlZeroMemory(…)
         #endif
       #elif defined __APPLE__ or defined __unix__
-        if (void (*const explicit_bzero)(void*, ::std::size_t) = reinterpret_cast<void (*)(void*, ::std::size_t)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "explicit_bzero")))) // --> <string.h> not NULL
-        if (static_cast<char*>(NULL) == ::dlerror()) {
-          explicit_bzero(bytes, size);
-          return bytes;
-        }
+        if (reinterpret_cast<void (*)(void*, ::std::size_t)>(&library::UNRESOLVED) != this -> extensions.explicit_bzero)
+        return this -> extensions.explicit_bzero(bytes, size);
 
-        if (void (*const bzero)(void*, ::std::size_t) = reinterpret_cast<void (*)(void*, ::std::size_t)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "bzero")))) // --> <strings.h> not NULL
-        if (static_cast<char*>(NULL) == ::dlerror()) {
-          bzero(bytes, size);
-          return bytes;
-        }
+        if (reinterpret_cast<void (*)(void*, ::std::size_t)>(&library::UNRESOLVED) != this -> extensions.bzero)
+        return this -> extensions.bzero(bytes, size);
       #endif
 
-      for (unsigned char volatile *byte = &bytes[size]; byte != bytes; ) // -|> Consider environment-dependent wider strides (e.g. `unsigned char[8]`/ `unsigned long` zeroing) where all bits participate in value representation
-      *--byte = 0x00u;                                                   // --> ::std::memset_explicit(allocation, 0x00, capacity)
-
-      return bytes;
+      while (size--)                                         // -|> Consider environment-dependent wider strides (e.g. `unsigned char[8]`/ `unsigned long` zeroing) where all bits participate in value representation
+      *const_cast<unsigned char volatile*>(bytes++) = 0x00u; // --> ::std::memset_explicit(allocation, 0x00, capacity)
     }
-  } memory = {NULL, 0u, libraries};
+  } memory = {{}, memory.buffer, sizeof memory.buffer, {}};
 
   struct option /* final */ {
     enum flag /* : unsigned char */ {
@@ -455,7 +692,9 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       OUTPUT,       // ->> `printf(…)`-formatted filter for renamed files                              --> "%u"
       PADDING,      // ->> Padding character to format indexes to the same length (NUL does not pad)   --> '0'
       REVERSE,      // ->> Reversed indexing                                                           --> false
-      SYSTEM_FILES  // ->> Renumerate system files                                                     --> false
+      SYSTEM_FILES, // ->> Renumerate system files                                                     --> false
+
+      HISTORY_FILES
     };
 
     struct namelist /* final */ { char const *pre, *values; };
@@ -490,438 +729,163 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
   };
 
   // ...
-  (void) console::buffer(stderr, static_cast<char*>(NULL), 0u);
-  (void) library::load  (libraries);
+  (void) console. buffer(stderr, static_cast<char*>(NULL), ::std::size_t());
+  (void) library::load  (libraries); {
+    console.load(libraries);
+    memory .load(libraries);
+  }
 
-  // ... ->> Assume standard (input/)output as Unicode (UTF-8)
-  #if defined _WIN32
-    enum /* : ::UINT */ {
-      CP_UTF16LE = 1200u, // ->> Wide character representation --> wchar_t
-      CP_UTF16BE = 1201u, CP_UTF32LE = 12000u, CP_UTF32BE = 12001u
-    };
+  // ... ->> Assume (robustly) standard (input/)output as Unicode (UTF-8) --> console.locale.set(…)
+  #if defined _WIN32 // ->> Can’t assume locale code page with `::SetThreadLocale(…)` from `CP_THREAD_ACP` to Unicode
+    enum /* : ::UINT */ { CP_UTF32BE = 12001u, CP_UTF32LE = 12000u, CP_UTF16BE = 1201u, CP_UTF16LE = 1200u }; // ->> Wide character representation --> wchar_t
 
-    // ... ->> Can’t assume locale code page with `::SetThreadLocale(…)` from `CP_THREAD_ACP` to Unicode
-    if (NULL != libraries[library::kernel32].module.handle) {
-      // ... ->> Assume standard console output as Unicode (analogous to `::SetConsoleCP(…)` for standard console input)
-      if (::BOOL (WINAPI *const SetConsoleOutputCP)(::UINT) = reinterpret_cast< ::BOOL (WINAPI*)(::UINT)>(::GetProcAddress(libraries[library::kernel32].module.handle, "SetConsoleOutputCP"))) // --> <windows.h> not NULL
-      for (::UINT const pages[] = {CP_UTF8, CP_UTF16LE /* , CP_UTF32LE, CP_UTF7 */}, *page = pages; page != &pages[sizeof pages / sizeof(::UINT)]; ++page) {
-        if (FALSE != SetConsoleOutputCP(*page))
-        break;
-      }
+    // ... ->> Assume standard console output as Unicode (analogous to `::SetConsoleCP(…)` for standard console input)
+    if (reinterpret_cast< ::BOOL (WINAPI*)(::UINT)>(&library::UNRESOLVED) != console.extensions.SetConsoleOutputCP)
+    for (::UINT const pages[] = {CP_UTF8, CP_UTF16LE /* , CP_UTF32LE, CP_UTF7 */}, *page = pages; page != &pages[sizeof pages / sizeof(::UINT)]; ++page) {
+      if (FALSE != console.extensions.SetConsoleOutputCP(*page)) // ->> Process-wide (for attached consoles)
+      break;
     }
 
-    if (NULL != libraries[library::ucrtbase].module.handle) {
-      // ... ->> Assume multibyte code page from `::std::setlocale(…)`’s `_MB_CP_LOCALE` to Unicode
-      if (int (__cdecl *const _setmbcp)(int) = reinterpret_cast<int (__cdecl*)(int)>(::GetProcAddress(libraries[library::ucrtbase].module.handle, "_setmbcp"))) // --> <mbctype.h> not NULL
-      (void) _setmbcp(_MB_CP_UTF8);                                                                                                                             // --> static_cast<int>(CP_UTF8)
+    // ... ->> Assume multibyte code page from `::std::setlocale(…)`’s `_MB_CP_LOCALE` to Unicode
+    if (reinterpret_cast<int (__cdecl*)(int)>(&library::UNRESOLVED) != console.extensions._setmbcp)
+    for (int const pages[] = {/* --> static_cast<int>(CP_UTF8) */ _MB_CP_UTF8 /* , … */}, *page = pages; page != &pages[sizeof pages / sizeof(int)]; ++page) {
+      if (0 == console.extensions._setmbcp(*page)) // ->> Process-wide
+      break;
+    }
 
-      // ... ->> Assume standard file stream modes as Unicode character conversion (with CRLF translations)
-      if (int (__cdecl *const _fileno) (::std::FILE*) = reinterpret_cast<int (__cdecl*)(::std::FILE*)>(::GetProcAddress(libraries[library::ucrtbase].module.handle, "_fileno")))  /* --> <stdio.h> not NULL */
-      if (int (__cdecl *const _setmode)(int, int)     = reinterpret_cast<int (__cdecl*)(int, int)>    (::GetProcAddress(libraries[library::ucrtbase].module.handle, "_setmode"))) /* --> <io.h>    not NULL */ {
-        for (::std::FILE *const streams[] = {stdout, stderr}, *const *stream = streams; stream != &streams[sizeof streams / sizeof(::std::FILE*)]; ++stream) {
-          int const descriptor = _fileno(*stream);
-
-          if (descriptor != -1 and 0 == ::std::fflush(*stream))
-          for (int const translations[] = {_O_U8TEXT, _O_WTEXT, _O_U16TEXT, _O_BINARY /* | _O_RAW */}, *translation = translations; translation != &translations[sizeof translations / sizeof(int)]; ++translation) {
-            if (_setmode(descriptor, *translation) != -1)
-            break;
-          }
-        }
+    // ... ->> Assume standard file stream modes as Unicode character conversion (with CRLF translations)
+    if (reinterpret_cast<int (__cdecl*)(::std::FILE*)>(&library::UNRESOLVED) != console.extensions._fileno and reinterpret_cast<int (__cdecl*)(int, int)>(&library::UNRESOLVED) != console.extensions._setmode)
+    for (::std::FILE *const streams[] = {stdout, stderr}, *const *stream = streams; stream != &streams[sizeof streams / sizeof(::std::FILE*)]; ++stream) {
+      if (0 == ::std::fflush(*stream))
+      for (int const descriptor = console.extensions._fileno(*stream), translations[] = {_O_U8TEXT, _O_WTEXT, _O_U16TEXT, _O_BINARY /* | _O_RAW */}, *translation = translations; descriptor != -1 and translation != &translations[sizeof translations / sizeof(int)]; ++translation) {
+        if (console.extensions._setmode(descriptor, *translation) != -1)
+        break;
       }
     }
   #endif
 
-  for (char const *const locales[] = {
-    LC_CTYPE not LC_ALL
-    /* ->> Mac */ "UTF-8", __APPLE__
-    /* ->> Windows: User’s default locale that supports UTF-8 */ ".UTF-8", _WIN32
-    /* ->> GNU C Library: Language-neutral UTF-8 */ "C.UTF-8", __GLIBC__
-    "aa_DJ.UTF-8",
-    "aa_ER.UTF-8",
-    "aa_ET.UTF-8",
-    "af_ZA.UTF-8",
-    "agr_PE.UTF-8",
-    "ak_GH.UTF-8",
-    "am_ET.UTF-8",
-    "an_ES.UTF-8",
-    "anp_IN.UTF-8",
-    "ar_AE.UTF-8",
-    "ar_BH.UTF-8",
-    "ar_DZ.UTF-8",
-    "ar_EG.UTF-8",
-    "ar_IN.UTF-8",
-    "ar_IQ.UTF-8",
-    "ar_JO.UTF-8",
-    "ar_KW.UTF-8",
-    "ar_LB.UTF-8",
-    "ar_LY.UTF-8",
-    "ar_MA.UTF-8",
-    "ar_OM.UTF-8",
-    "ar_QA.UTF-8",
-    "ar_SA.UTF-8",
-    "ar_SD.UTF-8",
-    "ar_SS.UTF-8",
-    "ar_SY.UTF-8",
-    "ar_TN.UTF-8",
-    "ar_YE.UTF-8",
-    "as_IN.UTF-8",
-    "ast_ES.UTF-8",
-    "ayc_PE.UTF-8",
-    "az_AZ.UTF-8",
-    "az_IR.UTF-8",
-    "be_BY.UTF-8",
-    "be_BY.UTF-8@latin",
-    "bem_ZM.UTF-8",
-    "ber_DZ.UTF-8",
-    "ber_MA.UTF-8",
-    "bg_BG.UTF-8",
-    "bhb_IN.UTF-8",
-    "bho_IN.UTF-8",
-    "bho_NP.UTF-8",
-    "bi_VU.UTF-8",
-    "bn_BD.UTF-8",
-    "bn_IN.UTF-8",
-    "bo_CN.UTF-8",
-    "bo_IN.UTF-8",
-    "br_FR.UTF-8",
-    "brx_IN.UTF-8",
-    "bs_BA.UTF-8",
-    "byn_ER.UTF-8",
-    "ca_AD.UTF-8",
-    "ca_ES.UTF-8",
-    "ca_ES.UTF-8@valencia",
-    "ca_FR.UTF-8",
-    "ca_IT.UTF-8",
-    "ce_RU.UTF-8",
-    "chr_US.UTF-8",
-    "ckb_IQ.UTF-8",
-    "cmn_TW.UTF-8",
-    "crh_RU.UTF-8",
-    "crh_UA.UTF-8",
-    "cs_CZ.UTF-8",
-    "csb_PL.UTF-8",
-    "cv_RU.UTF-8",
-    "cy_GB.UTF-8",
-    "da_DK.UTF-8",
-    "de_AT.UTF-8",
-    "de_BE.UTF-8",
-    "de_CH.UTF-8",
-    "de_DE.UTF-8",
-    "de_IT.UTF-8",
-    "de_LI.UTF-8",
-    "de_LU.UTF-8",
-    "doi_IN.UTF-8",
-    "dsb_DE.UTF-8",
-    "dv_MV.UTF-8",
-    "dz_BT.UTF-8",
-    "el_CY.UTF-8",
-    "el_GR.UTF-8",
-    "en_AG.UTF-8",
-    "en_AU.UTF-8",
-    "en_BW.UTF-8",
-    "en_CA.UTF-8",
-    "en_DK.UTF-8",
-    "en_GB.UTF-8",
-    "en_HK.UTF-8",
-    "en_IE.UTF-8",
-    "en_IL.UTF-8",
-    "en_IN.UTF-8",
-    "en_NG.UTF-8",
-    "en_NZ.UTF-8",
-    "en_PH.UTF-8",
-    "en_SC.UTF-8",
-    "en_SE.UTF-8",
-    "en_SG.UTF-8",
-    "en_US.UTF-8",
-    "en_ZA.UTF-8",
-    "en_ZM.UTF-8",
-    "en_ZW.UTF-8",
-    "eo.UTF-8",
-    "es_AR.UTF-8",
-    "es_BO.UTF-8",
-    "es_CL.UTF-8",
-    "es_CO.UTF-8",
-    "es_CR.UTF-8",
-    "es_CU.UTF-8",
-    "es_DO.UTF-8",
-    "es_EC.UTF-8",
-    "es_ES.UTF-8",
-    "es_GT.UTF-8",
-    "es_HN.UTF-8",
-    "es_MX.UTF-8",
-    "es_NI.UTF-8",
-    "es_PA.UTF-8",
-    "es_PE.UTF-8",
-    "es_PR.UTF-8",
-    "es_PY.UTF-8",
-    "es_SV.UTF-8",
-    "es_US.UTF-8",
-    "es_UY.UTF-8",
-    "es_VE.UTF-8",
-    "et_EE.UTF-8",
-    "eu_ES.UTF-8",
-    "fa_IR.UTF-8",
-    "ff_SN.UTF-8",
-    "fi_FI.UTF-8",
-    "fil_PH.UTF-8",
-    "fo_FO.UTF-8",
-    "fr_BE.UTF-8",
-    "fr_CA.UTF-8",
-    "fr_CH.UTF-8",
-    "fr_FR.UTF-8",
-    "fr_LU.UTF-8",
-    "fur_IT.UTF-8",
-    "fy_DE.UTF-8",
-    "fy_NL.UTF-8",
-    "ga_IE.UTF-8",
-    "gbm_IN.UTF-8",
-    "gd_GB.UTF-8",
-    "gez_ER.UTF-8",
-    "gez_ER.UTF-8@abegede",
-    "gez_ET.UTF-8",
-    "gez_ET.UTF-8@abegede",
-    "gl_ES.UTF-8",
-    "gu_IN.UTF-8",
-    "gv_GB.UTF-8",
-    "ha_NG.UTF-8",
-    "hak_TW.UTF-8",
-    "he_IL.UTF-8",
-    "hi_IN.UTF-8",
-    "hif_FJ.UTF-8",
-    "hne_IN.UTF-8",
-    "hr_HR.UTF-8",
-    "hrx_BR.UTF-8",
-    "hsb_DE.UTF-8",
-    "ht_HT.UTF-8",
-    "hu_HU.UTF-8",
-    "hy_AM.UTF-8",
-    "ia_FR.UTF-8",
-    "id_ID.UTF-8",
-    "ig_NG.UTF-8",
-    "ik_CA.UTF-8",
-    "is_IS.UTF-8",
-    "it_CH.UTF-8",
-    "it_IT.UTF-8",
-    "iu_CA.UTF-8",
-    "ja_JP.UTF-8",
-    "ka_GE.UTF-8",
-    "kab_DZ.UTF-8",
-    "kk_KZ.UTF-8",
-    "kl_GL.UTF-8",
-    "km_KH.UTF-8",
-    "kn_IN.UTF-8",
-    "ko_KR.UTF-8",
-    "kok_IN.UTF-8",
-    "ks_IN.UTF-8",
-    "ks_IN.UTF-8@devanagari",
-    "ku_TR.UTF-8",
-    "kv_RU.UTF-8",
-    "kw_GB.UTF-8",
-    "ky_KG.UTF-8",
-    "lb_LU.UTF-8",
-    "lg_UG.UTF-8",
-    "li_BE.UTF-8",
-    "li_NL.UTF-8",
-    "lij_IT.UTF-8",
-    "ln_CD.UTF-8",
-    "lo_LA.UTF-8",
-    "lt_LT.UTF-8",
-    "ltg_LV.UTF-8",
-    "lv_LV.UTF-8",
-    "lzh_TW.UTF-8",
-    "mag_IN.UTF-8",
-    "mai_IN.UTF-8",
-    "mai_NP.UTF-8",
-    "mdf_RU.UTF-8",
-    "mfe_MU.UTF-8",
-    "mg_MG.UTF-8",
-    "mhr_RU.UTF-8",
-    "mi_NZ.UTF-8",
-    "miq_NI.UTF-8",
-    "mjw_IN.UTF-8",
-    "mk_MK.UTF-8",
-    "ml_IN.UTF-8",
-    "mn_MN.UTF-8",
-    "mni_IN.UTF-8",
-    "mnw_MM.UTF-8",
-    "mr_IN.UTF-8",
-    "ms_MY.UTF-8",
-    "mt_MT.UTF-8",
-    "my_MM.UTF-8",
-    "nan_TW.UTF-8",
-    "nan_TW.UTF-8@latin",
-    "nb_NO.UTF-8",
-    "nds_DE.UTF-8",
-    "nds_NL.UTF-8",
-    "ne_NP.UTF-8",
-    "nhn_MX.UTF-8",
-    "niu_NU.UTF-8",
-    "niu_NZ.UTF-8",
-    "nl_AW.UTF-8",
-    "nl_BE.UTF-8",
-    "nl_NL.UTF-8",
-    "nn_NO.UTF-8",
-    "nr_ZA.UTF-8",
-    "nso_ZA.UTF-8",
-    "oc_FR.UTF-8",
-    "om_ET.UTF-8",
-    "om_KE.UTF-8",
-    "or_IN.UTF-8",
-    "os_RU.UTF-8",
-    "pa_IN.UTF-8",
-    "pa_PK.UTF-8",
-    "pap_AW.UTF-8",
-    "pap_CW.UTF-8",
-    "pl_PL.UTF-8",
-    "ps_AF.UTF-8",
-    "pt_BR.UTF-8",
-    "pt_PT.UTF-8",
-    "quz_PE.UTF-8",
-    "raj_IN.UTF-8",
-    "rif_MA.UTF-8",
-    "ro_RO.UTF-8",
-    "ru_RU.UTF-8",
-    "ru_UA.UTF-8",
-    "rw_RW.UTF-8",
-    "sa_IN.UTF-8",
-    "sah_RU.UTF-8",
-    "sat_IN.UTF-8",
-    "sc_IT.UTF-8",
-    "scn_IT.UTF-8",
-    "sd_IN.UTF-8",
-    "sd_IN.UTF-8@devanagari",
-    "se_NO.UTF-8",
-    "sgs_LT.UTF-8",
-    "shn_MM.UTF-8",
-    "shs_CA.UTF-8",
-    "si_LK.UTF-8",
-    "sid_ET.UTF-8",
-    "sk_SK.UTF-8",
-    "sl_SI.UTF-8",
-    "sm_WS.UTF-8",
-    "so_DJ.UTF-8",
-    "so_ET.UTF-8",
-    "so_KE.UTF-8",
-    "so_SO.UTF-8",
-    "sq_AL.UTF-8",
-    "sq_MK.UTF-8",
-    "sr_ME.UTF-8",
-    "sr_RS.UTF-8",
-    "sr_RS.UTF-8@latin",
-    "ss_ZA.UTF-8",
-    "ssy_ER.UTF-8",
-    "st_ZA.UTF-8",
-    "su_ID.UTF-8",
-    "sv_FI.UTF-8",
-    "sv_SE.UTF-8",
-    "sw_KE.UTF-8",
-    "sw_TZ.UTF-8",
-    "syr.UTF-8",
-    "szl_PL.UTF-8",
-    "ta_IN.UTF-8",
-    "ta_LK.UTF-8",
-    "tcy_IN.UTF-8",
-    "te_IN.UTF-8",
-    "tg_TJ.UTF-8",
-    "th_TH.UTF-8",
-    "the_NP.UTF-8",
-    "ti_ER.UTF-8",
-    "ti_ET.UTF-8",
-    "tig_ER.UTF-8",
-    "tk_TM.UTF-8",
-    "tl_PH.UTF-8",
-    "tn_ZA.UTF-8",
-    "to_TO.UTF-8",
-    "tok.UTF-8",
-    "tpi_PG.UTF-8",
-    "tr_CY.UTF-8",
-    "tr_TR.UTF-8",
-    "ts_ZA.UTF-8",
-    "tt_RU.UTF-8",
-    "tt_RU.UTF-8@iqtelif",
-    "ug_CN.UTF-8",
-    "uk_UA.UTF-8",
-    "unm_US.UTF-8",
-    "ur_IN.UTF-8",
-    "ur_PK.UTF-8",
-    "uz_UZ.UTF-8",
-    "uz_UZ.UTF-8@cyrillic",
-    "ve_ZA.UTF-8",
-    "vi_VN.UTF-8",
-    "wa_BE.UTF-8",
-    "wae_CH.UTF-8",
-    "wal_ET.UTF-8",
-    "wo_SN.UTF-8",
-    "xh_ZA.UTF-8",
-    "yi_US.UTF-8",
-    "yo_NG.UTF-8",
-    "yue_HK.UTF-8",
-    "yuw_PG.UTF-8",
-    "zgh_MA.UTF-8",
-    "zh_CN.UTF-8",
-    "zh_HK.UTF-8",
-    "zh_SG.UTF-8",
-    "zh_TW.UTF-8",
-    "zu_ZA.UTF-8"
+  for (char const *const locales[] /* --> char const[][23] */ = {
+    "C.UTF-8", // ->> GNU C Library: Language-neutral Unicode              --> __GLIBC__
+    "UTF-8",   // ->> Macintosh                                            --> __APPLE__
+    ".UTF-8",  // ->> Windows: User’s default locale that supports Unicode --> _WIN32
+    #if false
+      "aa_DJ.UTF-8",  "aa_ER.UTF-8",  "aa_ET.UTF-8",                                                                                                                                                                                                                                                 // ->> Afar (Djibouti, Eritrea, Ethiopia)
+      "af_ZA.UTF-8",  "agr_PE.UTF-8", "ak_GH.UTF-8", "am_ET.UTF-8", "an_ES.UTF-8", "anp_IN.UTF-8",                                                                                                                                                                                                   // ->> Afrikaans (South Africa), Aguaruna (Peru), Akan (Ghana), Amharic (Ethiopia), Aragonese (Spain), Angika (India)
+      "ar_AE.UTF-8",  "ar_BH.UTF-8",  "ar_DZ.UTF-8", "ar_EG.UTF-8", "ar_IN.UTF-8", "ar_IQ.UTF-8", "ar_JO.UTF-8", "ar_KW.UTF-8", "ar_LB.UTF-8", "ar_LY.UTF-8", "ar_MA.UTF-8", "ar_OM.UTF-8", "ar_QA.UTF-8", "ar_SA.UTF-8", "ar_SD.UTF-8", "ar_SS.UTF-8", "ar_SY.UTF-8", "ar_TN.UTF-8", "ar_YE.UTF-8", // ->> Arabic (United Arab Emirates, Bahrain, Algeria, Egypt, India, Iraq, Jordan, Kuwait, Lebanon, Libya, Morocco, Oman, Qatar, Saudi Arabia, Sudan, South Sudan, Syria, Tunisia, Yemen)
+      "as_IN.UTF-8",  "ast_ES.UTF-8", "ayc_PE.UTF-8",                                                                                                                                                                                                                                                // ->> Assamese (India), Asturian (Spain), Southern Aymara (Peru)
+      "az_AZ.UTF-8",  "az_IR.UTF-8",                                                                                                                                                                                                                                                                 // ->> Azerbaijani (Azerbaijan, Iran)
+      "be_BY.UTF-8",  "be_BY.UTF-8@latin",                                                                                                                                                                                                                                                           // ->> Belarusian (Belarus)
+      "bem_ZM.UTF-8", "ber_DZ.UTF-8", "ber_MA.UTF-8", "bg_BG.UTF-8", "bhb_IN.UTF-8", "bho_IN.UTF-8", "bho_NP.UTF-8", "bi_VU.UTF-8",                                                                                                                                                                  // ->> Bemba (Zambia), Amazigh (Algeria), Berber (Morocco), Bulgarian (Bulgaria), Bhili (India), Bhojpuri (India), Bhojpuri (Nepal), Bislama (Vanuatu)
+      "bn_BD.UTF-8",  "bn_IN.UTF-8",                                                                                                                                                                                                                                                                 // ->> Bengali (Bangladesh, India)
+      "bo_CN.UTF-8",  "bo_IN.UTF-8",                                                                                                                                                                                                                                                                 // ->> Tibetan (China, India)
+      "br_FR.UTF-8",  "brx_IN.UTF-8", "bs_BA.UTF-8",          "byn_ER.UTF-8",                                                                                                                                                                                                                        // ->> Breton (France), Bodo (India), Bosnian (Bosnia and Herzegovina), Blin (Eritrea)
+      "ca_AD.UTF-8",  "ca_ES.UTF-8",  "ca_ES.UTF-8@valencia", "ca_FR.UTF-8", "ca_IT.UTF-8",                                                                                                                                                                                                          // ->> Catalan (Andorra, Spain, France, Italy)
+      "ce_RU.UTF-8",  "chr_US.UTF-8", "ckb_IQ.UTF-8",         "cmn_TW.UTF-8",                                                                                                                                                                                                                        // ->> Chechen (Russia), Cherokee (United States), Central Kurdish (Iraq), Mandarin Chinese (Taiwan)
+      "crh_RU.UTF-8", "crh_UA.UTF-8",                                                                                                                                                                                                                                                                // ->> Crimean Tatar (Russia, Ukraine)
+      "cs_CZ.UTF-8",  "csb_PL.UTF-8", "cv_RU.UTF-8", "cy_GB.UTF-8", "da_DK.UTF-8",                                                                                                                                                                                                                   // ->> Czech (Czechia), Kashubian (Poland), Chuvash (Russia), Welsh (United Kingdom), Danish (Denmark)
+      "de_AT.UTF-8",  "de_BE.UTF-8",  "de_CH.UTF-8", "de_DE.UTF-8", "de_IT.UTF-8", "de_LI.UTF-8", "de_LU.UTF-8",                                                                                                                                                                                     // ->> German (Austria, Belgium, Switzerland, Germany, Italy, Liechtenstein, Luxembourg)
+      "doi_IN.UTF-8", "dsb_DE.UTF-8", "dv_MV.UTF-8", "dz_BT.UTF-8",                                                                                                                                                                                                                                  // ->> Dogri (India), Lower Sorbian (Germany), Divehi (Maldives), Dzongkha (Bhutan)
+      "el_CY.UTF-8",  "el_GR.UTF-8",                                                                                                                                                                                                                                                                 // ->> Greek (Cyprus, Greece)
+    #endif
+    "en_US.UTF-8", "en_GB.UTF-8", "en_AG.UTF-8", "en_AU.UTF-8", "en_BW.UTF-8", "en_CA.UTF-8", "en_DK.UTF-8", "en_HK.UTF-8", "en_IE.UTF-8", "en_IL.UTF-8", "en_IN.UTF-8", "en_NG.UTF-8", "en_NZ.UTF-8", "en_PH.UTF-8", "en_SC.UTF-8", "en_SE.UTF-8", "en_SG.UTF-8", "en_ZA.UTF-8", "en_ZM.UTF-8", "en_ZW.UTF-8", // ->> English (United States, United Kingdom, Antigua and Barbuda, Australia, Botswana, Canada, Denmark, Hong Kong, Ireland, Israel, India, Nigeria, New Zealand, Philippines, Seychelles, Sweden, Singapore, South Africa, Zambia, Zimbabwe)
+    #if false
+      "eo.UTF-8",                                                                                                                                                                                                                                                                                                                 // ->> Esperanto
+      "es_AR.UTF-8", "es_BO.UTF-8", "es_CL.UTF-8", "es_CO.UTF-8", "es_CR.UTF-8", "es_CU.UTF-8", "es_DO.UTF-8", "es_EC.UTF-8", "es_ES.UTF-8", "es_GT.UTF-8", "es_HN.UTF-8", "es_MX.UTF-8", "es_NI.UTF-8", "es_PA.UTF-8", "es_PE.UTF-8", "es_PR.UTF-8", "es_PY.UTF-8", "es_SV.UTF-8", "es_US.UTF-8", "es_UY.UTF-8", "es_VE.UTF-8",  // ->> Spanish (Argentina, Bolivia, Chile, Colombia, Costa Rica, Cuba, Dominican Republic, Ecuador, Spain, Guatemala, Honduras, Mexico, Nicaragua, Panama, Peru, Puerto Rico, Paraguay, El Salvador, United States, Uruguay, Venezuela)
+      "et_EE.UTF-8", "eu_ES.UTF-8", "fa_IR.UTF-8", "ff_SN.UTF-8", "fi_FI.UTF-8", "fil_PH.UTF-8", "fo_FO.UTF-8",                                                                                                                                                                                                                   // ->> Estonian (Estonia), Basque (Spain), Persian (Iran), Fulah (Senegal), Finnish (Finland), Filipino (Philippines), Faroese (Faroe Islands)
+      "fr_BE.UTF-8", "fr_CA.UTF-8", "fr_CH.UTF-8", "fr_FR.UTF-8", "fr_LU.UTF-8",                                                                                                                                                                                                                                                  // ->> French (Belgium, Canada, Switzerland, France, Luxembourg)
+      "fur_IT.UTF-8",                                                                                                                                                                                                                                                                                                             // ->> Friulian (Italy)
+      "fy_DE.UTF-8",  "fy_NL.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Western Frisian (Germany, Netherlands)
+      "ga_IE.UTF-8",  "gbm_IN.UTF-8",         "gd_GB.UTF-8",                                                                                                                                                                                                                                                                      // ->> Irish (Ireland), Garhwali (India), Scottish Gaelic (United Kingdom)
+      "gez_ER.UTF-8", "gez_ER.UTF-8@abegede", "gez_ET.UTF-8", "gez_ET.UTF-8@abegede",                                                                                                                                                                                                                                             // ->> Ge’ez (Eritrea, Ethiopia)
+      "gl_ES.UTF-8",  "gu_IN.UTF-8",          "gv_GB.UTF-8",  "ha_NG.UTF-8", "hak_TW.UTF-8", "he_IL.UTF-8", "hi_IN.UTF-8", "hif_FJ.UTF-8", "hne_IN.UTF-8", "hr_HR.UTF-8", "hrx_BR.UTF-8", "hsb_DE.UTF-8", "ht_HT.UTF-8", "hu_HU.UTF-8", "hy_AM.UTF-8", "ia_FR.UTF-8", "id_ID.UTF-8", "ig_NG.UTF-8", "ik_CA.UTF-8", "is_IS.UTF-8", // ->> Galician (Spain), Gujarati (India), Manx (United Kingdom), Hausa (Nigeria), Hakka Chinese (Taiwan), Hebrew (Israel), Hindi (India), Fiji Hindi (Fiji), Chhattisgarhi (India), Croatian (Croatia), Hunsrik (Brazil), Upper Sorbian (Germany), Haitian Creole (Haiti), Hungarian (Hungary), Armenian (Armenia), Interlingua (France), Indonesian (Indonesia), Igbo (Nigeria), Inupiaq (Canada), Icelandic (Iceland)
+      "it_CH.UTF-8",  "it_IT.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Italian (Switzerland, Italy)
+      "iu_CA.UTF-8",  "ja_JP.UTF-8", "ka_GE.UTF-8", "kab_DZ.UTF-8", "kk_KZ.UTF-8", "kl_GL.UTF-8", "km_KH.UTF-8", "kn_IN.UTF-8", "ko_KR.UTF-8", "kok_IN.UTF-8",                                                                                                                                                                    // ->> Inuktitut (Canada), Japanese (Japan), Georgian (Georgia), Kabyle (Algeria), Kazakh (Kazakhstan), Kalaallisut (Greenland), Khmer (Cambodia), Kannada (India), Korean (South Korea), Konkani (India)
+      "ks_IN.UTF-8",  "ks_IN.UTF-8@devanagari",                                                                                                                                                                                                                                                                                   // ->> Kashmiri (India)
+      "ku_TR.UTF-8",  "kv_RU.UTF-8", "kw_GB.UTF-8", "ky_KG.UTF-8", "lb_LU.UTF-8", "lg_UG.UTF-8",                                                                                                                                                                                                                                  // ->> Kurdish (Turkey), Komi (Russia), Cornish (United Kingdom), Kyrgyz (Kyrgyzstan), Luxembourgish (Luxembourg), Ganda (Uganda)
+      "li_BE.UTF-8",  "li_NL.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Limburgish (Belgium, Netherlands)
+      "lij_IT.UTF-8", "ln_CD.UTF-8", "lo_LA.UTF-8", "lt_LT.UTF-8", "ltg_LV.UTF-8", "lv_LV.UTF-8", "lzh_TW.UTF-8", "mag_IN.UTF-8",                                                                                                                                                                                                 // ->> Ligurian (Italy), Lingala (Democratic Republic of the Congo), Lao (Laos), Lithuanian (Lithuania), Latgalian (Latvia), Latvian (Latvia), Literary Chinese (Taiwan), Magahi (India)
+      "mai_IN.UTF-8", "mai_NP.UTF-8",                                                                                                                                                                                                                                                                                             // ->> Maithili (India, Nepal)
+      "mdf_RU.UTF-8", "mfe_MU.UTF-8", "mg_MG.UTF-8", "mhr_RU.UTF-8", "mi_NZ.UTF-8", "miq_NI.UTF-8", "mjw_IN.UTF-8", "mk_MK.UTF-8", "ml_IN.UTF-8", "mn_MN.UTF-8", "mni_IN.UTF-8", "mnw_MM.UTF-8", "mr_IN.UTF-8", "ms_MY.UTF-8", "mt_MT.UTF-8", "my_MM.UTF-8",                                                                      // ->> Moksha (Russia), Morisyen (Mauritius), Malagasy (Madagascar), Eastern Mari (Russia), Māori (New Zealand), Miskito (Nicaragua), Karbi (India), Macedonian (North Macedonia), Malayalam (India), Mongolian (Mongolia), Manipuri (India), Mon (Myanmar), Marathi (India), Malay (Malaysia), Maltese (Malta), Burmese (Myanmar)
+      "nan_TW.UTF-8", "nan_TW.UTF-8@latin",                                                                                                                                                                                                                                                                                       // ->> Min Nan Chinese (Taiwan)
+      "nb_NO.UTF-8",                                                                                                                                                                                                                                                                                                              // ->> Norwegian Bokmål (Norway)
+      "nds_DE.UTF-8", "nds_NL.UTF-8",                                                                                                                                                                                                                                                                                             // ->> Low German (Germany, Netherlands)
+      "ne_NP.UTF-8",  "nhn_MX.UTF-8",                                                                                                                                                                                                                                                                                             // ->> Nepali (Nepal), Central Nahuatl (Mexico)
+      "niu_NU.UTF-8", "niu_NZ.UTF-8",                                                                                                                                                                                                                                                                                             // ->> Niuean (Niue, New Zealand)
+      "nl_AW.UTF-8",  "nl_BE.UTF-8", "nl_NL.UTF-8",                                                                                                                                                                                                                                                                               // ->> Dutch (Aruba, Belgium, Netherlands)
+      "nn_NO.UTF-8",  "nr_ZA.UTF-8", "nso_ZA.UTF-8", "oc_FR.UTF-8",                                                                                                                                                                                                                                                               // ->> Norwegian Nynorsk (Norway), South Ndebele (South Africa), Northern Sotho (South Africa), Occitan (France)
+      "om_ET.UTF-8",  "om_KE.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Oromo (Ethiopia, Kenya)
+      "or_IN.UTF-8",  "os_RU.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Odia (India), Ossetian (Russia)
+      "pa_IN.UTF-8",  "pa_PK.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Punjabi (India, Pakistan)
+      "pap_AW.UTF-8", "pap_CW.UTF-8",                                                                                                                                                                                                                                                                                             // ->> Papiamento (Aruba, Curaçao)
+      "pl_PL.UTF-8",  "ps_AF.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Polish (Poland), Pashto (Afghanistan)
+      "pt_BR.UTF-8",  "pt_PT.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Portuguese (Brazil, Portugal)
+      "quz_PE.UTF-8", "raj_IN.UTF-8", "rif_MA.UTF-8", "ro_RO.UTF-8",                                                                                                                                                                                                                                                              // ->> Cusco Quechua (Peru), Rajasthani (India), Tarifit (Morocco), Romanian (Romania)
+      "ru_RU.UTF-8",  "ru_UA.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Russian (Russia, Ukraine)
+      "rw_RW.UTF-8",  "sa_IN.UTF-8", "sah_RU.UTF-8", "sat_IN.UTF-8", "sc_IT.UTF-8", "scn_IT.UTF-8",                                                                                                                                                                                                                               // ->> Kinyarwanda (Rwanda), Sanskrit (India), Sakha (Russia), Santali (India), Sardinian (Italy), Sicilian (Italy)
+      "sd_IN.UTF-8",  "sd_IN.UTF-8@devanagari",                                                                                                                                                                                                                                                                                   // ->> Sindhi (India)
+      "se_NO.UTF-8",  "sgs_LT.UTF-8", "shn_MM.UTF-8", "shs_CA.UTF-8", "si_LK.UTF-8", "sid_ET.UTF-8", "sk_SK.UTF-8", "sl_SI.UTF-8", "sm_WS.UTF-8",                                                                                                                                                                                 // ->> Northern Sami (Norway), Samogitian (Lithuania), Shan (Myanmar), Shuswap (Canada), Sinhala (Sri Lanka), Sidamo (Ethiopia), Slovak (Slovakia), Slovenian (Slovenia), Samoan (Samoa)
+      "so_DJ.UTF-8",  "so_ET.UTF-8",  "so_KE.UTF-8",  "so_SO.UTF-8",                                                                                                                                                                                                                                                              // ->> Somali (Djibouti, Ethiopia, Kenya, Somalia)
+      "sq_AL.UTF-8",  "sq_MK.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Albanian (Albania, North Macedonia)
+      "sr_ME.UTF-8",  "sr_RS.UTF-8",  "sr_RS.UTF-8@latin",                                                                                                                                                                                                                                                                        // ->> Serbian (Montenegro, Serbia)
+      "ss_ZA.UTF-8",  "ssy_ER.UTF-8", "st_ZA.UTF-8", "su_ID.UTF-8",                                                                                                                                                                                                                                                               // ->> Swati (South Africa), Saho (Eritrea), Southern Sotho (South Africa), Sundanese (Indonesia)
+      "sv_FI.UTF-8",  "sv_SE.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Swedish (Finland, Sweden)
+      "sw_KE.UTF-8",  "sw_TZ.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Swahili (Kenya, Tanzania)
+      "syr.UTF-8",    "szl_PL.UTF-8",                                                                                                                                                                                                                                                                                             // ->> Syriac, Silesian (Poland)
+      "ta_IN.UTF-8",  "ta_LK.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Tamil (India, Sri Lanka)
+      "tcy_IN.UTF-8", "te_IN.UTF-8", "tg_TJ.UTF-8", "th_TH.UTF-8", "the_NP.UTF-8",                                                                                                                                                                                                                                                // ->> Tulu (India), Telugu (India), Tajik (Tajikistan), Thai (Thailand), Chitwania Tharu (Nepal)
+      "ti_ER.UTF-8",  "ti_ET.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Tigrinya (Eritrea, Ethiopia)
+      "tig_ER.UTF-8", "tk_TM.UTF-8", "tl_PH.UTF-8", "tn_ZA.UTF-8", "to_TO.UTF-8", "tok.UTF-8", "tpi_PG.UTF-8",                                                                                                                                                                                                                    // ->> Tigre (Eritrea), Turkmen (Turkmenistan), Tagalog (Philippines), Tswana (South Africa), Tongan (Tonga), Toki Pona, Tok Pisin (Papua New Guinea)
+      "tr_CY.UTF-8",  "tr_TR.UTF-8",                                                                                                                                                                                                                                                                                              // ->> Turkish (Cyprus, Turkey)
+      "ts_ZA.UTF-8",                                                                                                                                                                                                                                                                                                              // ->> Tsonga (South Africa)
+      "tt_RU.UTF-8", "tt_RU.UTF-8@iqtelif",                                                                                                                                                                                                                                                                                       // ->> Tatar (Russia)
+      "ug_CN.UTF-8", "uk_UA.UTF-8", "unm_US.UTF-8",                                                                                                                                                                                                                                                                               // ->> Uyghur (China), Ukrainian (Ukraine), Unami (United States)
+      "ur_IN.UTF-8", "ur_PK.UTF-8",                                                                                                                                                                                                                                                                                               // ->> Urdu (India, Pakistan)
+      "uz_UZ.UTF-8", "uz_UZ.UTF-8@cyrillic",                                                                                                                                                                                                                                                                                      // ->> Uzbek (Uzbekistan)
+      "ve_ZA.UTF-8", "vi_VN.UTF-8", "wa_BE.UTF-8", "wae_CH.UTF-8", "wal_ET.UTF-8", "wo_SN.UTF-8", "xh_ZA.UTF-8", "yi_US.UTF-8", "yo_NG.UTF-8", "yue_HK.UTF-8", "yuw_PG.UTF-8", "zgh_MA.UTF-8",                                                                                                                                    // ->> Venda (South Africa), Vietnamese (Vietnam), Walloon (Belgium), Walser (Switzerland), Wolaytta (Ethiopia), Wolof (Senegal), Xhosa (South Africa), Yiddish (United States), Yoruba (Nigeria), Cantonese (Hong Kong), Yau (Papua New Guinea), Standard Moroccan Tamazight (Morocco)
+      "zh_CN.UTF-8", "zh_HK.UTF-8", "zh_SG.UTF-8", "zh_TW.UTF-8",                                                                                                                                                                                                                                                                 // ->> Chinese (China, Hong Kong, Singapore, Taiwan)
+      "zu_ZA.UTF-8",                                                                                                                                                                                                                                                                                                              // ->> Zulu (South Africa)
+    #endif
     "" // ->> User-preferred (ideally Unicode)
   }, *const *locale = locales; locale != &locales[sizeof locales / sizeof(char const*)]; ++locale) {
     #if defined __APPLE__ or defined __unix__
-      static struct l /* final */ {
-        void     (*release)(::locale_t);
-        ::locale_t value;
+      if (reinterpret_cast< ::locale_t (*)(int, char const[], ::locale_t)>(&library::UNRESOLVED) != console.extensions.newlocale and reinterpret_cast< ::locale_t (*)(::locale_t)>(&library::UNRESOLVED) != console.extensions.uselocale) {
+        console.locale.value = console.extensions.newlocale(LC_CTYPE_MASK, *locale, static_cast< ::locale_t>(0));
 
-        ~l() /* noexcept */ {
-          if (NULL != this -> release and NULL != this -> value)
-          this -> release(this -> value);
+        if (static_cast< ::locale_t>(0) != console.locale.value) {
+          console.locale.prior = console.extensions.uselocale(console.locale.value); // ->> Thread-local
+
+          if (static_cast< ::locale_t>(0) != console.locale.prior) {
+            if (static_cast<char*>(NULL) != ::std::setlocale(LC_CTYPE, *locale))
+            goto anyway;
+          }
+          if (reinterpret_cast<void (*)(::locale_t)>(&library::UNRESOLVED) != console.extensions.freelocale) console.extensions.freelocale(console.locale.value); // ->> Leaks `::newlocale(…)` if otherwise `&::UNRESOLVED`
         }
-      } unicode = {NULL, NULL};
-
-      // ...
-      if (void       (*const freelocale)(::locale_t)                    = reinterpret_cast<void        (*)(::locale_t)>                   (reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "freelocale")))) if (static_cast<char*>(NULL) == ::dlerror()) // --> <locale.h> not NULL
-      if (::locale_t (*const newlocale) (int, char const[], ::locale_t) = reinterpret_cast< ::locale_t (*)(int, char const[], ::locale_t)>(reinterpret_cast< ::uintptr_t>((void) ::dlerror(), ::dlsym(libraries -> module.handle, "newlocale"))))  if (static_cast<char*>(NULL) == ::dlerror()) {
-        locale -> release = freelocale;
-        locale -> value   = newlocale;
       }
-
-      LC_ADDRESS_MASK, LC_CTYPE_MASK,
-       LC_COLLATE_MASK, LC_IDENTIFICATION_MASK, LC_MEASUREMENT_MASK,
-       LC_MESSAGES_MASK, LC_MONETARY_MASK, LC_NUMERIC_MASK, LC_NAME_MASK,
-       LC_PAPER_MASK, LC_TELEPHONE_MASK, and LC_TIME_MASK.
-       Alternatively, the mask can be specified as LC_ALL_MASK
-      // ::locale_t utf8Locale = ::newlocale(LC_CTYPE_MASK, "C.UTF-8", static_cast< ::locale_t>(NULL));
-      //
-      // if (static_cast< ::locale_t>(NULL) == utf8Locale)
-      // return 1;
-      //
-      // ::locale_t previousLocale = ::uselocale(utf8Locale);
-      // ::std::printf("%s\n", ::nl_langinfo(CODESET)); // typically "UTF-8"
-      // ::uselocale(previousLocale);
-      // ::freelocale(utf8Locale);
     #endif
 
-    if (static_cast<char*>(NULL) != ::std::setlocale(LC_ALL, *locale)) /* --> LC_ALL == LC_CTYPE | … | LC_COLLATE | LC_MONETARY | LC_NUMERIC | LC_TIME | … | LC_MESSAGES | … | LC_ADDRESS | LC_IDENTIFICATION | LC_KEYBOARD | LC_MEASUREMENT | LC_NAME | LC_PAPER | LC_TELEPHONE | LC_XLITERATE */ {
-      if ('\0' != *locale) {
-        (void) ::std::fwide(stderr, +1);
-        (void) ::std::fwide(stdout, +1);
-      }
-
-      break;
-    }
+    if (static_cast<char*>(NULL) != ::std::setlocale(LC_CTYPE, *locale)) // ->> Process-wide
+    break;
   }
 
+  // ...
+  console.orientation.stderr = console.widen(stderr) or console.orientation.get(stderr);
+  console.orientation.stdout = console.widen(stdout);
+  (void) ::std::fwide(stderr, +1);
+  (void) ::std::fwide(stdout, +1);
+
+  // ... ->> Diagnose (eagerly) standard (input/)output Unicode (UTF-8) status --> console.locale.get()
   #if defined _WIN32
-    // switch (_getmbcp()) {
-    //   case CP_UTF7:
-    //   case CP_UTF8: {
-    //     // 1200/1201 UTF-16 LE?
-    //     // 12000/12001 UTF-32 LE?
-    //   } break;
-    //   default: ??? /* UTF-8 - don’t forget the others */
-    //   goto locale;
-    // }
+    switch (::_getmbcp()) {
+      case CP_UTF7:
+      case CP_UTF8: {
+        // 1200/1201 UTF-16 LE?
+        // 12000/12001 UTF-32 LE?
+      } break;
+      default: break; /* UTF-8 - don’t forget the others */
+    }
   #elif defined __APPLE__ or defined __unix__
-    // char const *const codeset = ::nl_langinfo(CODESET);
-    // // contests with std::setlocale()?
+    static_cast< ::locale_t>(0) != console.locale.prior ? console.locale.value == console.extensions.uselocale(0) or ::nl_langinfo(CODESET) : ::std::setlocale(LC_CTYPE, static_cast<char const*>(NULL))
+    // char const *const codeset = ;
     //   // test for UTF-7
     //   // UTF-8
     //   // UTF-16
@@ -932,16 +896,19 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
     //   // UTF-32LE
     // /* Test codeset for UTF-8 here. */
   #endif
-  for (struct locale /* final */ { char *const current; char const *const target; } locales[] = {
-    {::std::setlocale(LC_ALL, static_cast<char const*>(NULL)), NULL},
-    {locales -> current,                                       "UTF"},
-    {locales -> current,                                       "Unicode"}
+
+  for (struct locale /* final */ {
+    char       *const current;
+    char const *const target;
+  } locales[] = {
+    {::std::setlocale(LC_CTYPE, static_cast<char const*>(NULL)), NULL},
+    {locales -> current,                                         "UTF"},
+    {locales -> current,                                         "Unicode"}
   }, *locale = locales; ; ++locale) {
-    // ... ->> Announce whether Unicode or otherwise
     if (locale == &locales[sizeof locales / sizeof(struct locale)])
     locale: {
-      (void) console.format(stderr, L"%lc%ls%lc%.2ls%.4ls%.26ls", L'[', renum.name, L']', L": ", console::delimiters::nounicode() == delimiters ? L"Non-" : L"", L"Unicode locale detected \u2014 ");
-      (void) console.text  (stderr, locales -> current, delimiters, delimiters);
+      (void) console.format(stderr, L"%lc%ls%lc%.2ls%.4ls%.26ls", L'[', renum.name, L']', L": ", console.locale.quotes == console::locale::quotes::unicode() ? L"" : L"Non-", L"Unicode locale detected \u2014 ");
+      (void) console.text  (stderr, locales -> current, console.locale.quotes, console.locale.quotes);
       (void) console.format(stderr, L"%.2ls", L"\r\n");
 
       break;
@@ -957,7 +924,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
       char &current      = characters[0], &target = characters[1]; // ->> In lieu of `union { char characters[]; struct { char current, target; }; };`
 
       // ...
-      if ('\0' == target) { delimiters = console::delimiters::unicode(); goto locale; }
+      if ('\0' == target) { console.locale.quotes = console::locale::quotes::unicode(); goto locale; }
       if ('\0' == current) break;
 
       for (char *character = characters; character != &characters[sizeof characters / sizeof(char)]; ++character)
@@ -985,8 +952,8 @@ int main(int count, char* arguments[] /* , char* environment[] */) {
 
     // ...
     #if defined _WIN32
-      if (NULL != libraries[library::kernel32].module.handle)
-      if (int (*const MultiByteToWideChar)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int) = reinterpret_cast<int (*)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int)>(::GetProcAddress(libraries[library::kernel32].module.handle, "MultiByteToWideChar"))) /* --> <windows.h> not NULL */ {
+      if (NULL != libraries[library::kernelbase].module.handle)
+      if (int (*const MultiByteToWideChar)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int) = reinterpret_cast<int (*)(::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int)>(::GetProcAddress(libraries[library::kernelbase].module.handle, "MultiByteToWideChar"))) /* --> <windows.h> not NULL */ {
         int const length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, argument.multibyte, -1, static_cast< ::LPWSTR>(NULL), 0);
 
         argument.wide = length > 0 ? reinterpret_cast<wchar_t*>(memory.reserve(length + sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL;
