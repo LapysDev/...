@@ -285,8 +285,9 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       static int (format)(::std::FILE* const stream, wchar_t const* format, ...) /* noexcept */
     #endif
     {
-      ::std::va_list arguments;
-      int            count = 0; // ->> Logically, `count > INT_MAX` is Undefined Behaviour
+      ::std::va_list   arguments;
+      int              count = 0; // ->> Logically, `count > INT_MAX` is Undefined Behaviour
+      ::std::mbstate_t state = ::std::mbstate_t();
 
       // ... ->> Pessimizes multibyte orientation
       va_start(arguments, format);
@@ -299,7 +300,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       for (::std::size_t index = 0u; ; )
       switch (format[index]) {
         case L'\0': {
-          if (index > INT_MAX - count)                                                                   return va_end(arguments), -1; // --> EOVERFLOW
+          if (index > static_cast< ::std::size_t>(INT_MAX - count))                                      return va_end(arguments), -1; // --> EOVERFLOW
           if (not console::text(stream, format, &format[index], console::policy::MULTIBYTE_ORIENTATION)) return va_end(arguments), -1; // --> EILSEQ
 
           return count + index;
@@ -307,7 +308,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
 
         case L'%': switch (format[++index]) {
           case L'%': {
-            if (index > INT_MAX - count)                                                                   return va_end(arguments), -1; // --> EOVERFLOW
+            if (index > static_cast< ::std::size_t>(INT_MAX - count))                                      return va_end(arguments), -1; // --> EOVERFLOW
             if (not console::text(stream, format, &format[index], console::policy::MULTIBYTE_ORIENTATION)) return va_end(arguments), -1; // --> EILSEQ
 
             count  += index;
@@ -324,13 +325,11 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
               }              id : 4;
               wchar_t const *value; // --> wchar_t const[4]
             } const          modifiers[] = {{modifier::hh, L"hh"}, {modifier::h, L"h"}, {modifier::j, L"j"}, {modifier::L, L"L"}, {modifier::ll, L"ll"}, {modifier::l, L"l"}, {modifier::t, L"t"}, {modifier::z, L"z"}};
-            char             specifier[/* --> max(…) */ (MB_LEN_MAX | 11u) + 1u]; // ->> Maximum length sans flags, precision, and width (e.g. `"%0- +*.*lld"`, `"%#0- +*.*Lf"`, …)
-            ::std::mbstate_t state = ::std::mbstate_t();
             wchar_t const   *terminator;
             wchar_t const    terminators[] = L"\0" L"cdEefGginopsuXx" L"AaF" L"Bb"; // ->> C++98; C++11; C++26
 
             // ...
-            if (index - 1u > INT_MAX - count)                                                                   return va_end(arguments), -1; // --> EOVERFLOW
+            if (index - 1u > static_cast< ::std::size_t>(INT_MAX - count))                                      return va_end(arguments), -1; // --> EOVERFLOW
             if (not console::text(stream, format, &format[index - 1u], console::policy::MULTIBYTE_ORIENTATION)) return va_end(arguments), -1; // --> EILSEQ
 
             count  += index - 1u;
@@ -348,34 +347,40 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
               continue;
             }
 
-            // ::std::fprintf(stream, format[0:index], va_arg(arguments, …))
-            for (char *bytes = specifier; ; ) {
-              ::std::size_t const subcount = ::std::wcrtomb(bytes, *format, &state);
+            #if true
+              wchar_t specifier[/* --> max(…) */ (MB_LEN_MAX | 11u) + 1u];
+              // ::std::fprintf(stream, format[0:index], va_arg(arguments, …));
+            #else
+              char specifier[/* --> max(…) */ (MB_LEN_MAX | 11u) + 1u]; // ->> Maximum length sans flags, precision, and width (e.g. `"%0- +*.*lld"`, `"%#0- +*.*Lf"`, …)
 
-              // ...
-              if (subcount == static_cast< ::std::size_t>(-1) or subcount > &specifier[sizeof specifier / sizeof(char)] - bytes)
-              return va_end(arguments), -1; // --> ENOMEM
+              for (char *bytes = specifier; ; ) {
+                ::std::size_t const subcount = ::std::wcrtomb(bytes, *format, &state);
 
-              bytes += subcount;
+                // ...
+                if (subcount == static_cast< ::std::size_t>(-1) or subcount > &specifier[sizeof specifier / sizeof(char)] - bytes)
+                return va_end(arguments), -1; // --> ENOMEM
 
-              if (*(format++) == *terminator) {
-                *bytes = '\0';
-                break;
+                bytes += subcount;
+
+                if (*(format++) == *terminator) {
+                  *bytes = '\0';
+                  break;
+                }
               }
-            }
 
-            int subcount; // --> ::std::vfprintf(…)
-            subcount = ::std::vfprintf(stream, specifier, arguments); // NO, arguments is indeterminate and subcount is byte-based rather than wide-based
-                                                                      // if windows, %c and %s are wide by default
-                                                                      // consider supporting extended/ vendor specifiers
-                                                                      // let console::text() reuse mbstate_t
+              int subcount; // --> ::std::vfprintf(…)
+              subcount = ::std::vfprintf(stream, specifier, arguments); // NO, arguments is indeterminate and subcount is byte-based rather than wide-based
+                                                                        // if windows, %c and %s are wide by default
+                                                                        // consider supporting extended/ vendor specifiers
+                                                                        // let console::text() reuse mbstate_t
 
-            if (subcount < 0)               return va_end(arguments), subcount; // ->> ERROR
-            if (subcount > INT_MAX - count) return va_end(arguments), -1;       // --> EOVERFLOW
+              if (subcount < 0)               return va_end(arguments), subcount; // ->> ERROR
+              if (subcount > INT_MAX - count) return va_end(arguments), -1;       // --> EOVERFLOW
 
-            count  += subcount;
-            format += 1;
-            index   = 0u;
+              count  += subcount;
+              format += 1;
+              index   = 0u;
+            #endif
           }
         } break;
       }
