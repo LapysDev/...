@@ -867,7 +867,15 @@ int WINAPI wWinMain(HINSTANCE const instanceHandle, HINSTANCE const, PWSTR const
       (void) ::ShowWindow  (window -> handle, SW_SHOW | (windowAppearance & SW_SHOW));
       (void) ::UpdateWindow(window -> handle);
 
-      while (::GetMessageW(&threadMessage, static_cast<HWND>(NULL), 0x0u, 0x0u) > FALSE) {
+      for (::BOOL result; FALSE < (result = ::GetMessageW(&threadMessage, static_cast< ::HWND>(NULL), 0x0u, 0x0u)); ) {
+        if (result == -1) {
+          threadMessage.wParam = EXIT_FAILURE;
+          break;
+        }
+
+        if (WM_QUIT == threadMessage.message)
+        break; // --> threadMessage.wParam
+
         (void) ::TranslateMessage(&threadMessage); // --> FALSE, …
         (void) ::DispatchMessageW(&threadMessage); // --> window -> procedure(…)
       }
