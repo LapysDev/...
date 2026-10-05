@@ -242,8 +242,8 @@ struct program /* final */ {
           this -> extensions.InitOnceExecuteOnce = reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceExecuteOnce", &program::UNRESOLVED)); // --> <windows.h>
           this -> termination.ready              = true;
 
+          /* TODO ->> Init safely, finish safely */
           if (reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(&program::UNRESOLVED) != this -> extensions.InitOnceExecuteOnce) {
-            /* TODO ->> Init safely, finish safely */
             this -> extensions.InitOnceInitialize = reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceInitialize", &program::UNRESOLVED)); // --> <windows.h>
 
             if      (reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(&program::UNRESOLVED) != this -> extensions.InitOnceInitialize) this -> extensions.InitOnceInitialize(&this -> termination.finished.initialization);
