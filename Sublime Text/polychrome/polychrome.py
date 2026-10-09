@@ -7,10 +7,13 @@ BUFFER_CHARACTER_LIMIT = 67108864 # --> 64M characters
 COLORS                 = ("#FF6060", "#FF9F3F", "#FFCF60", "#60CF60", "#60FFFF", "#6090FF", "#C060FF", "#FF60C0")
 DELIMITERS             = (("(", ")"), ("[", "]"), ("{", "}"), ("᚛", "᚜"), ("‹", "›"), ("«", "»"), ("❨", "❩"), ("❪", "❫"), ("❬", "❭"), ("❮", "❯"), ("❰", "❱"), ("❲", "❳"), ("❴", "❵"), ("⟅", "⟆"), ("⟦", "⟧"), ("⟨", "⟩"), ("⟪", "⟫"), ("⟬", "⟭"), ("⟮", "⟯"), ("⦃", "⦄"), ("⦅", "⦆"), ("⦗", "⦘"), ("⧘", "⧙"), ("⧚", "⧛"), ("⸨", "⸩"), ("〈", "〉"), ("《", "》"), ("「", "」"), ("『", "』"), ("【", "】"), ("〔", "〕"), ("〖", "〗"), ("〘", "〙"), ("〚", "〛"), ("﴾", "﴿"), ("﹙", "﹚"), ("﹛", "﹜"), ("﹝", "﹞"), ("（", "）"), ("［", "］"), ("｛", "｝"), ("｟", "｠"), ("｢", "｣"))
 DELIMITER_MAP          = dict((closing, opening) for opening, closing in DELIMITERS)
-DELIMITER_PATTERN      = re.compile("[" + re.escape("".join(opening + closing for opening, closing in DELIMITERS)) + "]")
-IGNORED_SCOPE_SELECTOR = "comment, constant, string"
+DELIMITER_SET          = frozenset("".join(opening + closing for opening, closing in DELIMITERS))
+IGNORED_SCOPE_SELECTOR = "comment, constant"
 PACKAGE_NAME           = "Polychrome"
-PACKAGE_VERSION        = "3.0.0"
+PACKAGE_VERSION        = "3.1.0"
+QUOTES                 = (("'", "'"), ("‘", "’"), ("\"", "\""), ("“", "”"), ("`", "`"), ("ˋ", "ˊ"), ("⹁", ","), ("❛", "❜"), ("❝", "❞"), ("«", "»"), ("「", "」"), ("『", "』"))
+QUOTE_MAP              = dict(QUOTES)
+TOKEN_PATTERN          = re.compile("[" + re.escape("".join(opening + closing for opening, closing in DELIMITERS + QUOTES)) + "]")
 POLYCHROME_SCOPES      = tuple("polychrome.depth." + str(depth) for depth in range(len(COLORS)))
 REGION_FLAGS           = sublime.DRAW_NO_OUTLINE | getattr(sublime, "HIDE_ON_MINIMAP", 0)
 REGION_KEYS            = tuple("polychrome.depth." + str(depth) for depth in range(len(COLORS)))
@@ -141,9 +144,11 @@ def _repaint(view, expected_change_count=None, commanded=False):
   ignored_region_index = 0
   ignored_regions      = view.find_by_selector(IGNORED_SCOPE_SELECTOR)
   position             = 0
+  quote                = None
   regions_by_depth     = [[] for _ in COLORS]
   size                 = view.size()
   stack                = []
+  string_stack         = []
 
   ignored_regions.sort(key=lambda region: region.begin())
 
@@ -154,7 +159,7 @@ def _repaint(view, expected_change_count=None, commanded=False):
     end  = min(size, position + SCAN_CHUNK_SIZE)
     text = view.substr(sublime.Region(position, end))
 
-    for match in DELIMITER_PATTERN.finditer(text):
+    for match in TOKEN_PATTERN.finditer(text):
       point = position + match.start()
 
       while ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].end() <= point:
@@ -163,15 +168,33 @@ def _repaint(view, expected_change_count=None, commanded=False):
       if ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].begin() <= point < ignored_regions[ignored_region_index].end():
         continue
 
-      delimiter         = match.group(0)
-      opening_delimiter = DELIMITER_MAP.get(delimiter)
+      token = match.group(0)
+
+      if quote is not None:
+        if token == QUOTE_MAP[quote]:
+          quote = None
+          string_stack = []
+          continue
+
+        active_stack = string_stack
+      elif token in QUOTE_MAP:
+        quote        = token
+        string_stack = []
+        continue
+      else:
+        active_stack = stack
+
+      if token not in DELIMITER_SET:
+        continue
+
+      opening_delimiter = DELIMITER_MAP.get(token)
 
       if opening_delimiter is None:
-        regions_by_depth[len(stack) % len(COLORS)].append(point)
-        stack.append(delimiter)
-      elif stack and opening_delimiter == stack[-1]:
-        regions_by_depth[(len(stack) - 1) % len(COLORS)].append(point)
-        stack.pop()
+        regions_by_depth[len(active_stack) % len(COLORS)].append(point)
+        active_stack.append(token)
+      elif active_stack and opening_delimiter == active_stack[-1]:
+        regions_by_depth[(len(active_stack) - 1) % len(COLORS)].append(point)
+        active_stack.pop()
 
     position = end
 

@@ -23,12 +23,12 @@ struct program /* final */ {
     struct /* final */ {
       static ::LRESULT CALLBACK procedure(::HWND const windowHandle, ::UINT const message, ::WPARAM const parameter, ::LPARAM const subparameter) {
         switch (message) {
-          case WM_CLOSE:   (void) ::DestroyWindow(windowHandle);                                        return 00L;   break; // --> WM_DESTROY
-          case WM_DESTROY:        ::PostQuitMessage(application -> termination.status);                 return 00L;   break; // --> WM_QUIT
-          case WM_ENDSESSION: if (FALSE     != parameter) { (void) application -> finish(); }           return 00L;   break; // ->> Session ending (e.g. `winlogon.exe`) due to `ENDSESSION_CLOSEAPP | ENDSESSION_CRITICAL | ENDSESSION_LOGOFF == subparameter`
-          case WM_KEYDOWN:    if (VK_ESCAPE == parameter) { if (FALSE != ::DestroyWindow(windowHandle)) return 00L; } break; // --> WM_DESTROY
-          case WM_QUERYENDSESSION:                                                                      return TRUE;  break; //
-          default:;                                                                                                          //
+          case WM_CLOSE:   (void) ::DestroyWindow(windowHandle);                                                               return 00L;   break; // --> WM_DESTROY
+          case WM_DESTROY:        ::PostQuitMessage(application -> termination.status);                                        return 00L;   break; // --> WM_QUIT
+          case WM_ENDSESSION: if (FALSE     != parameter) { (void) application -> finish(application -> termination.status); } return 00L;   break; // ->> Session ending (e.g. `winlogon.exe`) due to `ENDSESSION_CLOSEAPP | ENDSESSION_CRITICAL | ENDSESSION_LOGOFF == subparameter`
+          case WM_KEYDOWN:    if (VK_ESCAPE == parameter) { if (FALSE != ::DestroyWindow(windowHandle))                        return 00L; } break; // --> WM_DESTROY
+          case WM_QUERYENDSESSION:                                                                                             return TRUE;  break; //
+          default:;                                                                                                                                 //
         }
 
         return ::DefWindowProcW(windowHandle, message, parameter, subparameter);
@@ -74,10 +74,9 @@ struct program /* final */ {
     }
   #endif
 
-  inline int finish()                 const /* noexcept */ { return this -> finish(this -> termination.status); }
-  int        finish(int const status) const /* noexcept */ {
+  int finish(int const status) const /* noexcept */ {
     // ->> Close files and sockets and such, flush persistent data, relinquish owned resources, stop workers, …
-    #if defined _WIN32
+    #if defined _WIN32 // ->> Will not handle `::TerminateJobObject(…)`, `::TerminateProcess(…)`, or Task Manager task ending
       if (FALSE == ::SetEvent(this -> termination.completed))
       return EXIT_FAILURE;
     #endif
@@ -185,5 +184,5 @@ int main(int, char*[]) {
   #endif
   finish:
 
-  return NULL != application ? application -> finish() : EXIT_FAILURE; // --> ::std::exit(…)
+  return NULL != application ? application -> finish(application -> termination.status) : EXIT_FAILURE; // --> ::std::exit(…)
 }

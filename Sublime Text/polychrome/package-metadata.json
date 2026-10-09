@@ -3,5 +3,5 @@
   "name": "Polychrome", 
   "platforms": ["*"],
   "sublime_text": ">=3148", 
-  "version": "3.0.0"
+  "version": "3.1.0"
 }
