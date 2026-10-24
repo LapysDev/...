@@ -10,10 +10,13 @@ DELIMITER_MAP          = dict((closing, opening) for opening, closing in DELIMIT
 DELIMITER_SET          = frozenset("".join(opening + closing for opening, closing in DELIMITERS))
 IGNORED_SCOPE_SELECTOR = "comment, constant"
 PACKAGE_NAME           = "Polychrome"
-PACKAGE_VERSION        = "3.2.0"
-QUOTES                 = (("'", "'"), ("‘", "’"), ("\"", "\""), ("“", "”"), ("`", "`"), ("ˋ", "ˊ"), ("⹁", ","), ("❛", "❜"), ("❝", "❞"), ("«", "»"), ("「", "」"), ("『", "』"))
-QUOTE_MAP              = dict(QUOTES)
-TOKEN_PATTERN          = re.compile("[" + re.escape("".join(opening + closing for opening, closing in DELIMITERS + QUOTES)) + "]")
+PACKAGE_VERSION        = "3.4.1"
+MULTI_LINE_QUOTES      = (("'", "'"), ("\"", "\""), ("“", "”"), ("`", "`"), ("ˋ", "ˊ"), ("⹁", ","), ("❛", "❜"), ("❝", "❞"), ("«", "»"), ("「", "」"), ("『", "』"))
+SINGLE_LINE_QUOTES     = (("/", "/"), ("‘", "’"))
+SINGLE_LINE_QUOTE_MAP  = dict(SINGLE_LINE_QUOTES)
+QUOTE_MAP              = dict(MULTI_LINE_QUOTES + SINGLE_LINE_QUOTES)
+QUOTE_CHARACTERS       = frozenset("".join(opening + closing for opening, closing in MULTI_LINE_QUOTES + SINGLE_LINE_QUOTES))
+TOKEN_PATTERN          = re.compile("[" + re.escape("".join(opening + closing for opening, closing in DELIMITERS + MULTI_LINE_QUOTES + SINGLE_LINE_QUOTES) + "\\\r\n") + "]")
 POLYCHROME_SCOPES      = tuple("polychrome.depth." + str(depth) for depth in range(len(COLORS)))
 REGION_FLAGS           = sublime.DRAW_NO_OUTLINE | getattr(sublime, "HIDE_ON_MINIMAP", 0)
 REGION_KEYS            = tuple("polychrome.depth." + str(depth) for depth in range(len(COLORS)))
@@ -47,17 +50,6 @@ class PolychromeEventListener(sublime_plugin.EventListener):
 
   def on_revert_async(self, view):
     _schedule_repaint(view, 0)
-
-class PolychromeRepaintCommand(sublime_plugin.TextCommand):
-  def run(self, edit):
-    if not _is_eligible_view(self.view):
-      return
-
-    sublime.status_message("Polychrome: Repainting from scratch...")
-    _repaint(self.view, None, True)
-
-  def is_enabled(self):
-    return _is_eligible_view(self.view)
 
 # ...
 def _ensure_color_scheme_overlay(view):
@@ -109,7 +101,7 @@ def _erase_regions(view):
 def _is_eligible_view(view):
   return view is not None and view.is_valid() and not view.is_loading() and not view.settings().get("is_widget", False)
 
-def _paint(view, change_count, regions_by_depth, use_overlay_scopes, commanded=False):
+def _paint(view, change_count, regions_by_depth, use_overlay_scopes):
   if not _is_eligible_view(view) or view.change_count() != change_count:
     return
 
@@ -122,11 +114,8 @@ def _paint(view, change_count, regions_by_depth, use_overlay_scopes, commanded=F
     if points:
       view.add_regions(REGION_KEYS[depth], [sublime.Region(point, point + 1) for point in points], scopes[depth], "", REGION_FLAGS)
 
-  if commanded:
-    sublime.status_message("Polychrome: Repaint complete")
-
 def _paint_matched_string_delimiters(regions_by_depth, string_delimiters):
-  # ->> Count only completed pairs when calculating rainbow depth. Unmatched opening delimiters must neither be coloured nor affect nested pair colours.
+  # ->> Count only completed pairs when calculating rainbow depth. Unmatched opening delimiters must neither be coloured nor affect nested pair colours
   depth = 0
 
   for point, is_opening, matched in string_delimiters:
@@ -140,24 +129,69 @@ def _paint_matched_string_delimiters(regions_by_depth, string_delimiters):
       depth -= 1
       regions_by_depth[depth % len(COLORS)].append(point)
 
-def _repaint(view, expected_change_count=None, commanded=False):
+def _has_closing_quote(view, point, quote, ignored_regions, ignored_region_index):
+  escaped          = False
+  last_token_point = point
+  end              = view.line(point).end() if quote in SINGLE_LINE_QUOTE_MAP else view.size()
+  closing          = QUOTE_MAP[quote]
+
+  position = point + 1
+
+  while position < end:
+    chunk_end = min(position + SCAN_CHUNK_SIZE, end)
+
+    for match in TOKEN_PATTERN.finditer(view.substr(sublime.Region(position, chunk_end))):
+      token_point = position + match.start()
+      token       = match.group(0)
+
+      if token_point != last_token_point + 1:
+        escaped = False
+      last_token_point = token_point
+
+      while ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].end() <= token_point:
+        ignored_region_index += 1
+
+      if ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].begin() <= token_point < ignored_regions[ignored_region_index].end():
+        escaped = False
+        continue
+
+      if token == "\\":
+        escaped = not escaped
+        continue
+
+      if token == "`" and not escaped and quote != "`" and token_point + 1 < end and view.substr(token_point + 1) in QUOTE_CHARACTERS:
+        escaped = True
+        continue
+
+      if escaped:
+        escaped = False
+        continue
+
+      if token == closing:
+        return True
+
+    position = chunk_end
+
+  return False
+
+def _repaint(view, expected_change_count):
   if not _is_eligible_view(view):
     return
 
   change_count = view.change_count()
 
-  if expected_change_count is not None and change_count != expected_change_count:
+  if change_count != expected_change_count:
     return
 
   _erase_regions(view)
 
   if view.size() > BUFFER_CHARACTER_LIMIT:
-    if commanded:
-      sublime.status_message("Polychrome: Repaint aborted - buffer character limit exceeded")
     return
 
+  escaped              = False
   ignored_region_index = 0
   ignored_regions      = view.find_by_selector(IGNORED_SCOPE_SELECTOR)
+  last_token_point     = -2
   position             = 0
   quote                = None
   regions_by_depth     = [[] for _ in COLORS]
@@ -177,14 +211,41 @@ def _repaint(view, expected_change_count=None, commanded=False):
 
     for match in TOKEN_PATTERN.finditer(text):
       point = position + match.start()
+      token = match.group(0)
+
+      if point != last_token_point + 1:
+        escaped = False
+      last_token_point = point
+
+      if token == "\n" or token == "\r":
+        if quote in SINGLE_LINE_QUOTE_MAP:
+          _paint_matched_string_delimiters(regions_by_depth, string_delimiters)
+          quote             = None
+          string_stack      = []
+          string_delimiters = []
+        escaped = False
+        continue
 
       while ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].end() <= point:
         ignored_region_index += 1
 
       if ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].begin() <= point < ignored_regions[ignored_region_index].end():
+        escaped = False
         continue
 
-      token = match.group(0)
+      if token == "\\":
+        escaped = not escaped
+        continue
+
+      # ->> Enclosed backticks take precedence over backtick-prefixed quote escapes
+      if token == "`" and not escaped and quote != "`" and point + 1 < size and view.substr(point + 1) in QUOTE_CHARACTERS and (quote is not None or not _has_closing_quote(view, point, token, ignored_regions, ignored_region_index)):
+        escaped = True
+        continue
+
+      if escaped:
+        escaped = False
+        if quote is not None or token not in QUOTE_MAP or not _has_closing_quote(view, point, token, ignored_regions, ignored_region_index):
+          continue
 
       if quote is not None:
         if token == QUOTE_MAP[quote]:
@@ -206,6 +267,10 @@ def _repaint(view, expected_change_count=None, commanded=False):
           _, opening_index = string_stack.pop()
           string_delimiters[opening_index][2] = True
           string_delimiters.append((point, False, True))
+        continue
+
+      # ->> An unclosed single-line quote is ordinary text; its inner delimiters still belong to the surrounding nest
+      if token in SINGLE_LINE_QUOTE_MAP and not _has_closing_quote(view, point, token, ignored_regions, ignored_region_index):
         continue
 
       if token in QUOTE_MAP:
@@ -237,9 +302,9 @@ def _repaint(view, expected_change_count=None, commanded=False):
   use_overlay_scopes, wrote_overlay = _ensure_color_scheme_overlay(view)
 
   if wrote_overlay:
-    sublime.set_timeout_async(lambda: _paint(view, change_count, regions_by_depth, use_overlay_scopes, commanded), 120)
+    sublime.set_timeout_async(lambda: _paint(view, change_count, regions_by_depth, use_overlay_scopes), 120)
   else:
-    _paint(view, change_count, regions_by_depth, use_overlay_scopes, commanded)
+    _paint(view, change_count, regions_by_depth, use_overlay_scopes)
 
 def _schedule_repaint(view, delay=REPAINT_DELAY):
   if not _is_eligible_view(view):
@@ -276,15 +341,6 @@ def _write_text_if_changed(path, text):
     return False
 
 def plugin_loaded():
-  package_directory = os.path.join(sublime.packages_path(), PACKAGE_NAME)
-
-  _write_text_if_changed(
-    os.path.join(package_directory, "Polychrome.sublime-commands"),
-    json.dumps([
-      {"caption": "Polychrome: Repaint", "command": "polychrome_repaint"}
-    ], indent=2, sort_keys=True) + "\n"
-  )
-
   for window in sublime.windows():
     for view in window.views():
       _schedule_repaint(view, 0)

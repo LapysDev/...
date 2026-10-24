@@ -1,30 +1,36 @@
 # %AppData%/Sublime Text/Packages/User
+import sublime
 import sublime_plugin
 
 # ...
 class IgnoreAllMisspellings(sublime_plugin.TextCommand):
   def run(self, edit):
-    view        = self.view
-    substr      = view.substr
-    selections  = view.sel()
-    seen        = set()
-    run_command = view.run_command
-    regions     = []
+    selections          = self.view.sel()
+    original_selections = list(selections)
+    selected_ranges     = [region for region in original_selections if not region.empty()]
+    seen                = set()
+    words               = set()
 
-    while True:
-      run_command("next_misspelling")
+    try:
+      selections.clear()
+      selections.add(sublime.Region(0))
 
-      region   = selections[0]
-      position = (region.a, region.b)
+      while True:
+        self.view.run_command("next_misspelling")
 
-      if position in seen:
-        break
+        region   = selections[0]
+        position = (region.begin(), region.end())
 
-      seen.add(position)
-      regions.append(region)
+        if region.empty() or position in seen:
+          break
 
-      for word in {substr(region) for region in selections}:
-        run_command("ignore_word", {"word": word})
+        seen.add(position)
 
-    selections.clear()
-    selections.add_all(regions)
+        if not selected_ranges or any(selected.begin() <= region.begin() and region.end() <= selected.end() for selected in selected_ranges):
+          words.add(self.view.substr(region))
+
+      for word in sorted(words):
+        self.view.run_command("ignore_word", {"word": word})
+    finally:
+      selections.clear()
+      selections.add_all(original_selections)

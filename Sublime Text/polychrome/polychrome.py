@@ -21,35 +21,45 @@ POLYCHROME_SCOPES      = tuple("polychrome.depth." + str(depth) for depth in ran
 REGION_FLAGS           = sublime.DRAW_NO_OUTLINE | getattr(sublime, "HIDE_ON_MINIMAP", 0)
 REGION_KEYS            = tuple("polychrome.depth." + str(depth) for depth in range(len(COLORS)))
 REGION_SCOPES          = ("region.redish", "region.orangish", "region.yellowish", "region.greenish", "region.cyanish", "region.bluish", "region.purplish", "region.pinkish")
-REPAINT_DELAY          = 60
+REPAINT_DELAY          = 150 # --> Debounce edits before scanning
+REPAINT_JOBS           = {}  # --> One current scan per view; no content cache
+REPAINT_STEP_DELAY     = 2   # --> Yield the asynchronous callback queue between chunks
 SCAN_CHUNK_SIZE        = 16384 # --> 16K characters
+STATUS_KEY             = "polychrome.progress"
+VIEWPORT_POLL_DELAY    = 250 # --> Scroll events have no dedicated Sublime Text API callback
+VIEWPORT_POLLING       = False
 
 # ...
 class PolychromeEventListener(sublime_plugin.EventListener):
+  def on_close(self, view):
+    REPAINT_JOBS.pop(view.id(), None)
+    if view.is_valid():
+      view.erase_status(STATUS_KEY)
+
   def on_activated_async(self, view):
     if _is_eligible_view(view):
-      _ensure_color_scheme_overlay(view)
+      _schedule_repaint(view, 0, True)
 
   def on_clone_async(self, view):
-    _schedule_repaint(view, 0)
+    _schedule_repaint(view, 0, True)
 
   def on_load_async(self, view):
-    _schedule_repaint(view, 0)
+    _schedule_repaint(view, 0, True)
 
   def on_modified_async(self, view):
     _schedule_repaint(view)
 
   def on_new_async(self, view):
-    _schedule_repaint(view, 0)
+    _schedule_repaint(view, 0, True)
 
   def on_post_save_async(self, view):
     _schedule_repaint(view, 0)
 
   def on_reload_async(self, view):
-    _schedule_repaint(view, 0)
+    _schedule_repaint(view, 0, True)
 
   def on_revert_async(self, view):
-    _schedule_repaint(view, 0)
+    _schedule_repaint(view, 0, True)
 
 # ...
 def _ensure_color_scheme_overlay(view):
@@ -102,19 +112,35 @@ def _is_eligible_view(view):
   return view is not None and view.is_valid() and not view.is_loading() and not view.settings().get("is_widget", False)
 
 def _paint(view, change_count, regions_by_depth, use_overlay_scopes):
-  if not _is_eligible_view(view) or view.change_count() != change_count:
-    return
+  completed = 0
+  total     = max(1, sum(len(points) for points in regions_by_depth))
+  scopes    = POLYCHROME_SCOPES if use_overlay_scopes else REGION_SCOPES
 
-  scopes = POLYCHROME_SCOPES if use_overlay_scopes else REGION_SCOPES
+  _set_status(view, "Painting", 81)
 
   for depth, points in enumerate(regions_by_depth):
-    if view.change_count() != change_count:
+    regions = []
+
+    for position in range(0, len(points), SCAN_CHUNK_SIZE):
+      if not _is_eligible_view(view) or view.change_count() != change_count:
+        return
+
+      regions.extend(sublime.Region(point, point + 1) for point in points[position:position + SCAN_CHUNK_SIZE])
+      _set_status(view, "Painting", 81 + 18 * (completed + len(regions)) // total)
+      yield REPAINT_STEP_DELAY
+
+    if not _is_eligible_view(view) or view.change_count() != change_count:
       return
 
-    if points:
-      view.add_regions(REGION_KEYS[depth], [sublime.Region(point, point + 1) for point in points], scopes[depth], "", REGION_FLAGS)
+    if regions:
+      view.add_regions(REGION_KEYS[depth], regions, scopes[depth], "", REGION_FLAGS)
+    else:
+      view.erase_regions(REGION_KEYS[depth])
 
-def _paint_matched_string_delimiters(regions_by_depth, string_delimiters):
+    completed += len(points)
+    yield REPAINT_STEP_DELAY
+
+def _paint_matched_string_delimiters(regions_by_depth, string_delimiters, paint_begin):
   # ->> Count only completed pairs when calculating rainbow depth. Unmatched opening delimiters must neither be coloured nor affect nested pair colours
   depth = 0
 
@@ -123,35 +149,49 @@ def _paint_matched_string_delimiters(regions_by_depth, string_delimiters):
       continue
 
     if is_opening:
-      regions_by_depth[depth % len(COLORS)].append(point)
+      if point >= paint_begin:
+        regions_by_depth[depth % len(COLORS)].append(point)
       depth += 1
     else:
       depth -= 1
-      regions_by_depth[depth % len(COLORS)].append(point)
+      if point >= paint_begin:
+        regions_by_depth[depth % len(COLORS)].append(point)
 
-def _has_closing_quote(view, point, quote, ignored_regions, ignored_region_index):
+def _has_closing_quote(view, point, quote, scan_limit):
   escaped          = False
   last_token_point = point
-  end              = view.line(point).end() if quote in SINGLE_LINE_QUOTE_MAP else view.size()
+  end              = min(scan_limit, view.line(point).end()) if quote in SINGLE_LINE_QUOTE_MAP else scan_limit
   closing          = QUOTE_MAP[quote]
 
   position = point + 1
 
   while position < end:
-    chunk_end = min(position + SCAN_CHUNK_SIZE, end)
+    chunk_end   = min(position + SCAN_CHUNK_SIZE, end)
+    scope_index = 0
+    scope_end   = position
+    ignored     = False
+    scopes      = view.extract_tokens_with_scopes(sublime.Region(position, chunk_end))
 
     for match in TOKEN_PATTERN.finditer(view.substr(sublime.Region(position, chunk_end))):
       token_point = position + match.start()
       token       = match.group(0)
 
+      if token_point >= scope_end:
+        while scope_index < len(scopes) and token_point >= scopes[scope_index][0].end():
+          scope_index += 1
+
+        if scope_index < len(scopes):
+          scope_end = scopes[scope_index][0].end()
+          ignored   = sublime.score_selector(scopes[scope_index][1], IGNORED_SCOPE_SELECTOR) > 0
+        else:
+          scope_end = chunk_end
+          ignored   = False
+
       if token_point != last_token_point + 1:
         escaped = False
       last_token_point = token_point
 
-      while ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].end() <= token_point:
-        ignored_region_index += 1
-
-      if ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].begin() <= token_point < ignored_regions[ignored_region_index].end():
+      if ignored:
         escaped = False
         continue
 
@@ -171,10 +211,11 @@ def _has_closing_quote(view, point, quote, ignored_regions, ignored_region_index
         return True
 
     position = chunk_end
+    yield REPAINT_STEP_DELAY
 
   return False
 
-def _repaint(view, expected_change_count):
+def _repaint(view, expected_change_count, scan_limit, paint_begin):
   if not _is_eligible_view(view):
     return
 
@@ -183,35 +224,48 @@ def _repaint(view, expected_change_count):
   if change_count != expected_change_count:
     return
 
-  _erase_regions(view)
+  if scan_limit > BUFFER_CHARACTER_LIMIT:
+    _erase_regions(view)
+    return "Skipped (file too large)"
 
-  if view.size() > BUFFER_CHARACTER_LIMIT:
-    return
+  # ->> Keep the old colours during scanning; replace them only when complete.
+  escaped           = False
+  last_token_point  = -2
+  position          = 0
+  quote             = None
+  regions_by_depth  = [[] for _ in COLORS]
+  size              = scan_limit
+  stack             = []
+  string_delimiters = []
+  string_stack      = []
 
-  escaped              = False
-  ignored_region_index = 0
-  ignored_regions      = view.find_by_selector(IGNORED_SCOPE_SELECTOR)
-  last_token_point     = -2
-  position             = 0
-  quote                = None
-  regions_by_depth     = [[] for _ in COLORS]
-  size                 = view.size()
-  stack                = []
-  string_stack         = []
-  string_delimiters    = []
-
-  ignored_regions.sort(key=lambda region: region.begin())
+  _set_status(view, "Scanning", 1)
 
   while position < size:
     if view.change_count() != change_count:
       return
 
-    end  = min(size, position + SCAN_CHUNK_SIZE)
-    text = view.substr(sublime.Region(position, end))
+    end         = min(size, position + SCAN_CHUNK_SIZE)
+    text        = view.substr(sublime.Region(position, end))
+    scope_index = 0
+    scope_end   = position
+    ignored     = False
+    scopes      = view.extract_tokens_with_scopes(sublime.Region(position, end))
 
     for match in TOKEN_PATTERN.finditer(text):
       point = position + match.start()
       token = match.group(0)
+
+      if point >= scope_end:
+        while scope_index < len(scopes) and point >= scopes[scope_index][0].end():
+          scope_index += 1
+
+        if scope_index < len(scopes):
+          scope_end = scopes[scope_index][0].end()
+          ignored   = sublime.score_selector(scopes[scope_index][1], IGNORED_SCOPE_SELECTOR) > 0
+        else:
+          scope_end = end
+          ignored   = False
 
       if point != last_token_point + 1:
         escaped = False
@@ -219,17 +273,14 @@ def _repaint(view, expected_change_count):
 
       if token == "\n" or token == "\r":
         if quote in SINGLE_LINE_QUOTE_MAP:
-          _paint_matched_string_delimiters(regions_by_depth, string_delimiters)
+          _paint_matched_string_delimiters(regions_by_depth, string_delimiters, paint_begin)
           quote             = None
           string_stack      = []
           string_delimiters = []
         escaped = False
         continue
 
-      while ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].end() <= point:
-        ignored_region_index += 1
-
-      if ignored_region_index < len(ignored_regions) and ignored_regions[ignored_region_index].begin() <= point < ignored_regions[ignored_region_index].end():
+      if ignored:
         escaped = False
         continue
 
@@ -238,18 +289,18 @@ def _repaint(view, expected_change_count):
         continue
 
       # ->> Enclosed backticks take precedence over backtick-prefixed quote escapes
-      if token == "`" and not escaped and quote != "`" and point + 1 < size and view.substr(point + 1) in QUOTE_CHARACTERS and (quote is not None or not _has_closing_quote(view, point, token, ignored_regions, ignored_region_index)):
+      if token == "`" and not escaped and quote != "`" and point + 1 < size and view.substr(point + 1) in QUOTE_CHARACTERS and (quote is not None or not (yield from _has_closing_quote(view, point, token, size))):
         escaped = True
         continue
 
       if escaped:
         escaped = False
-        if quote is not None or token not in QUOTE_MAP or not _has_closing_quote(view, point, token, ignored_regions, ignored_region_index):
+        if quote is not None or token not in QUOTE_MAP or not (yield from _has_closing_quote(view, point, token, size)):
           continue
 
       if quote is not None:
         if token == QUOTE_MAP[quote]:
-          _paint_matched_string_delimiters(regions_by_depth, string_delimiters)
+          _paint_matched_string_delimiters(regions_by_depth, string_delimiters, paint_begin)
           quote             = None
           string_stack      = []
           string_delimiters = []
@@ -270,7 +321,7 @@ def _repaint(view, expected_change_count):
         continue
 
       # ->> An unclosed single-line quote is ordinary text; its inner delimiters still belong to the surrounding nest
-      if token in SINGLE_LINE_QUOTE_MAP and not _has_closing_quote(view, point, token, ignored_regions, ignored_region_index):
+      if token in SINGLE_LINE_QUOTE_MAP and not (yield from _has_closing_quote(view, point, token, size)):
         continue
 
       if token in QUOTE_MAP:
@@ -285,33 +336,109 @@ def _repaint(view, expected_change_count):
       opening_delimiter = DELIMITER_MAP.get(token)
 
       if opening_delimiter is None:
-        regions_by_depth[len(stack) % len(COLORS)].append(point)
+        if point >= paint_begin:
+          regions_by_depth[len(stack) % len(COLORS)].append(point)
         stack.append(token)
       elif stack and opening_delimiter == stack[-1]:
-        regions_by_depth[(len(stack) - 1) % len(COLORS)].append(point)
+        if point >= paint_begin:
+          regions_by_depth[(len(stack) - 1) % len(COLORS)].append(point)
         stack.pop()
 
     position = end
+    _set_status(view, "Scanning", 1 + 79 * position // size)
+    yield REPAINT_STEP_DELAY
 
   if quote is not None:
-    _paint_matched_string_delimiters(regions_by_depth, string_delimiters)
+    _paint_matched_string_delimiters(regions_by_depth, string_delimiters, paint_begin)
 
   if view.change_count() != change_count:
     return
 
-  use_overlay_scopes, wrote_overlay = _ensure_color_scheme_overlay(view)
+  _set_status(view, "Preparing colours", 80)
+  use_overlay_scopes = int(sublime.version()) >= 3150 and bool(view.settings().get("color_scheme"))
+  yield from _paint(view, change_count, regions_by_depth, use_overlay_scopes)
 
-  if wrote_overlay:
-    sublime.set_timeout_async(lambda: _paint(view, change_count, regions_by_depth, use_overlay_scopes), 120)
-  else:
-    _paint(view, change_count, regions_by_depth, use_overlay_scopes)
+def _poll_viewports():
+  if not VIEWPORT_POLLING:
+    return
 
-def _schedule_repaint(view, delay=REPAINT_DELAY):
+  for window in sublime.windows():
+    for group in range(window.num_groups()):
+      view = window.active_view_in_group(group)
+
+      if _is_eligible_view(view):
+        _schedule_repaint(view, 0)
+
+  sublime.set_timeout_async(_poll_viewports, VIEWPORT_POLL_DELAY)
+
+def _set_status(view, action, progress):
+  status = PACKAGE_NAME + ": " + action + " " + str(progress) + "%"
+
+  if view.get_status(STATUS_KEY) != status:
+    view.set_status(STATUS_KEY, status)
+
+def _schedule_repaint(view, delay=REPAINT_DELAY, ensure_overlay=False):
   if not _is_eligible_view(view):
     return
 
-  change_count = view.change_count()
-  sublime.set_timeout_async(lambda: _repaint(view, change_count), delay)
+  # ->> Check the overlay on lifecycle events, not on every edit or scroll.
+  if ensure_overlay:
+    _, wrote_overlay = _ensure_color_scheme_overlay(view)
+    if wrote_overlay:
+      delay = max(delay, 120)
+
+  change_count  = view.change_count()
+  view_id       = view.id()
+  visible       = view.visible_region()
+  visible_begin = max(0, min(view.size(), visible.begin()))
+  visible_end   = max(visible_begin, min(view.size(), visible.end()))
+
+  # ->> `visible_region()` excludes the minimap; scan and paint one editor page
+  # ->> below its lower edge, accounting for wraps and folded lines.
+  viewport_position = view.viewport_position()
+  viewport_extent   = view.viewport_extent()
+  scan_limit        = max(visible_end, view.layout_to_text((viewport_position[0] + viewport_extent[0], viewport_position[1] + 2 * viewport_extent[1])))
+
+  if visible_end == visible_begin and view.size():
+    scan_limit = max(scan_limit, visible_begin + SCAN_CHUNK_SIZE)
+
+  paint_begin = visible_begin // SCAN_CHUNK_SIZE * SCAN_CHUNK_SIZE
+  scan_limit  = min(view.size(), scan_limit)
+  revision    = (change_count, paint_begin, scan_limit)
+
+  # ->> Ignore duplicate notifications and supersede old revisions/viewport positions.
+  if view_id in REPAINT_JOBS and REPAINT_JOBS[view_id][:3] == revision:
+    return
+
+  repaint = _repaint(view, change_count, scan_limit, paint_begin)
+  REPAINT_JOBS[view_id] = revision + (repaint,)
+  _set_status(view, "Queued", 1)
+
+  def step():
+    if REPAINT_JOBS.get(view_id) != revision + (repaint,):
+      return
+
+    if not _is_eligible_view(view) or view.change_count() != change_count:
+      REPAINT_JOBS.pop(view_id, None)
+      if view.is_valid():
+        view.erase_status(STATUS_KEY)
+      return
+
+    try:
+      next_delay = next(repaint)
+    except StopIteration as completed:
+      if view.change_count() != change_count:
+        REPAINT_JOBS.pop(view_id, None)
+        view.erase_status(STATUS_KEY)
+        return
+
+      REPAINT_JOBS[view_id] = revision + (None,)
+      _set_status(view, completed.value or "Complete", 100)
+      return
+
+    sublime.set_timeout_async(step, next_delay)
+
+  sublime.set_timeout_async(step, delay)
 
 def _write_text_if_changed(path, text):
   directory     = os.path.dirname(path)
@@ -341,12 +468,25 @@ def _write_text_if_changed(path, text):
     return False
 
 def plugin_loaded():
+  global VIEWPORT_POLLING
+
   for window in sublime.windows():
     for view in window.views():
-      _schedule_repaint(view, 0)
+      _schedule_repaint(view, 0, True)
+
+  if not VIEWPORT_POLLING:
+    VIEWPORT_POLLING = True
+    sublime.set_timeout_async(_poll_viewports, VIEWPORT_POLL_DELAY)
 
 def plugin_unloaded():
+  global VIEWPORT_POLLING
+
+  VIEWPORT_POLLING = False
+  REPAINT_JOBS.clear()
+
   for window in sublime.windows():
     for view in window.views():
-      if _is_eligible_view(view):
-        _erase_regions(view)
+      if view.is_valid():
+        view.erase_status(STATUS_KEY)
+        if _is_eligible_view(view):
+          _erase_regions(view)
