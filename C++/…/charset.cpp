@@ -426,14 +426,23 @@ struct state /* final */ {
   union { struct state::scalar_state scalars; struct state::utf7_state utf7; union state::utf16_state utf16; };
 
   /* ... */
-  void reset(enum format::encoding const format) /* noexcept */ {
+  inline state() /* noexcept */ :
+    characterCount(0u),
+    endianness    (static_cast<enum policy>(0x00u)),
+    invalidCount  (0u),
+    offset        (0u),
+    status        (0x00u),
+    scalars       ()
+  {}
+
+  void reset(enum format::encoding const encoding) /* noexcept */ {
     this -> characterCount = 0u;
     this -> endianness     = static_cast<enum policy>(0x00u);
     this -> invalidCount   = 0u;
     this -> offset         = 0u;
     this -> status         = 0x00u;
 
-    switch (format::strategy(format)) {
+    switch (format::strategy(encoding)) {
       case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: {
         this -> utf16.surrogate.high = 0x0000u;
         this -> utf16.surrogate.low  = 0x0000u;
@@ -448,8 +457,8 @@ struct state /* final */ {
       } break;
 
       default: {
-        for (this -> scalars.count = sizeof this -> scalars.pending / sizeof(::uint_least32_t); this -> scalars.count--; )
-        this -> scalars.pending[this -> scalars.count] = 0x000000u;
+        for (this -> scalars.count = sizeof this -> scalars.pending / sizeof(::uint_least32_t); this -> scalars.count; )
+        this -> scalars.pending[--this -> scalars.count] = 0x000000u;
       } break;
     }
   }
@@ -462,542 +471,597 @@ struct state /* final */ {
                       state::UNSUPPORTED  = static_cast< ::std::size_t>(-6);
 
 /* ... ->> Characters are accordingly either Unicode scalars or legacy code units */
-static ::std::size_t scsu_length(unsigned char const text[], bool unicoded) /* noexcept */ {
-  for (::std::size_t length = 0u; ; ) {
-    unsigned const first = text[length];
-    unsigned       width = 1u;
+extern "C" {
+  ::std::size_t bom(enum format::encoding, unsigned char[], ::std::size_t, enum policy) /* noexcept */,
+                nul(enum format::encoding, unsigned char[], ::std::size_t)              /* noexcept */;
 
-    // ...
-    if (unicoded) {
-      if (first == 0u and text[length + 1u] == 0u) return length;
-      if (first >= 0xE0u and first <= 0xE7u) unicoded = false;
-      else if (first >= 0xE8u and first <= 0xEFu) { unicoded = false; width = 2u; }
-      else if (first == 0xF0u) width = 3u;
-      else if (first == 0xF1u) { unicoded = false; width = 3u; }
-      else width = 2u;
-    }
-
-    else {
-      if (first == 0u) return length;
-      if (first == 0x0Fu) unicoded = true;
-      else if ((first >= 0x01u and first <= 0x08u) or (first >= 0x18u and first <= 0x1Fu)) width = 2u;
-      else if (first == 0x0Bu or first == 0x0Eu) width = 3u;
-    }
-
-    if (length >= state::UNSUPPORTED - width)
-    return state::COUNT_LIMIT;
-
-    length += width;
-  }
+  ::std::size_t length (unsigned char const[], enum format::encoding, enum policy, struct state*) /* noexcept */,
+                next   (unsigned char const[], enum format::encoding,              struct state*) /* noexcept */,
+                unicode(unsigned char const[], enum format::encoding,              struct state*) /* noexcept */;
 }
 
 extern "C" ::std::size_t nul(enum format::encoding const encoding, unsigned char nul[], ::std::size_t const capacity = 0u) /* noexcept */ {
   switch (format::strategy(encoding)) {
     case STRATEGY_DOUBLE_94:                                                                                               return state::UNSUPPORTED;
-    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: return not capacity or capacity >= 2u           ? (void) ::std::memset (nul, 0x00u, 2u),           2u           : state::NO_SPACE;
-    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: return not capacity or capacity >= 4u           ? (void) ::std::memset (nul, 0x00u, 4u),           4u           : state::NO_SPACE;
-    case STRATEGY_FORMAT_UTF_7:      { unsigned char const shift[] = {'+', 'A', 'A', 'A', '-'};                            return not capacity or capacity >= sizeof shift ? (void) ::std::memmove(nul, shift, sizeof shift), sizeof shift : state::NO_SPACE; } break;
-    case STRATEGY_FORMAT_UTF_7_IMAP: { unsigned char const shift[] = {'&', 'A', 'A', 'A', '-'};                            return not capacity or capacity >= sizeof shift ? (void) ::std::memmove(nul, shift, sizeof shift), sizeof shift : state::NO_SPACE; } break;
-    default: *nul = 0x00u;                                                                                                 return 1u;
+    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: return not capacity or capacity >= 2u           ? (void) (NULL != nul ? ::std::memset(nul, 0x00u, 2u)           : NULL), 2u           : state::NO_SPACE;
+    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: return not capacity or capacity >= 4u           ? (void) (NULL != nul ? ::std::memset(nul, 0x00u, 4u)           : NULL), 4u           : state::NO_SPACE;
+    case STRATEGY_FORMAT_UTF_7:      { unsigned char const shift[] = {'+', 'A', 'A', 'A', '-'};                            return not capacity or capacity >= sizeof shift ? (void) (NULL != nul ? ::std::memcpy(nul, shift, sizeof shift) : NULL), sizeof shift : state::NO_SPACE; } break;
+    case STRATEGY_FORMAT_UTF_7_IMAP: { unsigned char const shift[] = {'&', 'A', 'A', 'A', '-'};                            return not capacity or capacity >= sizeof shift ? (void) (NULL != nul ? ::std::memcpy(nul, shift, sizeof shift) : NULL), sizeof shift : state::NO_SPACE; } break;
+    default: if (NULL != nul) *nul = 0x00u;                                                                                return 1u;
   }
 }
 
-// Return the positive width, in native CHAR_BIT bytes, of the next character (or state-changing command).
-//   A shift/designation command has width > 0 but produces zero characters.
-//   UTF-7’s Base64 run may contain several characters in one returned width.
-// The number produced is `state::characterCount`; there is no extra width output parameter.
-//
-// On each successful call, state->offset advances by the returned
-// width, while state->status retains stateful charset transitions. Pass a
-// pointer to the CURRENT byte, not the start of the entire source buffer:
-//   next(&text[state.offset], encoding, &state)
-// The optional status pointer overrides state->status (useful when sharing
-// shift state without sharing other state); NULL is the default sentinel.
-extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding const encoding, struct state* const state = NULL, unsigned* const status = NULL) /* noexcept */ {
+extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding const encoding, struct state* nextState = NULL) /* noexcept */ {
+  typedef struct state nostate;
+
+  ::std::size_t     width    = 0u; // ->> Character length
+  struct state     &state    = NULL == nextState ? const_cast<struct state&>(static_cast<struct state const&>(nostate())) : *nextState;
   enum policy const strategy = format::strategy(encoding);
-  ::std::size_t length = 0u;
+  struct /* final */ {
+    struct /* final */ { bool g1Designated, g2Designated, g3Designated; bool shifted; } iso2022;
+    struct /* final */ { bool unicoded; }                                               scsu;
+  }             status     = {{0 != (state.status & state::ISO_2022_G1_DESIGNATED), 0 != (state.status & state::ISO_2022_G2_DESIGNATED), 0 != (state.status & state::ISO_2022_G3_DESIGNATED), 0 != (state.status & state::ISO_2022_SHIFTED)}, {0 != (state.status & state::SCSU_UNICODE)}};
+  ::std::size_t length     = 0u; // ->> Text length
+  ::std::size_t invalid    = static_cast< ::std::size_t>(-0);
+  enum policy   endianness = ENDIAN_BIG != state.endianness and ENDIAN_LITTLE != state.endianness ? ENDIAN_LITTLE : state.endianness;
 
-  // Determine remaining length from the encoding-appropriate terminator.
-  // Without a caller-supplied bound, input MUST remain accessible through it.
-  if (strategy == STRATEGY_FORMAT_SCSU) {
-    length = scsu_length(text, state != NULL and (state->status & state::SCSU_UNICODE) != 0u);
-    if (length == state::COUNT_LIMIT) return length;
-  } else {
-    unsigned unitBytes = 1;
-    // NUL code-unit width is determined by the encoding strategy.
-    switch (strategy) {
-      case STRATEGY_FORMAT_UCS_2:
-      case STRATEGY_FORMAT_UTF_16:
-      case STRATEGY_FORMAT_UTF_16BE:
-      case STRATEGY_FORMAT_UTF_16LE: unitBytes = 2u; break;
-      case STRATEGY_FORMAT_UCS_4:
-      case STRATEGY_FORMAT_UTF_32:
-      case STRATEGY_FORMAT_UTF_32BE:
-      case STRATEGY_FORMAT_UTF_32LE: unitBytes = 4u; break;
-      default: break;
-    }
-    for (;;) {
-      bool terminated = true;
-      for (unsigned index = 0; index < unitBytes; ++index)
-        if (text[length + index] != 0) terminated = false;
-      if (terminated) break;
-      if ((strategy == STRATEGY_FORMAT_UTF_7 or strategy == STRATEGY_FORMAT_UTF_7_IMAP) and
-          text[length] == (strategy == STRATEGY_FORMAT_UTF_7 ? '+' : '&') and
-          text[length + 1u] == 'A' and text[length + 2u] == 'A' and
-          text[length + 3u] == 'A' and text[length + 4u] == '-') break;
-      if (length >= state::UNSUPPORTED - unitBytes) return state::COUNT_LIMIT;
-      length += unitBytes;
-    }
-  }
-  if (length == 0) return state::MALFORMED;
-
-  enum policy endianness = state != NULL ? state->endianness : ENDIAN_LITTLE;
-  if (endianness != ENDIAN_BIG and endianness != ENDIAN_LITTLE) endianness = ENDIAN_LITTLE;
+  // ... --> endianness = …;
   switch (strategy) {
-    case STRATEGY_FORMAT_UTF_16BE:
-    case STRATEGY_FORMAT_UTF_32BE: endianness = ENDIAN_BIG; break;
-    case STRATEGY_FORMAT_UTF_16LE:
-    case STRATEGY_FORMAT_UTF_32LE: endianness = ENDIAN_LITTLE; break;
-    default: break;
+    case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_32BE: endianness = ENDIAN_BIG;    break;
+    case STRATEGY_FORMAT_UTF_16LE: case STRATEGY_FORMAT_UTF_32LE: endianness = ENDIAN_LITTLE; break;
+    default:;
   }
 
-  // A standalone next() starts with an optional BOM. The higher-level
-  // operations already handle BOMs before calling next(), so they start
-  // after the BOM, keeping its bytes outside their character count.
-  if (state == NULL or state->offset == 0) {
-    if (strategy == STRATEGY_FORMAT_UTF_16 and length >= 2 and
-        ((text[0] == 0xFEu and text[1] == 0xFFu) or (text[0] == 0xFFu and text[1] == 0xFEu))) {
-      endianness = text[0] == 0xFEu ? ENDIAN_BIG : ENDIAN_LITTLE;
-      if (state != NULL) {
-        state->endianness = endianness;
-        state->characterCount = 0;
-        state->invalidCount   = 0;
-        state->offset += 2;
+  // ... --> length = …;
+  switch (strategy) {
+    case STRATEGY_FORMAT_SCSU: for (bool unicoded = status.scsu.unicoded; ; ) {
+      unsigned char width = 1u;
+
+      // ...
+      if (unicoded) {
+        if (0x00u == text[length + 0u] and 0x00u == text[length + 1u])
+        break;
+
+        else if (text[length] == 0xF0u)                             width = 3u;
+        else if (text[length] == 0xF1u)                           { width = 3u; unicoded = false; }
+        else if (text[length] >= 0xE0u and text[length] <= 0xE7u) { width = 1u; unicoded = false; }
+        else if (text[length] >= 0xE8u and text[length] <= 0xEFu) { width = 2u; unicoded = false; }
+        else                                                        width = 2u;
       }
-      return 2;
-    }
-    if (strategy == STRATEGY_FORMAT_UTF_32 and length >= 4 and
-        ((text[0] == 0 and text[1] == 0 and text[2] == 0xFEu and text[3] == 0xFFu) or
-         (text[0] == 0xFFu and text[1] == 0xFEu and text[2] == 0 and text[3] == 0))) {
-      endianness = text[0] == 0xFFu ? ENDIAN_LITTLE : ENDIAN_BIG;
-      if (state != NULL) {
-        state->endianness = endianness;
-        state->characterCount = 0;
-        state->invalidCount   = 0;
-        state->offset += 4;
-      }
-      return 4;
-    }
-  }
-  bool const little = endianness != ENDIAN_BIG;
-  unsigned shiftFlags = status != NULL ? *status : (state != NULL ? state->status : 0u);
-  // Native code units carry one wire octet each for the following formats.
-  if ((strategy == STRATEGY_FORMAT_BOCU_1 or strategy == STRATEGY_FORMAT_HZ_GB_2312 or
-       strategy == STRATEGY_FORMAT_ISO_2022_CN or strategy == STRATEGY_FORMAT_ISO_2022_CN_EXT or
-       strategy == STRATEGY_FORMAT_ISO_2022_JP or strategy == STRATEGY_FORMAT_ISO_2022_JP_2 or
-       strategy == STRATEGY_FORMAT_ISO_2022_KR or strategy == STRATEGY_FORMAT_KOI7_SWITCHED or
-       strategy == STRATEGY_FORMAT_SCSU or strategy == STRATEGY_FORMAT_UTF_7 or
-       strategy == STRATEGY_FORMAT_UTF_7_IMAP) and CHAR_BIT != 8) return state::UNSUPPORTED;
 
-  // These booleans are local views of the stream's compact shift status.
-  bool shifted = (shiftFlags & state::ISO_2022_SHIFTED) != 0;
-  bool designation = (shiftFlags & state::ISO_2022_G1_DESIGNATED) != 0;
-  bool g2Designated = (shiftFlags & state::ISO_2022_G2_DESIGNATED) != 0;
-  bool g3Designated = (shiftFlags & state::ISO_2022_G3_DESIGNATED) != 0;
-  bool unicoded = (shiftFlags & state::SCSU_UNICODE) != 0;
-  ::std::size_t width = 1;
-  ::std::size_t produced = 1;
-  ::std::size_t failure = 0;
-
-  unsigned first = text[0];
-  unsigned second = length >= 2 ? text[1] : 0;
-  unsigned third = length >= 3 ? text[2] : 0;
-  unsigned fourth = length >= 4 ? text[3] : 0;
-
-  if (first > 0xFFu) { failure = state::MALFORMED; goto finished; }
-
-  if (strategy == STRATEGY_ACCENT_PREFIX) {
-    // ANSI X3.110-1983 and T.61 use a non-spacing accent byte (C1..CF)
-    // optionally followed by a base-letter byte. These are 1- or 2-byte
-    // character units; exact repertoire/mapping is not validated here.
-    if (first >= 0xC1u and first <= 0xCFu and length >= 2 and
-        ((second >= 'A' and second <= 'Z') or (second >= 'a' and second <= 'z') or second == ' ')) width = 2;
-    goto finished;
-  }
-
-  if (strategy == STRATEGY_FORMAT_HZ_GB_2312) {
-    // RFC 1843: "~~" literal tilde; "~{" enter GB; "~}" leave GB;
-    // tilde-newline is a continuation with no decoded character.
-    if (first == '~') {
-      if (length < 2 or second > 0x7Fu) { failure = state::MALFORMED; goto finished; }
-      width = 2;
-      if (second == '~') { /* literal tilde */ }
-      else if (second == '{' and not shifted) { shifted = true; produced = 0; }
-      else if (second == '}' and shifted) { shifted = false; produced = 0; }
-      else if (second == '\n') produced = 0;
-      else failure = state::MALFORMED;
-    } else if (shifted) {
-      if (length < 2 or first < 0x21u or first > 0x77u or second < 0x21u or second > 0x7Eu) failure = state::MALFORMED;
-      else width = 2;
-    } else if (first > 0x7Fu) failure = state::MALFORMED;
-    goto finished;
-  }
-
-  if (strategy == STRATEGY_FORMAT_ISO_2022_JP or strategy == STRATEGY_FORMAT_ISO_2022_JP_2 or
-      strategy == STRATEGY_FORMAT_ISO_2022_KR or strategy == STRATEGY_FORMAT_ISO_2022_CN or
-      strategy == STRATEGY_FORMAT_ISO_2022_CN_EXT or strategy == STRATEGY_FORMAT_KOI7_SWITCHED) {
-    // ISO 2022 uses ESC for charset designations and SO/SI for switching.
-    // Designations and shifts consume bytes but are NOT characters.
-    bool japanese = strategy == STRATEGY_FORMAT_ISO_2022_JP or strategy == STRATEGY_FORMAT_ISO_2022_JP_2;
-    bool extendedJP = strategy == STRATEGY_FORMAT_ISO_2022_JP_2;
-    bool chinese = strategy == STRATEGY_FORMAT_ISO_2022_CN or strategy == STRATEGY_FORMAT_ISO_2022_CN_EXT;
-    if (first == 0x1Bu and strategy != STRATEGY_FORMAT_KOI7_SWITCHED) {
-      produced = 0;
-      if (length < 3) { failure = state::MALFORMED; goto finished; }
-      if (japanese) {
-        if (second == '(' and (third == 'B' or third == 'J' or
-            (third == 'I' and (strategy == STRATEGY_FORMAT_ISO_2022_JP or encoding == format::CP50220)))) {
-          shifted = false; width = 3;
-        } else if (second == '$' and (third == '@' or third == 'B' or (third == 'A' and extendedJP))) {
-          shifted = true; width = 3;
-        } else if (extendedJP and second == '$' and third == '(' and length >= 4 and (fourth == 'C' or fourth == 'D')) {
-          shifted = true; width = 4;
-        } else if (extendedJP and second == '.' and (third == 'A' or third == 'F')) {
-          g2Designated = true; width = 3;
-        } else if (extendedJP and second == 'N' and g2Designated and length >= 3 and third >= 0x20u and third <= 0x7Fu) {
-          width = 3; produced = 1;
-        } else failure = state::MALFORMED;
-      } else if (strategy == STRATEGY_FORMAT_ISO_2022_KR) {
-        if (length >= 4 and second == '$' and third == ')' and fourth == 'C') { designation = true; width = 4; }
-        else failure = state::MALFORMED;
-      } else if (chinese) {
-        if (length >= 4 and second == '$' and third == ')' and
-            (fourth == 'A' or fourth == 'G' or (strategy == STRATEGY_FORMAT_ISO_2022_CN_EXT and fourth == 'E'))) {
-          designation = true; width = 4;
-        } else if (length >= 4 and second == '$' and third == '*' and fourth == 'H') {
-          g2Designated = true; width = 4;
-        } else if (length >= 4 and strategy == STRATEGY_FORMAT_ISO_2022_CN_EXT and second == '$' and third == '+' and fourth >= 'I' and fourth <= 'M') {
-          g3Designated = true; width = 4;
-        } else if (second == 'N' and g2Designated and length >= 4 and third >= 0x21u and third <= 0x7Eu and fourth >= 0x21u and fourth <= 0x7Eu) {
-          width = 4; produced = 1;
-        } else if (second == 'O' and g3Designated and length >= 4 and third >= 0x21u and third <= 0x7Eu and fourth >= 0x21u and fourth <= 0x7Eu) {
-          width = 4; produced = 1;
-        } else failure = state::MALFORMED;
-      }
-      goto finished;
-    }
-    if (first == 0x0Eu or first == 0x0Fu) {
-      if (japanese) { failure = state::MALFORMED; goto finished; }
-      if (first == 0x0Eu and not designation and strategy != STRATEGY_FORMAT_KOI7_SWITCHED) failure = state::MALFORMED;
-      shifted = (first == 0x0Eu);
-      produced = 0;
-      goto finished;
-    }
-    if (first > 0x7Fu) { failure = state::MALFORMED; goto finished; }
-    if (shifted) {
-      if (length < 2 or first < 0x21u or first > 0x7Eu or second < 0x21u or second > 0x7Eu) {
-        // KOI7 still represents a single 7-bit character after a shift.
-        if (strategy == STRATEGY_FORMAT_KOI7_SWITCHED) width = 1;
-        else failure = state::MALFORMED;
-      } else if (strategy != STRATEGY_FORMAT_KOI7_SWITCHED) width = 2;
-    }
-    goto finished;
-  }
-
-  if (strategy == STRATEGY_FORMAT_BOCU_1) {
-    // ICU BOCU-1 lead-byte range rule: 0x50..0xCF => 1,
-    // 0x25..0x4F or 0xD0..0xFA => 2, 0x22..0x24 or 0xFB..0xFD => 3,
-    // otherwise (0x21 or 0xFE) => 4. 0xFF is a reset byte.
-    // Without reconstructing the delta this is STRUCTURAL validation only.
-    if (first == 0xFFu) { produced = 0; goto finished; }
-    if (first <= 0x20u) goto finished;
-    if (first >= 0x50u and first < 0xD0u) width = 1;
-    else if ((first >= 0x25u and first < 0x50u) or (first >= 0xD0u and first <= 0xFAu)) width = 2;
-    else if ((first >= 0x22u and first < 0x25u) or (first >= 0xFBu and first <= 0xFDu)) width = 3;
-    else width = 4;
-    if (length < width) failure = state::MALFORMED;
-    else for (::std::size_t index = 1; index < width; ++index)
-      if (text[index] == 0u) failure = state::MALFORMED;
-    goto finished;
-  }
-
-  if (strategy == STRATEGY_FORMAT_SCSU) {
-    // UTR #6 / ICU SCSU: command bytes may change the active strategy
-    // without producing a character. Unicode strategy stores UCS-2 big-endianness.
-    if (not unicoded) {
-      if (first >= 0x01u and first <= 0x08u) width = 2; // SQ0..SQ7
-      else if (first == 0x0Bu) width = 3; // SDX
-      else if (first == 0x0Eu) width = 3; // SQU, quoted UCS-2 unit
-      else if (first == 0x0Fu) { unicoded = true; produced = 0; }
-      else if (first >= 0x10u and first <= 0x17u) produced = 0; // SC0..SC7
-      else if (first >= 0x18u and first <= 0x1Fu) { width = 2; produced = 0; } // SD0..SD7
-      else if (first == 0x0Cu or (first >= 0x01u and first < 0x20u and first != 0x09u and first != 0x0Au and first != 0x0Du)) failure = state::MALFORMED;
-    } else {
-      if (first >= 0xE0u and first <= 0xE7u) { unicoded = false; produced = 0; }
-      else if (first >= 0xE8u and first <= 0xEFu) { width = 2; unicoded = false; produced = 0; }
-      else if (first == 0xF0u) width = 3; // UQU, quote a Unicode code unit
-      else if (first == 0xF1u) { width = 3; unicoded = false; produced = 0; }
-      else if (first >= 0xF2u) failure = state::MALFORMED;
       else {
-        // In Unicode strategy two big-endianness units making a surrogate pair
-        // represent one scalar (four source bytes), not two characters.
+        if (0x00u == text[length])
+        break;
+
+        else if ((text[length] == 0x0Fu))                                                                                unicoded = true;
+        else if ((text[length] == 0x0Bu)                           or (text[length] == 0x0Eu))                           width    = 3u;
+        else if ((text[length] >= 0x01u and text[length] <= 0x08u) or (text[length] >= 0x18u and text[length] <= 0x1Fu)) width    = 2u;
+      }
+
+      // ...
+      if (length >= state::UNSUPPORTED - width)
+      return state::COUNT_LIMIT;
+
+      length += width;
+    } break;
+
+    default: for (::std::size_t const width = STRATEGY_FORMAT_UTF_7 == strategy or STRATEGY_FORMAT_UTF_7_IMAP == strategy or state::UNSUPPORTED == nul(encoding, NULL, 0u) ? 1u : nul(encoding, NULL, 0u); ; ) {
+      bool terminated = true;
+
+      // ...
+      switch (strategy) {
+        case STRATEGY_FORMAT_UTF_7:      { unsigned char const shift[] = {'+', 'A', 'A', 'A', '-'}; terminated = 0x00u == text[length] or 0 == ::std::memcmp(shift, &text[length], sizeof shift); } break;
+        case STRATEGY_FORMAT_UTF_7_IMAP: { unsigned char const shift[] = {'&', 'A', 'A', 'A', '-'}; terminated = 0x00u == text[length] or 0 == ::std::memcmp(shift, &text[length], sizeof shift); } break;
+        default:  for (::std::size_t index = width; index--; ) if (0x00u != text[index + length]) { terminated = false; break; }
+      }
+
+      if (terminated)                           break;
+      if (length >= state::UNSUPPORTED - width) return state::COUNT_LIMIT;
+
+      length += width;
+    } break;
+  }
+
+  // ...
+  if (0u == length)
+  return state::MALFORMED;
+
+  #if CHAR_BIT != 8
+    if (
+      STRATEGY_FORMAT_BOCU_1        == strategy or STRATEGY_FORMAT_HZ_GB_2312      == strategy or
+      STRATEGY_FORMAT_ISO_2022_CN   == strategy or STRATEGY_FORMAT_ISO_2022_CN_EXT == strategy or STRATEGY_FORMAT_ISO_2022_JP == strategy or STRATEGY_FORMAT_ISO_2022_JP_2 == strategy or STRATEGY_FORMAT_ISO_2022_KR == strategy or
+      STRATEGY_FORMAT_KOI7_SWITCHED == strategy or STRATEGY_FORMAT_SCSU            == strategy or
+      STRATEGY_FORMAT_UTF_7         == strategy or STRATEGY_FORMAT_UTF_7_IMAP      == strategy
+    ) return state::UNSUPPORTED; // ->> Native code units carry one wire octet each
+  #endif
+
+  while (width != /* --> format::maximum<encoding>::value */ 6u and width != length)
+  if (text[width++] > 0xFFu) {
+    invalid = state::MALFORMED;
+    goto done;
+  }
+
+  /* ... ->> Byte Order Mark (optional) */
+  if (0u == state.offset and (STRATEGY_FORMAT_UTF_7 == strategy or STRATEGY_FORMAT_UTF_8 == strategy or STRATEGY_FORMAT_UTF_16 == strategy or STRATEGY_FORMAT_UTF_32 == strategy)) {
+    struct /* final */ {
+      struct /* final */ { unsigned char *big, *little, *mixed; } endian;
+      unsigned char                                               all[2][/* --> max(…) */ format::maximum<format::UTF_7>::value | format::maximum<format::UTF_8>::value | format::maximum<format::UTF_16>::value | format::maximum<format::UTF_32>::value];
+      unsigned char                                               count : 2;
+      unsigned char const                                         width : 3;
+    } sequences = {{NULL, NULL, NULL}, {}, 0u, static_cast<unsigned char>(bom(encoding, NULL, 0u, endianness))};
+
+    // ... ->> Assume successful `bom(…)` query
+    if (length >= sequences.width) {
+      switch (strategy) {
+        case STRATEGY_FORMAT_UTF_7: {
+          unsigned char const sequence[] = {'+', '/', 'v', '8', '-'};
+
+          sequences.count        = 1u;
+          sequences.endian.mixed = static_cast<unsigned char*>(::std::memcpy(*sequences.all, sequence, sequences.width));
+        } break;
+
+        case STRATEGY_FORMAT_UTF_8: {
+          unsigned char const sequence[] = {0xEFu, 0xBBu, 0xBFu};
+
+          sequences.count        = 1u;
+          sequences.endian.mixed = static_cast<unsigned char*>(::std::memcpy(*sequences.all, sequence, sequences.width));
+        } break;
+
+        case STRATEGY_FORMAT_UTF_16: {
+          struct { unsigned char big[2], little[2]; } const endian = {{0xFEu, 0xFFu}, {0xFFu, 0xFEu}};
+
+          sequences.count         = 2u;
+          sequences.endian.big    = static_cast<unsigned char*>(::std::memcpy(sequences.all[0], endian.big,    sequences.width));
+          sequences.endian.little = static_cast<unsigned char*>(::std::memcpy(sequences.all[1], endian.little, sequences.width));
+        } break;
+
+        case STRATEGY_FORMAT_UTF_32: {
+          struct { unsigned char big[4], little[4]; } const endian = {{0x00u, 0x00u, 0xFEu, 0xFFu}, {0xFFu, 0xFEu, 0x00u, 0x00u}};
+
+          sequences.count         = 2u;
+          sequences.endian.big    = static_cast<unsigned char*>(::std::memcpy(sequences.all[0], endian.big,    sequences.width));
+          sequences.endian.little = static_cast<unsigned char*>(::std::memcpy(sequences.all[1], endian.little, sequences.width));
+        } break;
+
+        default:;
+      }
+
+      for (::std::size_t index = 0u; index != sequences.count; ++index)
+      if (0 == ::std::memcmp(sequences.all[index], text, sequences.width)) {
+        state.characterCount = 0u;
+        state.endianness     = NULL != sequences.endian.mixed ? state.endianness : sequences.endian.big[0] == text[0] ? ENDIAN_BIG : ENDIAN_LITTLE;
+        state.invalidCount   = 0u;
+        state.offset        += sequences.width;
+
+        return sequences.width;
+      }
+    }
+  }
+
+  // ...
+  state.characterCount = 1u;
+  width                = 1u;
+
+  switch (strategy) {
+    // ->> Stateful strategies
+    case STRATEGY_ACCENT_PREFIX: {
+      width = (                                                                                                //
+        ((text[0] >= 0xC1u and text[0] <= 0xCFu))                                                          and // ->> Non-spacing accent byte (0xC1–0xCF)
+        ((text[1] >= 'A'   and text[1] <= 'Z') or (text[1] >= 'a' and text[1] <= 'z') or (text[1] == ' ')) and //       optionally followed by a base-letter byte
+        length >= 2u                                                                                           //
+      ) ? 2u : 1u;
+    } goto done;
+
+    case STRATEGY_FORMAT_BOCU_1: {
+      if (text[0] == 0xFFu) { state.characterCount = 0u; goto done; } // ->> Reset
+      if (text[0] <= 0x20u) { state.characterCount = 1u; goto done; }
+
+      width = (
+        (text[0] >= 0x50u and text[0] < 0xD0u)                                            ? 1u :
+        (text[0] >= 0x25u and text[0] < 0x50u) or (text[0] >= 0xD0u and text[0] <= 0xFAu) ? 2u :
+        (text[0] >= 0x22u and text[0] < 0x25u) or (text[0] >= 0xFBu and text[0] <= 0xFDu) ? 3u :
+        /* (text[0] == 0x21u or text[0] == 0xFEu) */                                        4u
+      );
+
+      if (length < width)                                                                    { invalid = state::MALFORMED; }
+      else { for (::std::size_t index = 1u; index != width; ++index) if (0x00u == text[index]) invalid = state::MALFORMED; }
+    } goto done;
+
+    case STRATEGY_FORMAT_HZ_GB_2312: {
+      if (text[0] == '~') /* ->> RFC 1843 */ {
+        if (length >= 2u and text[1] <= 0x7Fu)
+        switch (text[1]) {
+          case '\n': state.characterCount = 0u;                                                                     width = 2u; break; // ->> Continuation: No decoded character
+          case '{':  if (not status.iso2022.shifted) { state.characterCount = 0u; status.iso2022.shifted = true;  } width = 2u; break; // ->> Enter GB
+          case '}':  if     (status.iso2022.shifted) { state.characterCount = 0u; status.iso2022.shifted = false; } width = 2u; break; // ->> Leave GB
+          case '~':                                                                                                 width = 2u; break; // --> ~
+          default: invalid = state::MALFORMED;                                                                      width = 2u;
+        } else     invalid = state::MALFORMED;
+      }
+
+      else if (status.iso2022.shifted) {
+        if (length >= 2u and (text[0] >= 0x21u and text[0] <= 0x77u) and (text[1] >= 0x21u and text[1] <= 0x7Eu)) width   = 2u;
+        else                                                                                                      invalid = state::MALFORMED;
+      }
+
+      else if (text[0] > 0x7Fu)
+        invalid = state::MALFORMED;
+    } goto done;
+
+    case STRATEGY_FORMAT_ISO_2022_CN: case STRATEGY_FORMAT_ISO_2022_CN_EXT:
+    case STRATEGY_FORMAT_ISO_2022_JP: case STRATEGY_FORMAT_ISO_2022_JP_2:
+    case STRATEGY_FORMAT_ISO_2022_KR: case STRATEGY_FORMAT_KOI7_SWITCHED: /* ->> Uses `ESC` for charset designations and SO/SI for switching */ {
+      if (text[0] == 0x1Bu and STRATEGY_FORMAT_KOI7_SWITCHED != strategy) {
+        state.characterCount = 0u;
+
+        if (length < 3u) invalid = state::MALFORMED;
+        else switch (strategy) {
+          case STRATEGY_FORMAT_ISO_2022_CN: case STRATEGY_FORMAT_ISO_2022_CN_EXT: {
+            if      (length >= 4u and text[1] == '$' and text[2] == ')'                        and (text[3] == 'A' or text[3] == 'G' or (STRATEGY_FORMAT_ISO_2022_CN_EXT == strategy and text[3] == 'E'))) { status.iso2022.g1Designated = true; width = 4u; }
+            else if (length >= 4u and text[1] == '$' and text[2] == '*'                        and (text[3] == 'H'))                                                                                       { status.iso2022.g2Designated = true; width = 4u; }
+            else if (length >= 4u and text[1] == '$' and text[2] == '+'                        and (text[3] >= 'I'   and text[3] <= 'M')   and STRATEGY_FORMAT_ISO_2022_CN_EXT == strategy)                { status.iso2022.g3Designated = true; width = 4u; }
+            else if (length >= 4u and text[1] == 'N' and text[2] >= 0x21u and text[2] <= 0x7Eu and (text[3] >= 0x21u and text[3] <= 0x7Eu) and status.iso2022.g2Designated)                                { state.characterCount        = 1u;   width = 4u; }
+            else if (length >= 4u and text[1] == 'O' and text[2] >= 0x21u and text[2] <= 0x7Eu and (text[3] >= 0x21u and text[3] <= 0x7Eu) and status.iso2022.g3Designated)                                { state.characterCount        = 1u;   width = 4u; }
+            else invalid = state::MALFORMED;
+          } break;
+
+          case STRATEGY_FORMAT_ISO_2022_JP: case STRATEGY_FORMAT_ISO_2022_JP_2: {
+            if      (text[1] == '(' and (text[2] == 'B' or text[2] == 'J' or (text[2] == 'I' and (STRATEGY_FORMAT_ISO_2022_JP   == strategy or format::CP50220 == encoding))))           { status.iso2022.shifted      = false; width = 3u; }
+            else if (text[1] == '$' and (text[2] == '@' or text[2] == 'B' or (text[2] == 'A' and (STRATEGY_FORMAT_ISO_2022_JP_2 == strategy))))                                          { status.iso2022.shifted      = true;  width = 3u; }
+            else if (text[1] == '$' and (text[2] == '(')                        and STRATEGY_FORMAT_ISO_2022_JP_2 == strategy and (length >= 4u and (text[3] == 'C' or text[3] == 'D'))) { status.iso2022.shifted      = true;  width = 4u; }
+            else if (text[1] == '.' and (text[2] == 'A'   or  text[2] == 'F')   and STRATEGY_FORMAT_ISO_2022_JP_2 == strategy)                                                           { status.iso2022.g2Designated = true;  width = 3u; }
+            else if (text[1] == 'N' and (text[2] >= 0x20u and text[2] <= 0x7Fu) and STRATEGY_FORMAT_ISO_2022_JP_2 == strategy and status.iso2022.g2Designated)                           { state.characterCount        = 1u;    width = 3u; }
+            else invalid = state::MALFORMED;
+          } break;
+
+          case STRATEGY_FORMAT_ISO_2022_KR: {
+            if (length >= 4u and text[1] == '$' and text[2] == ')' and text[3] == 'C') { status.iso2022.g1Designated = true; width = 4u; }
+            else invalid = state::MALFORMED;
+          } break;
+
+          default:;
+        }
+      }
+
+      else if (text[0] == 0x0Eu or text[0] == 0x0Fu) {
+        if (STRATEGY_FORMAT_ISO_2022_JP != strategy and STRATEGY_FORMAT_ISO_2022_JP_2 != strategy and (STRATEGY_FORMAT_KOI7_SWITCHED == strategy or status.iso2022.g1Designated or text[0] != 0x0Eu)) {
+          state.characterCount   = 0u;
+          status.iso2022.shifted = text[0] == 0x0Eu;
+        } else invalid = state::MALFORMED;
+      }
+
+      else if (text[0] > 0x7Fu)
+        invalid = state::MALFORMED;
+
+      else if (status.iso2022.shifted) {
+        if      (length < 2u or text[0] < 0x21u or text[0] > 0x7Eu or text[1] < 0x21u or text[1] > 0x7Eu) { if (strategy == STRATEGY_FORMAT_KOI7_SWITCHED) width = 1u; else invalid = state::MALFORMED; } // ->> KOI7 still represents a single 7-bit character after a shift
+        else if (STRATEGY_FORMAT_KOI7_SWITCHED != strategy)                                                                                                width = 2u;
+      }
+    } goto done;
+
+    case STRATEGY_FORMAT_SCSU: {
+      /* TODO */
+      // UTR #6 / ICU SCSU: command bytes may change the active strategy
+      // without producing a character. Unicode strategy stores UCS-2 big-endianness.
+      if (not status.scsu.unicoded) {
+        if (text[0] >= 0x01u and text[0] <= 0x08u) width = 2; // SQ0..SQ7
+        else if (text[0] == 0x0Bu) width = 3; // SDX
+        else if (text[0] == 0x0Eu) width = 3; // SQU, quoted UCS-2 unit
+        else if (text[0] == 0x0Fu) { status.scsu.unicoded = true; state.characterCount = 0; }
+        else if (text[0] >= 0x10u and text[0] <= 0x17u) state.characterCount = 0; // SC0..SC7
+        else if (text[0] >= 0x18u and text[0] <= 0x1Fu) { width = 2; state.characterCount = 0; } // SD0..SD7
+        else if (text[0] == 0x0Cu or (text[0] >= 0x01u and text[0] < 0x20u and text[0] != 0x09u and text[0] != 0x0Au and text[0] != 0x0Du)) invalid = state::MALFORMED;
+      } else {
+        if (text[0] >= 0xE0u and text[0] <= 0xE7u) { status.scsu.unicoded = false; state.characterCount = 0; }
+        else if (text[0] >= 0xE8u and text[0] <= 0xEFu) { width = 2; status.scsu.unicoded = false; state.characterCount = 0; }
+        else if (text[0] == 0xF0u) width = 3; // UQU, quote a Unicode code unit
+        else if (text[0] == 0xF1u) { width = 3; status.scsu.unicoded = false; state.characterCount = 0; }
+        else if (text[0] >= 0xF2u) invalid = state::MALFORMED;
+        else {
+          // In Unicode strategy two big-endianness units making a surrogate pair
+          // represent one scalar (four source bytes), not two characters.
+          width = 2;
+          if (length >= 2 and text[0] >= 0xD8u and text[0] <= 0xDBu) {
+            if (text[1] > 0xFFu or length < 4 or text[2] < 0xDCu or text[2] > 0xDFu) invalid = state::MALFORMED;
+            else width = 4;
+          } else if (text[0] >= 0xDCu and text[0] <= 0xDFu) invalid = state::MALFORMED;
+        }
+      }
+      if (length < width) invalid = state::MALFORMED;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_UTF_7:
+    case STRATEGY_FORMAT_UTF_7_IMAP: {
+      // RFC 2152 UTF-7 and RFC 3501 IMAP modified UTF-7 pack UTF-16 code
+      // units in Base64 without byte-aligned character boundaries. Parse each RUN
+      // and count scalars; one run may yield multiple characters.
+      bool const imap = strategy == STRATEGY_FORMAT_UTF_7_IMAP;
+      if (text[0] > 0x7Fu or (imap and (text[0] < 0x20u or text[0] > 0x7Eu))) { invalid = state::MALFORMED; goto done; }
+      if (text[0] != (imap ? '&' : '+')) goto done;
+      if (length >= 2 and text[1] == '-') { width = 2; goto done; } // literal + or &
+      unsigned accumulator = 0u;
+      unsigned bits = 0u;
+      unsigned pendingHigh = 0u;
+      state.characterCount = 0;
+      width = 1;
+      while (width < length) {
+        unsigned nextByte = text[width];
+        int digit = nextByte >= 'A' and nextByte <= 'Z' ? static_cast<int>(nextByte - 'A') :
+          nextByte >= 'a' and nextByte <= 'z' ? static_cast<int>(nextByte - 'a' + 26) :
+          nextByte >= '0' and nextByte <= '9' ? static_cast<int>(nextByte - '0' + 52) :
+          nextByte == '+' ? 62 : nextByte == (imap ? ',' : '/') ? 63 : -1;
+        if (digit < 0) break;
+        accumulator = (accumulator << 6) | static_cast<unsigned>(digit);
+        bits += 6;
+        ++width;
+        if (bits >= 16) {
+          bits -= 16;
+          unsigned unit = (accumulator >> bits) & 0xFFFFu;
+          accumulator &= (1u << bits) - 1u;
+          if (pendingHigh) {
+            if (unit < 0xDC00u or unit > 0xDFFFu) { invalid = state::MALFORMED; break; }
+            pendingHigh = 0;
+            ++state.characterCount;
+          } else if (unit >= 0xD800u and unit <= 0xDBFFu) pendingHigh = unit;
+          else if (unit >= 0xDC00u and unit <= 0xDFFFu) { invalid = state::MALFORMED; break; }
+          else if (imap and unit >= 0x20u and unit <= 0x7Eu) { invalid = state::MALFORMED; break; } // must be direct ASCII, or &-
+          else ++state.characterCount;
+        }
+      }
+      if (width == 1 or state.characterCount == 0 or pendingHigh or (bits != 0 and accumulator != 0)) invalid = state::MALFORMED;
+      if (imap and (width >= length or text[width] != '-')) invalid = state::MALFORMED; // no implicit shift termination
+      if (width < length and text[width] == '-') ++width;
+      goto done;
+    } break;
+
+    // Stateless strategies: inspect the lead byte and enough lookahead to determine how many native bytes belong to the encoded character.
+    // For 94×94 character sets, '94' means the 94 graphic byte positions 0x21..0x7E in each of two code-set dimensions (row and column).
+    case STRATEGY_BYTE: goto done;
+
+    case STRATEGY_BYTE_SEPTET: {
+      invalid = text[0] <= 0x7Fu ? 0 : state::MALFORMED;
+      goto done;
+    } break;
+
+    case STRATEGY_DOUBLE_94: /* Only validate lookahead bytes after determining they belong to this character. */ {
+      // ISO 2022 94-character graphic sets use byte positions 0x21..0x7E.
+      width = length < 2 ? length : 2;
+      { invalid = length >= 2 and (text[0] >= 0x21u and text[0] <= 0x7Eu) and (text[1] >= 0x21u and text[1] <= 0x7Eu) ? 0 : state::MALFORMED; goto done; }
+    } break;
+
+    case STRATEGY_FORMAT_BIG5: {
+      if (text[0] < 0x80u) goto done;
+      if (length < 2) { invalid = state::MALFORMED; goto done; }
+      if (text[0] < 0x81u or text[0] > 0xFEu or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or
+          (text[1] >= 0xA1u and text[1] <= 0xFEu))) { invalid = state::MALFORMED; goto done; }
+      width = 2;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_CESU_8: case STRATEGY_FORMAT_UTF_8: {
+      if (text[0] < 0x80u) goto done;
+      if (text[0] < 0xC2u or text[0] > 0xF4u) { invalid = text[0] == 0xC0u or text[0] == 0xC1u ? state::OVERLONG : state::MALFORMED; goto done; }
+      if (text[0] <= 0xDFu) width = 2;
+      else if (text[0] <= 0xEFu) width = 3;
+      else if (strategy == STRATEGY_FORMAT_UTF_8) width = 4;
+      else { invalid = state::MALFORMED; goto done; }
+
+      if (length < width) { width = length; { invalid = state::MALFORMED; goto done; } }
+      if ((width >= 2 and text[1] > 0xFFu) or (width >= 3 and text[2] > 0xFFu) or
+          (width == 4 and text[3] > 0xFFu)) { invalid = state::MALFORMED; goto done; }
+      if (not ((text[1] & 0xC0u) == 0x80u) or (width >= 3 and not ((text[2] & 0xC0u) == 0x80u)) or
+          (width == 4 and not ((text[3] & 0xC0u) == 0x80u))) { width = 1; { invalid = state::MALFORMED; goto done; } }
+      if ((text[0] == 0xE0u and text[1] < 0xA0u) or (text[0] == 0xF0u and text[1] < 0x90u)) { invalid = state::OVERLONG; goto done; }
+      if (text[0] == 0xF4u and text[1] > 0x8Fu) { invalid = state::MALFORMED; goto done; }
+
+      if (text[0] == 0xEDu and text[1] >= 0xA0u) {
+        if (strategy == STRATEGY_FORMAT_UTF_8) { invalid = state::MALFORMED; goto done; }
+        if (text[1] >= 0xB0u) { invalid = state::MALFORMED; goto done; } // isolated low surrogate
+        // CESU-8's surrogate pair encodes one supplementary character in 6 bytes.
+        if (length < 6) { width = length; { invalid = state::MALFORMED; goto done; } }
+
+        if (text[3] != 0xEDu or text[4] < 0xB0u or text[4] > 0xBFu or
+            text[5] > 0xFFu or (text[5] & 0xC0u) != 0x80u) { invalid = state::MALFORMED; goto done; }
+        width = 6;
+      }
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_GB18030: case STRATEGY_FORMAT_GBK: {
+      if (text[0] < 0x80u) goto done;
+      if (text[0] < 0x81u or text[0] > 0xFEu or length < 2) { invalid = state::MALFORMED; goto done; }
+      if (text[1] >= 0x40u and text[1] <= 0xFEu and text[1] != 0x7Fu) { width = 2; goto done; }
+      if (strategy == STRATEGY_FORMAT_GB18030 and text[1] >= 0x30u and text[1] <= 0x39u) {
+        if (length < 4) { width = length; { invalid = state::MALFORMED; goto done; } }
+        if (text[2] >= 0x81u and text[2] <= 0xFEu and text[3] >= 0x30u and text[3] <= 0x39u) {
+          width = 4;
+          goto done;
+        }
+      }
+      { invalid = state::MALFORMED; goto done; }
+    } break;
+
+    case STRATEGY_FORMAT_JOHAB: {
+      // Johab/CP1361: ASCII, Hangul 84..D3 with 41..7E/81..FE trails,
+      // or Hanja and symbols D9..DE/E0..F9 with 31..7E/91..FE trails.
+      // Validate byte geometry, not which Hangul combinations are assigned.
+      if (text[0] < 0x80u) goto done;
+      width = length < 2 ? length : 2;
+      if (length < 2) { invalid = state::MALFORMED; goto done; }
+      if (text[0] >= 0x84u and text[0] <= 0xD3u) {
+        if (not ((text[1] >= 0x41u and text[1] <= 0x7Eu) or (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+      } else if ((text[0] >= 0xD9u and text[0] <= 0xDEu) or (text[0] >= 0xE0u and text[0] <= 0xF9u)) {
+        if (not ((text[1] >= 0x31u and text[1] <= 0x7Eu) or (text[1] >= 0x91u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+      } else invalid = state::MALFORMED;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_EUC_JP: {
+      if (text[0] < 0x80u) goto done;
+      if (text[0] == 0x8Eu) {
+        if (length < 2 or text[1] < 0xA1u or text[1] > 0xDFu) { invalid = state::MALFORMED; goto done; }
         width = 2;
-        if (length >= 2 and first >= 0xD8u and first <= 0xDBu) {
-          if (second > 0xFFu or length < 4 or third < 0xDCu or third > 0xDFu) failure = state::MALFORMED;
-          else width = 4;
-        } else if (first >= 0xDCu and first <= 0xDFu) failure = state::MALFORMED;
+        goto done;
       }
-    }
-    if (length < width) failure = state::MALFORMED;
-    goto finished;
-  }
-
-  if (strategy == STRATEGY_FORMAT_UTF_7 or strategy == STRATEGY_FORMAT_UTF_7_IMAP) {
-    // RFC 2152 UTF-7 and RFC 3501 IMAP modified UTF-7 pack UTF-16 code
-    // units in Base64 without byte-aligned character boundaries. Parse each RUN
-    // and count scalars; one run may yield multiple characters.
-    bool const imap = strategy == STRATEGY_FORMAT_UTF_7_IMAP;
-    if (first > 0x7Fu or (imap and (first < 0x20u or first > 0x7Eu))) { failure = state::MALFORMED; goto finished; }
-    if (first != (imap ? '&' : '+')) goto finished;
-    if (length >= 2 and second == '-') { width = 2; goto finished; } // literal + or &
-    unsigned accumulator = 0u;
-    unsigned bits = 0u;
-    unsigned pendingHigh = 0u;
-    produced = 0;
-    width = 1;
-    while (width < length) {
-      unsigned nextByte = text[width];
-      int digit = nextByte >= 'A' and nextByte <= 'Z' ? static_cast<int>(nextByte - 'A') :
-        nextByte >= 'a' and nextByte <= 'z' ? static_cast<int>(nextByte - 'a' + 26) :
-        nextByte >= '0' and nextByte <= '9' ? static_cast<int>(nextByte - '0' + 52) :
-        nextByte == '+' ? 62 : nextByte == (imap ? ',' : '/') ? 63 : -1;
-      if (digit < 0) break;
-      accumulator = (accumulator << 6) | static_cast<unsigned>(digit);
-      bits += 6;
-      ++width;
-      if (bits >= 16) {
-        bits -= 16;
-        unsigned unit = (accumulator >> bits) & 0xFFFFu;
-        accumulator &= (1u << bits) - 1u;
-        if (pendingHigh) {
-          if (unit < 0xDC00u or unit > 0xDFFFu) { failure = state::MALFORMED; break; }
-          pendingHigh = 0;
-          ++produced;
-        } else if (unit >= 0xD800u and unit <= 0xDBFFu) pendingHigh = unit;
-        else if (unit >= 0xDC00u and unit <= 0xDFFFu) { failure = state::MALFORMED; break; }
-        else if (imap and unit >= 0x20u and unit <= 0x7Eu) { failure = state::MALFORMED; break; } // must be direct ASCII, or &-
-        else ++produced;
+      if (text[0] == 0x8Fu) {
+        if (length < 3 or not (text[1] >= 0xA1u and text[1] <= 0xFEu) or not (text[2] >= 0xA1u and text[2] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
+        width = 3;
+        goto done;
       }
-    }
-    if (width == 1 or produced == 0 or pendingHigh or (bits != 0 and accumulator != 0)) failure = state::MALFORMED;
-    if (imap and (width >= length or text[width] != '-')) failure = state::MALFORMED; // no implicit shift termination
-    if (width < length and text[width] == '-') ++width;
-    goto finished;
+      if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
+      width = 2;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_EUC_KR: case STRATEGY_FORMAT_GB2312: {
+      // EUC 94-character rows/columns use 0xA1..0xFE.
+      if (text[0] < 0x80u) goto done;
+      if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
+      width = 2;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_EUC_TW: {
+      // EUC-TW: ASCII (1), CNS plane 1 (2), or SS2 8E A1..B0 with a CNS pair (4).
+      // A1..B0 covers planes 1..16; this validates syntax, not assigned repertoire.
+      if (text[0] < 0x80u) goto done;
+      if (text[0] == 0x8Eu) {
+        width = length < 4 ? length : 4;
+        if (length < 4 or text[1] < 0xA1u or text[1] > 0xB0u or
+            text[2] < 0xA1u or text[2] > 0xFEu or text[3] < 0xA1u or text[3] > 0xFEu) invalid = state::MALFORMED;
+        goto done;
+      }
+      width = length < 2 ? length : 2;
+      if (length < 2 or text[0] < 0xA1u or text[0] > 0xFEu or text[1] < 0xA1u or text[1] > 0xFEu) invalid = state::MALFORMED;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_SJIS: {
+      if (text[0] <= 0x7Fu or (text[0] >= 0xA1u and text[0] <= 0xDFu)) goto done;
+      if (not ((text[0] >= 0x81u and text[0] <= 0x9Fu) or (text[0] >= 0xE0u and text[0] <= 0xFCu)) or
+          length < 2 or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0x80u and text[1] <= 0xFCu))) { invalid = state::MALFORMED; goto done; }
+      width = 2;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: {
+      width = length < 2 ? length : 2;
+      if (length < 2 or text[1] > 0xFFu) { invalid = state::MALFORMED; goto done; }
+
+      unsigned unit = ENDIAN_BIG != endianness ? text[0] | (text[1] << 8) : (text[0] << 8) | text[1];
+      if (strategy == STRATEGY_FORMAT_UCS_2) { invalid = unit >= 0xD800u and unit <= 0xDFFFu ? state::MALFORMED : 0; goto done; }
+      if (unit >= 0xDC00u and unit <= 0xDFFFu) { invalid = state::MALFORMED; goto done; }
+      if (unit >= 0xD800u and unit <= 0xDBFFu) {
+        if (length < 4) { width = length; { invalid = state::MALFORMED; goto done; } }
+        if (text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; goto done; }
+        unsigned low = ENDIAN_BIG != endianness ? text[2] | (text[3] << 8) : (text[2] << 8) | text[3];
+        if (low < 0xDC00u or low > 0xDFFFu) { invalid = state::MALFORMED; goto done; }
+        width = 4;
+      }
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: {
+      width = length < 4 ? length : 4;
+      if (length < 4 or text[1] > 0xFFu or text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; goto done; }
+      ::uint_least32_t value = ENDIAN_BIG != endianness ?
+        static_cast< ::uint_least32_t>(text[0]) | (static_cast< ::uint_least32_t>(text[1]) << 8) |
+          (static_cast< ::uint_least32_t>(text[2]) << 16) | (static_cast< ::uint_least32_t>(text[3]) << 24) :
+        (static_cast< ::uint_least32_t>(text[0]) << 24) | (static_cast< ::uint_least32_t>(text[1]) << 16) |
+          (static_cast< ::uint_least32_t>(text[2]) << 8) | static_cast< ::uint_least32_t>(text[3]);
+      if (value > 0x10FFFFu or (value >= 0xD800u and value <= 0xDFFFu)) { invalid = state::MALFORMED; goto done; }
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_WINDOWS_949: {
+      // Unified Hangul Code extends EUC-KR: lead 81..FE; ASCII-letter and
+      // high-byte trails (41..5A, 61..7A, 81..FE) allow additional Hangul.
+      if (text[0] < 0x80u) goto done;
+      width = length < 2 ? length : 2;
+      if (length < 2 or text[0] < 0x81u or text[0] > 0xFEu or
+          not ((text[1] >= 0x41u and text[1] <= 0x5Au) or (text[1] >= 0x61u and text[1] <= 0x7Au) or
+               (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+      goto done;
+    } break;
+
+    default:;
   }
 
-  // Non-stateful strategies: inspect the lead byte and enough lookahead
-  // to determine how many native bytes belong to the encoded character.
-  // For 94×94 character sets, '94' means the 94 graphic byte positions
-  // 0x21..0x7E in each of two code-set dimensions (row and column).
-if (strategy == STRATEGY_BYTE) goto finished;
-if (strategy == STRATEGY_BYTE_SEPTET) { failure = first <= 0x7Fu ? 0 : state::MALFORMED; goto finished; }
+  // ...
+  invalid = state::UNSUPPORTED;
+  done: {
+    if (invalid) state.characterCount = 0u;
+    state.endianness     = endianness;
+    state.invalidCount   = invalid ? width : 0u;
 
-// Only validate lookahead bytes after determining they belong to this character.
+    if (invalid)
+    return invalid;
 
-if (strategy == STRATEGY_DOUBLE_94) {
-  // ISO 2022 94-character graphic sets use byte positions 0x21..0x7E.
-  width = length < 2 ? length : 2;
-  { failure = length >= 2 and (first >= 0x21u and first <= 0x7Eu) and (second >= 0x21u and second <= 0x7Eu) ? 0 : state::MALFORMED; goto finished; }
-}
-
-if (strategy == STRATEGY_FORMAT_UCS_2 or strategy == STRATEGY_FORMAT_UTF_16 or strategy == STRATEGY_FORMAT_UTF_16BE or strategy == STRATEGY_FORMAT_UTF_16LE) {
-  width = length < 2 ? length : 2;
-  if (length < 2 or second > 0xFFu) { failure = state::MALFORMED; goto finished; }
-
-  unsigned unit = little ? first | (second << 8) : (first << 8) | second;
-  if (strategy == STRATEGY_FORMAT_UCS_2) { failure = unit >= 0xD800u and unit <= 0xDFFFu ? state::MALFORMED : 0; goto finished; }
-  if (unit >= 0xDC00u and unit <= 0xDFFFu) { failure = state::MALFORMED; goto finished; }
-  if (unit >= 0xD800u and unit <= 0xDBFFu) {
-    if (length < 4) { width = length; { failure = state::MALFORMED; goto finished; } }
-    if (third > 0xFFu or fourth > 0xFFu) { failure = state::MALFORMED; goto finished; }
-    unsigned low = little ? third | (fourth << 8) : (third << 8) | fourth;
-    if (low < 0xDC00u or low > 0xDFFFu) { failure = state::MALFORMED; goto finished; }
-    width = 4;
+    state.offset += width;
+    state.status  = (
+      (status.iso2022.g1Designated ? static_cast<unsigned>(state::ISO_2022_G1_DESIGNATED) : 0x00u) |
+      (status.iso2022.g2Designated ? static_cast<unsigned>(state::ISO_2022_G2_DESIGNATED) : 0x00u) |
+      (status.iso2022.g3Designated ? static_cast<unsigned>(state::ISO_2022_G3_DESIGNATED) : 0x00u) |
+      (status.iso2022.shifted      ? static_cast<unsigned>(state::ISO_2022_SHIFTED)       : 0x00u) |
+      (status.scsu.unicoded        ? static_cast<unsigned>(state::SCSU_UNICODE)           : 0x00u)
+    );
   }
-  goto finished;
-}
 
-if (strategy == STRATEGY_FORMAT_UCS_4 or strategy == STRATEGY_FORMAT_UTF_32 or strategy == STRATEGY_FORMAT_UTF_32BE or strategy == STRATEGY_FORMAT_UTF_32LE) {
-  width = length < 4 ? length : 4;
-  if (length < 4 or second > 0xFFu or third > 0xFFu or fourth > 0xFFu) { failure = state::MALFORMED; goto finished; }
-  ::uint_least32_t value = little ?
-    static_cast< ::uint_least32_t>(first) | (static_cast< ::uint_least32_t>(second) << 8) |
-      (static_cast< ::uint_least32_t>(third) << 16) | (static_cast< ::uint_least32_t>(fourth) << 24) :
-    (static_cast< ::uint_least32_t>(first) << 24) | (static_cast< ::uint_least32_t>(second) << 16) |
-      (static_cast< ::uint_least32_t>(third) << 8) | static_cast< ::uint_least32_t>(fourth);
-  if (value > 0x10FFFFu or (value >= 0xD800u and value <= 0xDFFFu)) { failure = state::MALFORMED; goto finished; }
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_UTF_8 or strategy == STRATEGY_FORMAT_CESU_8) {
-  if (first < 0x80u) goto finished;
-  if (first < 0xC2u or first > 0xF4u) { failure = first == 0xC0u or first == 0xC1u ? state::OVERLONG : state::MALFORMED; goto finished; }
-  if (first <= 0xDFu) width = 2;
-  else if (first <= 0xEFu) width = 3;
-  else if (strategy == STRATEGY_FORMAT_UTF_8) width = 4;
-  else { failure = state::MALFORMED; goto finished; }
-
-  if (length < width) { width = length; { failure = state::MALFORMED; goto finished; } }
-  if ((width >= 2 and second > 0xFFu) or (width >= 3 and third > 0xFFu) or
-      (width == 4 and fourth > 0xFFu)) { failure = state::MALFORMED; goto finished; }
-  if (not ((second & 0xC0u) == 0x80u) or (width >= 3 and not ((third & 0xC0u) == 0x80u)) or
-      (width == 4 and not ((fourth & 0xC0u) == 0x80u))) { width = 1; { failure = state::MALFORMED; goto finished; } }
-  if ((first == 0xE0u and second < 0xA0u) or (first == 0xF0u and second < 0x90u)) { failure = state::OVERLONG; goto finished; }
-  if (first == 0xF4u and second > 0x8Fu) { failure = state::MALFORMED; goto finished; }
-
-  if (first == 0xEDu and second >= 0xA0u) {
-    if (strategy == STRATEGY_FORMAT_UTF_8) { failure = state::MALFORMED; goto finished; }
-    if (second >= 0xB0u) { failure = state::MALFORMED; goto finished; } // isolated low surrogate
-    // CESU-8's surrogate pair encodes one supplementary character in 6 bytes.
-    if (length < 6) { width = length; { failure = state::MALFORMED; goto finished; } }
-    unsigned sixth = text[5];
-    if (text[3] != 0xEDu or text[4] < 0xB0u or text[4] > 0xBFu or
-        sixth > 0xFFu or (sixth & 0xC0u) != 0x80u) { failure = state::MALFORMED; goto finished; }
-    width = 6;
-  }
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_BIG5) {
-  if (first < 0x80u) goto finished;
-  if (length < 2) { failure = state::MALFORMED; goto finished; }
-  if (first < 0x81u or first > 0xFEu or not ((second >= 0x40u and second <= 0x7Eu) or
-      (second >= 0xA1u and second <= 0xFEu))) { failure = state::MALFORMED; goto finished; }
-  width = 2;
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_SJIS) {
-  if (first <= 0x7Fu or (first >= 0xA1u and first <= 0xDFu)) goto finished;
-  if (not ((first >= 0x81u and first <= 0x9Fu) or (first >= 0xE0u and first <= 0xFCu)) or
-      length < 2 or not ((second >= 0x40u and second <= 0x7Eu) or (second >= 0x80u and second <= 0xFCu))) { failure = state::MALFORMED; goto finished; }
-  width = 2;
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_EUC_KR or strategy == STRATEGY_FORMAT_GB2312) {
-  // EUC 94-character rows/columns use 0xA1..0xFE.
-  if (first < 0x80u) goto finished;
-  if (length < 2 or not (first >= 0xA1u and first <= 0xFEu) or not (second >= 0xA1u and second <= 0xFEu)) { failure = state::MALFORMED; goto finished; }
-  width = 2;
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_EUC_TW) {
-  // EUC-TW: ASCII (1), CNS plane 1 (2), or SS2 8E A1..B0 with a CNS pair (4).
-  // A1..B0 covers planes 1..16; this validates syntax, not assigned repertoire.
-  if (first < 0x80u) goto finished;
-  if (first == 0x8Eu) {
-    width = length < 4 ? length : 4;
-    if (length < 4 or second < 0xA1u or second > 0xB0u or
-        third < 0xA1u or third > 0xFEu or fourth < 0xA1u or fourth > 0xFEu) failure = state::MALFORMED;
-    goto finished;
-  }
-  width = length < 2 ? length : 2;
-  if (length < 2 or first < 0xA1u or first > 0xFEu or second < 0xA1u or second > 0xFEu) failure = state::MALFORMED;
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_EUC_JP) {
-  if (first < 0x80u) goto finished;
-  if (first == 0x8Eu) {
-    if (length < 2 or second < 0xA1u or second > 0xDFu) { failure = state::MALFORMED; goto finished; }
-    width = 2;
-    goto finished;
-  }
-  if (first == 0x8Fu) {
-    if (length < 3 or not (second >= 0xA1u and second <= 0xFEu) or not (third >= 0xA1u and third <= 0xFEu)) { failure = state::MALFORMED; goto finished; }
-    width = 3;
-    goto finished;
-  }
-  if (length < 2 or not (first >= 0xA1u and first <= 0xFEu) or not (second >= 0xA1u and second <= 0xFEu)) { failure = state::MALFORMED; goto finished; }
-  width = 2;
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_JOHAB) {
-  // Johab/CP1361: ASCII, Hangul 84..D3 with 41..7E/81..FE trails,
-  // or Hanja and symbols D9..DE/E0..F9 with 31..7E/91..FE trails.
-  // Validate byte geometry, not which Hangul combinations are assigned.
-  if (first < 0x80u) goto finished;
-  width = length < 2 ? length : 2;
-  if (length < 2) { failure = state::MALFORMED; goto finished; }
-  if (first >= 0x84u and first <= 0xD3u) {
-    if (not ((second >= 0x41u and second <= 0x7Eu) or (second >= 0x81u and second <= 0xFEu))) failure = state::MALFORMED;
-  } else if ((first >= 0xD9u and first <= 0xDEu) or (first >= 0xE0u and first <= 0xF9u)) {
-    if (not ((second >= 0x31u and second <= 0x7Eu) or (second >= 0x91u and second <= 0xFEu))) failure = state::MALFORMED;
-  } else failure = state::MALFORMED;
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_WINDOWS_949) {
-  // Unified Hangul Code extends EUC-KR: lead 81..FE; ASCII-letter and
-  // high-byte trails (41..5A, 61..7A, 81..FE) allow additional Hangul.
-  if (first < 0x80u) goto finished;
-  width = length < 2 ? length : 2;
-  if (length < 2 or first < 0x81u or first > 0xFEu or
-      not ((second >= 0x41u and second <= 0x5Au) or (second >= 0x61u and second <= 0x7Au) or
-           (second >= 0x81u and second <= 0xFEu))) failure = state::MALFORMED;
-  goto finished;
-}
-
-if (strategy == STRATEGY_FORMAT_GBK or strategy == STRATEGY_FORMAT_GB18030) {
-  if (first < 0x80u) goto finished;
-  if (first < 0x81u or first > 0xFEu or length < 2) { failure = state::MALFORMED; goto finished; }
-  if (second >= 0x40u and second <= 0xFEu and second != 0x7Fu) { width = 2; goto finished; }
-  if (strategy == STRATEGY_FORMAT_GB18030 and second >= 0x30u and second <= 0x39u) {
-    if (length < 4) { width = length; { failure = state::MALFORMED; goto finished; } }
-    if (third >= 0x81u and third <= 0xFEu and fourth >= 0x30u and fourth <= 0x39u) {
-      width = 4;
-      goto finished;
-    }
-  }
-  { failure = state::MALFORMED; goto finished; }
-}
-
-{ failure = state::UNSUPPORTED; goto finished; }
-
-  finished:
-    // Only commit shift-state changes when the source operation is valid.
-    if (state != NULL) {
-      state->endianness = endianness;
-      state->characterCount = failure ? 0 : produced;
-      state->invalidCount = failure ? width : 0;
-      if (not failure) state->offset += width;
-    }
-    if (not failure) {
-      unsigned const updatedFlags = (shifted ? static_cast<unsigned>(state::ISO_2022_SHIFTED) : 0u) |
-        (designation ? static_cast<unsigned>(state::ISO_2022_G1_DESIGNATED) : 0u) |
-        (g2Designated ? static_cast<unsigned>(state::ISO_2022_G2_DESIGNATED) : 0u) |
-        (g3Designated ? static_cast<unsigned>(state::ISO_2022_G3_DESIGNATED) : 0u) |
-        (unicoded ? static_cast<unsigned>(state::SCSU_UNICODE) : 0u);
-      if (state != NULL) state->status = updatedFlags;
-      if (status != NULL) *status = updatedFlags;
-      return width;
-    }
-    return failure;
+  return width;
 }
 
 // Count encoded characters without allocating or constructing output bytes.
 // Invalid text still follows the requested ignore/terminate policy.
 extern "C" ::std::size_t length(unsigned char const text[], enum format::encoding const encoding, enum policy const policy = static_cast<enum policy>(ENDIAN_LITTLE | (INVALID_IGNORE ^ INVALID_TERMINATE)), struct state* const state = NULL) /* noexcept */ {
-  if (NULL != state) state->reset(encoding);
+  if (NULL != state) state -> reset(encoding);
   enum policy strategy = format::strategy(encoding);
   // Find the encoded NUL terminator; UTF-16/32 are scanned in
   // aligned code units. Input MUST contain an accessible terminator.
   ::std::size_t length = 0u;
   if (strategy == STRATEGY_FORMAT_SCSU) {
-    length = scsu_length(text, false);
+    struct sus /* final */ {
+      // TODO: Inline this function in the same vein as `next(…)`
+      inline static ::std::size_t scsu_length(unsigned char const text[], bool unicoded) /* noexcept */ {
+        ::std::size_t length = 0u;
+
+        // ...
+        while (true) {
+          unsigned char const byte  = text[length];
+          unsigned char       width = 1u;
+
+          // ...
+          if (unicoded) {
+            if (0x00u == byte and 0x00u == text[length + 1u])
+            break;
+
+            else if (byte == 0xF0u)                     width = 3u;
+            else if (byte == 0xF1u)                   { width = 3u; unicoded = false; }
+            else if (byte >= 0xE0u and byte <= 0xE7u) { width = 1u; unicoded = false; }
+            else if (byte >= 0xE8u and byte <= 0xEFu) { width = 2u; unicoded = false; }
+            else                                        width = 2u;
+          }
+
+          else {
+            if (0x00u == byte)
+            break;
+
+            else if ((byte == 0x0Fu))                                                        unicoded = true;
+            else if ((byte == 0x0Bu)                   or (byte == 0x0Eu))                   width    = 3u;
+            else if ((byte >= 0x01u and byte <= 0x08u) or (byte >= 0x18u and byte <= 0x1Fu)) width    = 2u;
+          }
+
+          // ...
+          if (length >= state::UNSUPPORTED - width)
+          return state::COUNT_LIMIT;
+
+          length += width;
+        }
+
+        return length;
+      }
+    };
+    length = sus::scsu_length(text, false);
   } else {
     unsigned unitBytes = 1u;
     // NUL code-unit width is determined by the encoding strategy.
@@ -1051,7 +1115,7 @@ extern "C" ::std::size_t length(unsigned char const text[], enum format::encodin
   ::std::size_t position = bomBytes;
   ::std::size_t count = 0;
   ::std::size_t status = 0;
-  struct state iterator = {};
+  struct state iterator;
   iterator.reset(encoding);
   iterator.endianness = little ? ENDIAN_LITTLE : ENDIAN_BIG;
   iterator.offset = position;
@@ -1078,7 +1142,7 @@ extern "C" ::std::size_t length(unsigned char const text[], enum format::encodin
   // HZ and ISO-2022 use in-band shift commands (not characters); a stream
   // ending in its shifted set without the required reset is incomplete.
   if (not status and (iterator.status & state::ISO_2022_SHIFTED) and (strategy == STRATEGY_FORMAT_HZ_GB_2312 or strategy == STRATEGY_FORMAT_ISO_2022_JP or strategy == STRATEGY_FORMAT_ISO_2022_JP_2 or strategy == STRATEGY_FORMAT_ISO_2022_CN or strategy == STRATEGY_FORMAT_ISO_2022_CN_EXT or strategy == STRATEGY_FORMAT_ISO_2022_KR)) status = state::MALFORMED;
-  if (state != NULL) { state->offset = position; state->status = iterator.status; state->endianness = iterator.endianness; }
+  if (state != NULL) { state -> offset = position; state -> status = iterator.status; state -> endianness = iterator.endianness; }
   return status ? status : count;
 }
 
@@ -1555,27 +1619,27 @@ static ::uint_least32_t unicode_legacy_lookup(enum format::encoding const encodi
 // Each call supplies the same run start; no borrowed pointer is stored in state.
 static ::std::size_t unicode_shifted(unsigned char const character[], struct state* const state, bool const imap) /* noexcept */ {
   ::uint_least16_t highSurrogate = 0u;
-  for (; state->utf7.offset < state->utf7.byteCount; ) {
-    unsigned const byte = character[state->utf7.offset++];
+  for (; state -> utf7.offset < state -> utf7.byteCount; ) {
+    unsigned const byte = character[state -> utf7.offset++];
     int const digit = byte >= 'A' and byte <= 'Z' ? static_cast<int>(byte - 'A') :
       byte >= 'a' and byte <= 'z' ? static_cast<int>(byte - 'a' + 26u) :
       byte >= '0' and byte <= '9' ? static_cast<int>(byte - '0' + 52u) :
       byte == '+' ? 62 : byte == (imap ? ',' : '/') ? 63 : -1;
     if (digit < 0) break; // ->> '-' or UTF-7's implicit run terminator
-    state->utf7.bits = (state->utf7.bits << 6) | static_cast<unsigned>(digit);
-    state->utf7.bitCount += 6u;
-    if (state->utf7.bitCount < 16u) continue;
-    state->utf7.bitCount -= 16u;
-    ::uint_least16_t const unit = static_cast< ::uint_least16_t>((state->utf7.bits >> state->utf7.bitCount) & 0xFFFFu);
-    state->utf7.bits &= (static_cast< ::uint_least32_t>(1u) << state->utf7.bitCount) - 1u;
+    state -> utf7.bits = (state -> utf7.bits << 6) | static_cast<unsigned>(digit);
+    state -> utf7.bitCount += 6u;
+    if (state -> utf7.bitCount < 16u) continue;
+    state -> utf7.bitCount -= 16u;
+    ::uint_least16_t const unit = static_cast< ::uint_least16_t>((state -> utf7.bits >> state -> utf7.bitCount) & 0xFFFFu);
+    state -> utf7.bits &= (static_cast< ::uint_least32_t>(1u) << state -> utf7.bitCount) - 1u;
     if (unit >= 0xD800u and unit <= 0xDBFFu) { highSurrogate = unit; continue; }
 
     ::std::size_t const scalar = highSurrogate ?
       0x10000u + ((highSurrogate - 0xD800u) << 10) + (unit - 0xDC00u) : unit;
-    --state->utf7.remainingCount;
-    state->characterCount = 1u;
-    if (state->utf7.remainingCount == 0u) {
-      state->offset += state->utf7.byteCount;
+    --state -> utf7.remainingCount;
+    state -> characterCount = 1u;
+    if (state -> utf7.remainingCount == 0u) {
+      state -> offset += state -> utf7.byteCount;
     }
     return scalar;
   }
@@ -1586,12 +1650,12 @@ static ::std::size_t unicode_shifted(unsigned char const character[], struct sta
 // NO_CHARACTER denotes a BOM/shift command, not a Unicode scalar; retry at
 // the updated offset. UTF-7 can yield multiple scalars while the offset stays
 // at the run's beginning; use state until the run has been fully delivered.
-// Initialise a caller-owned state with reset(encoding) before its first unicode()
-// call, and again when switching encodings; the three buffers share storage.
+// Fresh scalar state uses the default constructor; UTF-7 requires reset(encoding)
+// before first use. Reset again when switching encodings (shared union storage).
 // Unsupported legacy mappings are NOT treated as equal-numbered Unicode.
 extern "C" ::std::size_t unicode(unsigned char const character[], enum format::encoding const encoding, struct state* const state = NULL) /* noexcept */ {
   bool const imap = encoding == format::UTF_7_IMAP;
-  if (state != NULL and (encoding == format::UTF_7 or imap) and state->utf7.remainingCount != 0u)
+  if (state != NULL and (encoding == format::UTF_7 or imap) and state -> utf7.remainingCount != 0u)
     return unicode_shifted(character, state, imap);
 
   // Restrict byte-mapped encodings to explicitly supplied Unicode mappings.
@@ -1769,15 +1833,15 @@ extern "C" ::std::size_t unicode(unsigned char const character[], enum format::e
     encoding == format::GB18030 or encoding == format::GB2312 or encoding == format::GBK or
     encoding == format::JOHAB or encoding == format::SHIFT_JIS or encoding == format::WINDOWS_31J or
     encoding == format::WINDOWS_949;
-  if (state != NULL and (asciiCompatible or encoding == format::TSCII) and state->scalars.count != 0u) {
-    ::uint_least32_t const scalar = state->scalars.pending[--state->scalars.count];
-    state->characterCount = 1u;
+  if (state != NULL and (asciiCompatible or encoding == format::TSCII) and state -> scalars.count != 0u) {
+    ::uint_least32_t const scalar = state -> scalars.pending[--state -> scalars.count];
+    state -> characterCount = 1u;
     return scalar;
   }
   if (character == NULL) return state::MALFORMED;
   if (mapping == NULL and not unicodeFamily and not asciiCompatible and not mapped94 and encoding != format::TSCII) return state::UNSUPPORTED;
 
-  struct state local = {};
+  struct state local;
   if (state == NULL) local.reset(encoding);
   struct state* const cursor = state != NULL ? state : &local;
   ::std::size_t const position = cursor->offset;
@@ -1897,12 +1961,12 @@ extern "C" ::std::size_t bom(enum format::encoding encoding, unsigned char bom[]
   }
 
   switch (encoding) {
-    case format::UTF_7:    { unsigned char const sequence[] = {'+', '/', 'v', '8', '-'};    return not capacity or capacity >= sizeof sequence ? (void) ::std::memmove(bom, sequence, sizeof sequence), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_8:    { unsigned char const sequence[] = {0xEFu, 0xBBu, 0xBFu};        return not capacity or capacity >= sizeof sequence ? (void) ::std::memmove(bom, sequence, sizeof sequence), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_16BE: { unsigned char const sequence[] = {0xFEu, 0xFFu};               return not capacity or capacity >= sizeof sequence ? (void) ::std::memmove(bom, sequence, sizeof sequence), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_16LE: { unsigned char const sequence[] = {0xFFu, 0xFEu};               return not capacity or capacity >= sizeof sequence ? (void) ::std::memmove(bom, sequence, sizeof sequence), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_32BE: { unsigned char const sequence[] = {0x00u, 0x00u, 0xFEu, 0xFFu}; return not capacity or capacity >= sizeof sequence ? (void) ::std::memmove(bom, sequence, sizeof sequence), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_32LE: { unsigned char const sequence[] = {0xFFu, 0xFEu, 0x00u, 0x00u}; return not capacity or capacity >= sizeof sequence ? (void) ::std::memmove(bom, sequence, sizeof sequence), sizeof sequence : state::NO_SPACE; } break;
+    case format::UTF_7:    { unsigned char const sequence[] = {'+', '/', 'v', '8', '-'};    return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
+    case format::UTF_8:    { unsigned char const sequence[] = {0xEFu, 0xBBu, 0xBFu};        return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
+    case format::UTF_16BE: { unsigned char const sequence[] = {0xFEu, 0xFFu};               return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
+    case format::UTF_16LE: { unsigned char const sequence[] = {0xFFu, 0xFEu};               return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
+    case format::UTF_32BE: { unsigned char const sequence[] = {0x00u, 0x00u, 0xFEu, 0xFFu}; return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
+    case format::UTF_32LE: { unsigned char const sequence[] = {0xFFu, 0xFEu, 0x00u, 0x00u}; return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
     default:;
   }
 
@@ -2017,7 +2081,7 @@ int main(int, char*[]) {
   // TSCII can expand a single source byte to four Unicode scalar values.
   {
     unsigned char const bytes[] = {0x82u, 0u};
-    struct state iterator = {};
+    struct state iterator;
     iterator.reset(format::TSCII);
     assert(unicode(bytes, format::TSCII, &iterator) == 0x0BB8u);
     assert(unicode(bytes, format::TSCII, &iterator) == 0x0BCDu);
@@ -2043,13 +2107,13 @@ int main(int, char*[]) {
   assert(bomBytes[0] == '+' and bomBytes[1] == '/' and bomBytes[2] == 'v' and bomBytes[3] == '8' and bomBytes[4] == '-');
   assert(bom(format::UTF_8, bomBytes, 2u) == state::NO_SPACE);
   unsigned char const utf7Bom[] = {'+', '/', 'v', '8', '-', 0u};
-  assert(unicode(utf7Bom, format::UTF_7) == 0xFEFFu);
+  assert(unicode(utf7Bom, format::UTF_7) == state::NO_CHARACTER);
   assert(bom(format::UTF_7_IMAP, bomBytes) == state::UNSUPPORTED);
   assert(bom(format::WINDOWS_1252, bomBytes) == state::UNSUPPORTED);
   assert(bom(format::UTF_16, bomBytes, 0u, ENDIAN_MIXED) == state::UNSUPPORTED);
 
   unsigned char const pairedUtf16[] = {0x3Du, 0xD8u, 0x00u, 0xDEu, 0u, 0u};
-  struct state pairedCursor = {}; pairedCursor.reset(format::UTF_16LE);
+  struct state pairedCursor;
   assert(unicode(pairedUtf16, format::UTF_16LE, &pairedCursor) == 0x1F600u);
   assert(pairedCursor.utf16.surrogate.high == 0xD83Du and pairedCursor.utf16.surrogate.low == 0xDE00u);
   pairedCursor.reset(format::UTF_16LE);
@@ -2060,7 +2124,7 @@ int main(int, char*[]) {
   {
     unsigned char const big5Pair[] = {0x88u, 0x62u, 0u};
     unsigned char const utf7Pair[] = {'+', 'A', 'E', 'I', 'A', 'Q', 'w', '-', 0u};
-    struct state reused = {};
+    struct state reused;
     reused.reset(format::BIG5_HKSCS);
     assert(unicode(big5Pair, format::BIG5_HKSCS, &reused) == 0x00CAu);
     assert(reused.scalars.count == 1u);
@@ -2085,206 +2149,206 @@ int main(int, char*[]) {
   }
 
   // Unicode regression checks: multibyte mappings, extended planes, and split scalars.
-  { unsigned char const text[] = {0xA4u, 0x40u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x4E00u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x88u, 0x62u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0xCAu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA4u, 0xA2u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x3042u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA4u, 0xA2u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x3042u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB0u, 0xA1u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0xAC00u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA2u, 0xA1u, 0xA1u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x4E42u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD2u, 0xBBu, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x4E00u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD2u, 0xBBu, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x4E00u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD2u, 0xBBu, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x4E00u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x84u, 0x41u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0x3000u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x82u, 0xA0u, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x3042u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xFAu, 0x40u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x2170u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB0u, 0xA1u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xAC00u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE5u, 0x56u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x5AFDu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xADu, 0x43u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x8036u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA4u, 0x41u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x4E59u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xEFu, 0xDFu, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x6ABDu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBEu, 0x50u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x92B7u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBAu, 0xF8u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x7DBFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB8u, 0xCFu, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x88D2u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xAFu, 0xF9u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x8336u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xEFu, 0x6Au, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x9B9Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xACu, 0x4Fu, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x662Fu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE9u, 0x45u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x565Eu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xEFu, 0xD1u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x64FFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xDBu, 0x73u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x83CBu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xAAu, 0xACu, 0u}; struct state cursor = {}; cursor.reset(format::BIG5); assert(unicode(text, format::BIG5, &cursor) == 0x72C0u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE1u, 0xD1u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x6165u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0x4Bu, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x23E8Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xC7u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x455Cu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Cu, 0x61u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x2685Eu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB6u, 0xFAu, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x5AC9u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB9u, 0xEEu, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x5BDFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF3u, 0x53u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x8E6Fu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Du, 0xF4u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x702Cu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xFEu, 0xF3u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x7980u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB2u, 0xE5u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x8123u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xFBu, 0xA4u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x21692u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE1u, 0x60u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x5887u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB7u, 0x76u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x6687u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE7u, 0xA1u, 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS); assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x8756u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xCAu, 0xA3u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x7180u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xDAu, 0xE2u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x6773u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA1u, 0xCCu, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x3014u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xE7u, 0xD7u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x97BFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xC5u, 0xD7u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x783Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xDDu, 0xA1u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x897Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF3u, 0xF3u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x9F60u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE5u, 0xD1u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x7E23u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xDAu, 0xDDu, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x65F1u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xC4u, 0xF1u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x62B5u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xCFu, 0xBBu, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x516Du); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xE8u, 0xC6u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x98C8u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE4u, 0xF3u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x7CC2u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBBu, 0xD6u, 0u}; struct state cursor = {}; cursor.reset(format::CP51932); assert(unicode(text, format::CP51932, &cursor) == 0x5FD7u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB9u, 0xF7u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x6F09u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xECu, 0xC9u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x8CAEu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBAu, 0xDAu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x83DCu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE8u, 0xEAu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x84BBu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE6u, 0xB0u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x7F82u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xCCu, 0xD4u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x7492u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD8u, 0xBEu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x610Du); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB1u, 0xBFu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x904Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xE2u, 0xD0u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x913Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xB3u, 0xC6u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x5260u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xC0u, 0xEAu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x647Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBFu, 0xD1u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x58ECu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xECu, 0xB2u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x8C4Cu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB7u, 0xCFu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_JP); assert(unicode(text, format::EUC_JP, &cursor) == 0x7CFBu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD9u, 0xD9u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x5EDFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE5u, 0xD3u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x8B93u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xC7u, 0xA2u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0xD41Du); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB1u, 0xDBu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0xAE00u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA9u, 0xFDu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x2083u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xCEu, 0xB5u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x742Fu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD8u, 0xF9u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x7720u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB3u, 0xC7u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0xB0D8u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xCFu, 0xA8u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x5BC7u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB7u, 0xAAu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0xB7B4u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE8u, 0xE7u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0xF9BAu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD6u, 0xFAu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x71CEu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF5u, 0xD2u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x6A1Eu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE6u, 0xA9u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_KR); assert(unicode(text, format::EUC_KR, &cursor) == 0x8245u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA2u, 0xCFu, 0xC3u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x9AE3u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA4u, 0xCAu, 0xE7u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x23F4Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA4u, 0xC0u, 0xC2u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x26CCCu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA2u, 0xF0u, 0xA4u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x9EC2u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA7u, 0xAEu, 0xEFu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x23688u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA3u, 0xC6u, 0xE4u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x5FB4u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA7u, 0xC4u, 0xF6u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x293C5u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xAFu, 0xE3u, 0xD4u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x2705Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA7u, 0xB8u, 0xAFu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x22DD0u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA6u, 0xE3u, 0xC2u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x28757u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xECu, 0xB4u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x5632u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA6u, 0xC8u, 0xB6u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x22045u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA6u, 0xDAu, 0xB7u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x295B3u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xA2u, 0xD5u, 0xBBu, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor) == 0x92C2u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xDDu, 0x56u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x8EFBu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xFEu, 0xCFu, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0xE496u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xABu, 0x69u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x73A6u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Du, 0x62u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x6F1Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD0u, 0xCAu, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x60FAu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xC2u, 0x94u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x8070u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xAFu, 0xAAu, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0xE1DFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xEFu, 0x88u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x98EFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF7u, 0xC2u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x9AC0u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE1u, 0x4Au, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x915Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA6u, 0xE7u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0xFE3Eu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF7u, 0x4Du, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x9C49u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB8u, 0xF1u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x683Cu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Au, 0xBBu, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x5A00u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBCu, 0xE3u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x7B3Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF0u, 0xC8u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x9E51u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA4u, 0xA3u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x3043u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xEEu, 0xFAu, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x94E4u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xC4u, 0xB7u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x59C6u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xCBu, 0xE3u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x7B97u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xC0u, 0xA8u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x62ECu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA7u, 0xF1u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x44Fu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBBu, 0xADu, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x753Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xDAu, 0xB6u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x8BD9u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF5u, 0xB1u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x91A3u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE7u, 0xC3u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x7F11u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xC4u, 0xB0u, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x964Cu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBBu, 0xBAu, 0u}; struct state cursor = {}; cursor.reset(format::GB2312); assert(unicode(text, format::GB2312, &cursor) == 0x7F13u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xFAu, 0x97u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x9DF9u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xDEu, 0xA4u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x84FCu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xCCu, 0xB9u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x5766u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF7u, 0x77u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x9C73u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD7u, 0xA6u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x722Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x99u, 0xBAu, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x6AE4u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB6u, 0x4Fu, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x79A3u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x99u, 0x4Fu, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x6A6Du); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB2u, 0xF2u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x8C7Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE9u, 0x6Du, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x9599u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE5u, 0x89u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x9353u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB5u, 0xC8u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x7B49u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xEDu, 0x6Eu, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x97D3u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD2u, 0x76u, 0u}; struct state cursor = {}; cursor.reset(format::GBK); assert(unicode(text, format::GBK, &cursor) == 0x8973u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE4u, 0xE1u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0x5E36u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xDDu, 0x3Eu, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0x167u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xB8u, 0xADu, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0xC7D4u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA6u, 0x79u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0xBD7Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF8u, 0x38u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0x595Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF5u, 0x5Fu, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0x8F1Fu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Bu, 0xADu, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0xB76Cu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x92u, 0x48u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0xB1D3u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA0u, 0x69u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0xB9D0u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xA9u, 0xB8u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0xBF56u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xABu, 0x45u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0xC040u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE8u, 0xDBu, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0x6822u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x95u, 0xCDu, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0xB3ECu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE2u, 0x68u, 0u}; struct state cursor = {}; cursor.reset(format::JOHAB); assert(unicode(text, format::JOHAB, &cursor) == 0x62D0u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x96u, 0x41u, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x6CE1u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Fu, 0xACu, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x6D33u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Au, 0x40u, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x54ABu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Cu, 0xBDu, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x610Eu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x90u, 0x7Eu, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x53A8u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Du, 0xC7u, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x655Du); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x81u, 0x5Fu, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0xFF3Cu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE3u, 0x6Eu, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x7E05u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE5u, 0x42u, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x854Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Au, 0x86u, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x6070u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE3u, 0x7Au, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x7E3Bu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Du, 0x40u, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x621Eu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE6u, 0x7Du, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x8AF3u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x91u, 0x40u, 0u}; struct state cursor = {}; cursor.reset(format::SHIFT_JIS); assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x7E4Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xE2u, 0xD9u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x7C50u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0xBCu, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x6E7Fu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Eu, 0xCCu, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x69CAu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xEDu, 0xA3u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x60DEu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x92u, 0xC8u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x939Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF0u, 0x62u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xE022u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD6u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xFF96u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Cu, 0x56u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x5F16u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF4u, 0x72u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xE322u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x94u, 0xA0u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x7BB1u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF4u, 0xE7u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xE396u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Eu, 0x67u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x4F7Fu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Fu, 0x60u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x6B54u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x96u, 0x72u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_31J); assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x7766u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Du, 0x59u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xC4C4u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xCAu, 0xFDu, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0x9452u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x9Eu, 0xD0u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xC667u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x81u, 0x53u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xAC28u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBFu, 0x48u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xD4A5u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xF2u, 0xFBu, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0x57F7u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x84u, 0xB5u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xAF6Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x95u, 0xB6u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xBE52u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xC6u, 0xB1u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xD2BFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xBBu, 0xFBu, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xC0DBu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xAEu, 0x93u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xCE1Au); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Bu, 0xC3u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xB5B8u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xAFu, 0x67u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xCE50u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x8Fu, 0xA5u, 0u}; struct state cursor = {}; cursor.reset(format::WINDOWS_949); assert(unicode(text, format::WINDOWS_949, &cursor) == 0xB8EFu); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0x90u, 0x30u, 0x81u, 0x30u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x10000u); }
-  { unsigned char const text[] = {0x94u, 0x39u, 0xFCu, 0x36u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x1F600u); }
-  { unsigned char const text[] = {0x81u, 0x30u, 0x81u, 0x30u, 0u}; struct state cursor = {}; cursor.reset(format::GB18030); assert(unicode(text, format::GB18030, &cursor) == 0x80u); }
-  { unsigned char const text[] = {0x8Eu, 0xA1u, 0xA1u, 0xA1u, 0u}; struct state cursor = {}; cursor.reset(format::EUC_TW); assert(unicode(text, format::EUC_TW, &cursor)  == state::MALFORMED); }
-  { unsigned char const text[] = {0x88u, 0x62u, 'A', 0u}; struct state cursor = {}; cursor.reset(format::BIG5_HKSCS);
+  { unsigned char const text[] = {0xA4u, 0x40u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x4E00u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x88u, 0x62u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0xCAu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA4u, 0xA2u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x3042u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA4u, 0xA2u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x3042u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB0u, 0xA1u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0xAC00u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA2u, 0xA1u, 0xA1u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x4E42u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD2u, 0xBBu, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x4E00u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD2u, 0xBBu, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x4E00u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD2u, 0xBBu, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x4E00u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x84u, 0x41u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0x3000u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x82u, 0xA0u, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x3042u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xFAu, 0x40u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x2170u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB0u, 0xA1u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xAC00u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE5u, 0x56u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x5AFDu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xADu, 0x43u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x8036u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA4u, 0x41u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x4E59u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xEFu, 0xDFu, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x6ABDu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBEu, 0x50u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x92B7u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBAu, 0xF8u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x7DBFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB8u, 0xCFu, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x88D2u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xAFu, 0xF9u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x8336u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xEFu, 0x6Au, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x9B9Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xACu, 0x4Fu, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x662Fu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE9u, 0x45u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x565Eu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xEFu, 0xD1u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x64FFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xDBu, 0x73u, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x83CBu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xAAu, 0xACu, 0u}; struct state cursor; assert(unicode(text, format::BIG5, &cursor) == 0x72C0u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE1u, 0xD1u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x6165u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0x4Bu, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x23E8Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xC7u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x455Cu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Cu, 0x61u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x2685Eu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB6u, 0xFAu, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x5AC9u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB9u, 0xEEu, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x5BDFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF3u, 0x53u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x8E6Fu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Du, 0xF4u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x702Cu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xFEu, 0xF3u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x7980u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB2u, 0xE5u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x8123u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xFBu, 0xA4u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x21692u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE1u, 0x60u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x5887u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB7u, 0x76u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x6687u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE7u, 0xA1u, 0u}; struct state cursor; assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x8756u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xCAu, 0xA3u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x7180u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xDAu, 0xE2u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x6773u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA1u, 0xCCu, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x3014u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xE7u, 0xD7u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x97BFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xC5u, 0xD7u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x783Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xDDu, 0xA1u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x897Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF3u, 0xF3u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x9F60u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE5u, 0xD1u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x7E23u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xDAu, 0xDDu, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x65F1u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xC4u, 0xF1u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x62B5u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xCFu, 0xBBu, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x516Du); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xE8u, 0xC6u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x98C8u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE4u, 0xF3u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x7CC2u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBBu, 0xD6u, 0u}; struct state cursor; assert(unicode(text, format::CP51932, &cursor) == 0x5FD7u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB9u, 0xF7u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x6F09u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xECu, 0xC9u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x8CAEu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBAu, 0xDAu, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x83DCu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE8u, 0xEAu, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x84BBu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE6u, 0xB0u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x7F82u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xCCu, 0xD4u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x7492u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD8u, 0xBEu, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x610Du); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB1u, 0xBFu, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x904Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xE2u, 0xD0u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x913Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xB3u, 0xC6u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x5260u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xC0u, 0xEAu, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x647Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBFu, 0xD1u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x58ECu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xECu, 0xB2u, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x8C4Cu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB7u, 0xCFu, 0u}; struct state cursor; assert(unicode(text, format::EUC_JP, &cursor) == 0x7CFBu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD9u, 0xD9u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x5EDFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE5u, 0xD3u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x8B93u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xC7u, 0xA2u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0xD41Du); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB1u, 0xDBu, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0xAE00u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA9u, 0xFDu, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x2083u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xCEu, 0xB5u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x742Fu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD8u, 0xF9u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x7720u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB3u, 0xC7u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0xB0D8u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xCFu, 0xA8u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x5BC7u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB7u, 0xAAu, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0xB7B4u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE8u, 0xE7u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0xF9BAu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD6u, 0xFAu, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x71CEu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF5u, 0xD2u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x6A1Eu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE6u, 0xA9u, 0u}; struct state cursor; assert(unicode(text, format::EUC_KR, &cursor) == 0x8245u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA2u, 0xCFu, 0xC3u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x9AE3u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA4u, 0xCAu, 0xE7u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x23F4Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA4u, 0xC0u, 0xC2u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x26CCCu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA2u, 0xF0u, 0xA4u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x9EC2u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA7u, 0xAEu, 0xEFu, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x23688u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA3u, 0xC6u, 0xE4u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x5FB4u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA7u, 0xC4u, 0xF6u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x293C5u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xAFu, 0xE3u, 0xD4u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x2705Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA7u, 0xB8u, 0xAFu, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x22DD0u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA6u, 0xE3u, 0xC2u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x28757u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xECu, 0xB4u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x5632u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA6u, 0xC8u, 0xB6u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x22045u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA6u, 0xDAu, 0xB7u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x295B3u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xA2u, 0xD5u, 0xBBu, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor) == 0x92C2u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xDDu, 0x56u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x8EFBu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xFEu, 0xCFu, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0xE496u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xABu, 0x69u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x73A6u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Du, 0x62u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x6F1Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD0u, 0xCAu, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x60FAu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xC2u, 0x94u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x8070u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xAFu, 0xAAu, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0xE1DFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xEFu, 0x88u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x98EFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF7u, 0xC2u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x9AC0u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE1u, 0x4Au, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x915Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA6u, 0xE7u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0xFE3Eu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF7u, 0x4Du, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x9C49u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB8u, 0xF1u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x683Cu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Au, 0xBBu, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x5A00u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBCu, 0xE3u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x7B3Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF0u, 0xC8u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x9E51u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA4u, 0xA3u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x3043u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xEEu, 0xFAu, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x94E4u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xC4u, 0xB7u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x59C6u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xCBu, 0xE3u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x7B97u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xC0u, 0xA8u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x62ECu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA7u, 0xF1u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x44Fu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBBu, 0xADu, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x753Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xDAu, 0xB6u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x8BD9u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF5u, 0xB1u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x91A3u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE7u, 0xC3u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x7F11u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xC4u, 0xB0u, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x964Cu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBBu, 0xBAu, 0u}; struct state cursor; assert(unicode(text, format::GB2312, &cursor) == 0x7F13u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xFAu, 0x97u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x9DF9u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xDEu, 0xA4u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x84FCu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xCCu, 0xB9u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x5766u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF7u, 0x77u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x9C73u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD7u, 0xA6u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x722Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x99u, 0xBAu, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x6AE4u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB6u, 0x4Fu, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x79A3u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x99u, 0x4Fu, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x6A6Du); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB2u, 0xF2u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x8C7Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE9u, 0x6Du, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x9599u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE5u, 0x89u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x9353u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB5u, 0xC8u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x7B49u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xEDu, 0x6Eu, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x97D3u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD2u, 0x76u, 0u}; struct state cursor; assert(unicode(text, format::GBK, &cursor) == 0x8973u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE4u, 0xE1u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0x5E36u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xDDu, 0x3Eu, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0x167u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xB8u, 0xADu, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0xC7D4u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA6u, 0x79u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0xBD7Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF8u, 0x38u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0x595Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF5u, 0x5Fu, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0x8F1Fu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Bu, 0xADu, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0xB76Cu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x92u, 0x48u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0xB1D3u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA0u, 0x69u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0xB9D0u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xA9u, 0xB8u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0xBF56u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xABu, 0x45u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0xC040u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE8u, 0xDBu, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0x6822u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x95u, 0xCDu, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0xB3ECu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE2u, 0x68u, 0u}; struct state cursor; assert(unicode(text, format::JOHAB, &cursor) == 0x62D0u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x96u, 0x41u, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x6CE1u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Fu, 0xACu, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x6D33u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Au, 0x40u, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x54ABu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Cu, 0xBDu, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x610Eu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x90u, 0x7Eu, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x53A8u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Du, 0xC7u, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x655Du); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x81u, 0x5Fu, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0xFF3Cu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE3u, 0x6Eu, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x7E05u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE5u, 0x42u, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x854Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Au, 0x86u, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x6070u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE3u, 0x7Au, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x7E3Bu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Du, 0x40u, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x621Eu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE6u, 0x7Du, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x8AF3u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x91u, 0x40u, 0u}; struct state cursor; assert(unicode(text, format::SHIFT_JIS, &cursor) == 0x7E4Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xE2u, 0xD9u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x7C50u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0xBCu, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x6E7Fu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Eu, 0xCCu, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x69CAu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xEDu, 0xA3u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x60DEu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x92u, 0xC8u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x939Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF0u, 0x62u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xE022u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD6u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xFF96u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Cu, 0x56u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x5F16u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF4u, 0x72u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xE322u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x94u, 0xA0u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x7BB1u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF4u, 0xE7u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xE396u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Eu, 0x67u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x4F7Fu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Fu, 0x60u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x6B54u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x96u, 0x72u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x7766u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Du, 0x59u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xC4C4u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xCAu, 0xFDu, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0x9452u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x9Eu, 0xD0u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xC667u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x81u, 0x53u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xAC28u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBFu, 0x48u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xD4A5u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xF2u, 0xFBu, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0x57F7u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x84u, 0xB5u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xAF6Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x95u, 0xB6u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xBE52u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xC6u, 0xB1u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xD2BFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xBBu, 0xFBu, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xC0DBu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xAEu, 0x93u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xCE1Au); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Bu, 0xC3u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xB5B8u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xAFu, 0x67u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xCE50u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x8Fu, 0xA5u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_949, &cursor) == 0xB8EFu); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0x90u, 0x30u, 0x81u, 0x30u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x10000u); }
+  { unsigned char const text[] = {0x94u, 0x39u, 0xFCu, 0x36u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x1F600u); }
+  { unsigned char const text[] = {0x81u, 0x30u, 0x81u, 0x30u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x80u); }
+  { unsigned char const text[] = {0x8Eu, 0xA1u, 0xA1u, 0xA1u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor)  == state::MALFORMED); }
+  { unsigned char const text[] = {0x88u, 0x62u, 'A', 0u}; struct state cursor;
     assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x00CAu); assert(cursor.offset == 2u);
     assert(unicode(&text[cursor.offset], format::BIG5_HKSCS, &cursor) == 0x0304u); assert(cursor.offset == 2u);
     assert(unicode(&text[cursor.offset], format::BIG5_HKSCS, &cursor) == 'A'); assert(cursor.offset == 3u);
@@ -2293,7 +2357,7 @@ int main(int, char*[]) {
   assert(length(utf8, format::UTF_8, INVALID_TERMINATE) == 2);
 
   // next() returns character widths directly; its state retains source offset.
-  struct state cursor = {};
+  struct state cursor;
   assert(next(utf8, format::UTF_8, &cursor) == 1);
   assert(cursor.offset == 1 and cursor.characterCount == 1);
   assert(next(&utf8[cursor.offset], format::UTF_8, &cursor) == 3);
@@ -2305,7 +2369,7 @@ int main(int, char*[]) {
   assert(cursor.status == 0 and cursor.invalidCount == 0 and cursor.characterCount == 0);
 
   unsigned char const overlong[] = { 0xC0u, 0xAFu, 0 }; assert(length(overlong, format::UTF_8, INVALID_TERMINATE) == state::OVERLONG);
-  struct state ignored = {};
+  struct state ignored;
   assert(length(overlong, format::UTF_8, INVALID_IGNORE, &ignored) == 0);
   assert(ignored.offset == 2);
 
@@ -2313,7 +2377,7 @@ int main(int, char*[]) {
   assert(length(accented, format::T_61_8BIT, INVALID_TERMINATE) == 1);
 
   unsigned char const utf16be[] = { 0, 0x41u, 0xD8u, 0x3Du, 0xDEu, 0, 0, 0 };
-  struct state utf16BEBounded = {};
+  struct state utf16BEBounded;
   assert(length(utf16be, format::UTF_16BE, INVALID_TERMINATE, &utf16BEBounded) == 2);
   assert(utf16BEBounded.offset == 6);
 
@@ -2322,13 +2386,13 @@ int main(int, char*[]) {
   assert(format::maximum<format::UTF_8>::value == 4 and format::maximum<format::CESU_8>::value == 6);
 
   // next() reports malformed input at a properly terminated incomplete sequence.
-  struct state malformedCursor = {};
+  struct state malformedCursor;
   unsigned char const invalidUtf8[] = { 0xC0u, 0xAFu, 0 }; assert(next(invalidUtf8, format::UTF_8, &malformedCursor) == state::OVERLONG);
   assert(malformedCursor.offset == 0 and malformedCursor.invalidCount == 1);
   assert(next(utf8, format::UTF_8) == 1);
 
   // Byte order is retained after a standalone BOM; BOMs produce no characterCount.
-  struct state utf16Cursor = {};
+  struct state utf16Cursor;
   unsigned char const withBom[] = { 0xFEu, 0xFFu, 0, 'A', 0xD8u, 0x3Du, 0xDEu, 0, 0, 0 }; assert(next(withBom, format::UTF_16, &utf16Cursor) == 2);
   assert(utf16Cursor.characterCount == 0 and utf16Cursor.endianness == ENDIAN_BIG);
   assert(next(&withBom[utf16Cursor.offset], format::UTF_16, &utf16Cursor) == 2);
@@ -2350,7 +2414,7 @@ int main(int, char*[]) {
   unsigned char const johab[] = { 'A', 0x84u, 0x41u, 0xD9u, 0x31u, 0xE0u, 0x91u, 0 };                             assert(length(johab, format::JOHAB, INVALID_TERMINATE)                              == 4);
   unsigned char const uhc[] = { 'A', 0x81u, 0x41u, 0x81u, 0x61u, 0xA1u, 0xA1u, 0 };                               assert(length(uhc, format::WINDOWS_949, INVALID_TERMINATE)                            == 4);
 
-  struct state multibyteCursor = {};
+  struct state multibyteCursor;
   unsigned char const eucTWTruncated[] = { 0x8Eu, 0xA2u, 0xA1u, 0 }; assert(next(eucTWTruncated, format::EUC_TW, &multibyteCursor) == state::MALFORMED);
   assert(multibyteCursor.invalidCount == 3 and multibyteCursor.offset == 0);
   unsigned char const eucTWBadPlane[] = { 0x8Eu, 0xB1u, 0xA1u, 0xA1u, 0 }; assert(length(eucTWBadPlane, format::EUC_TW, INVALID_TERMINATE) == state::MALFORMED);
@@ -2379,12 +2443,12 @@ int main(int, char*[]) {
   unsigned char const ebcdicA[] = { 0xC1u, 0 };            assert(unicode(ebcdicA, format::IBM037)                                == 'A');
   unsigned char const koi8A[] = { 0xE1u, 0 };              assert(unicode(koi8A, format::KOI8_R)                                    == 0x0410u);
   unsigned char const macEacute[] = { 0x8Eu, 0 };          assert(unicode(macEacute, format::MACINTOSH)                         == 0x00E9u);
-  struct state unicodeBom = {}; unicodeBom.reset(format::UTF_16);
+  struct state unicodeBom;
   assert(unicode(withBom, format::UTF_16, &unicodeBom) == state::NO_CHARACTER);
   assert(unicode(&withBom[unicodeBom.offset], format::UTF_16, &unicodeBom) == 'A');
   assert(unicode(&withBom[unicodeBom.offset], format::UTF_16, &unicodeBom) == 0x1F600u);
   assert(unicodeBom.offset == 8u);
-  struct state unicodeUnmappable = {}; unicodeUnmappable.reset(format::WINDOWS_1252);
+  struct state unicodeUnmappable;
   assert(unicode(invalidWindows1252, format::WINDOWS_1252, &unicodeUnmappable) == state::MALFORMED);
   assert(unicodeUnmappable.offset == 0u and unicodeUnmappable.invalidCount == 1u);
   // Without an explicit length, an initial NUL terminates the sequence.
@@ -2409,10 +2473,10 @@ int main(int, char*[]) {
     unsigned char const utf7Incomplete[] = {'+', 0u}; assert(length(utf7Incomplete, format::UTF_7, INVALID_TERMINATE) == state::MALFORMED);
 
     unsigned char const hz[] = { 'A', '~', '{', 0x3Du, 0x3Bu, '~', '}', 'B', 0 };
-    struct state hzLength = {};
+    struct state hzLength;
     assert(length(hz, format::HZ_GB_2312, INVALID_TERMINATE, &hzLength) == 3);
     assert(hzLength.offset == 8);
-    struct state hzCursor = {};
+    struct state hzCursor;
     assert(next(hz, format::HZ_GB_2312, &hzCursor) == 1);
     assert(next(&hz[hzCursor.offset], format::HZ_GB_2312, &hzCursor) == 2);
     assert(hzCursor.characterCount == 0 and (hzCursor.status & state::ISO_2022_SHIFTED));
@@ -2424,7 +2488,7 @@ int main(int, char*[]) {
     assert(hzCursor.offset == 8);
 
     unsigned char const jp[] = { 0x1Bu, '$', 'B', 0x24u, 0x22u, 0x24u, 0x24u, 0x1Bu, '(', 'B', 0 };
-    struct state jpLength = {};
+    struct state jpLength;
     assert(length(jp, format::ISO_2022_JP, INVALID_TERMINATE, &jpLength) == 2);
     assert(jpLength.offset == 10);
     assert(length(jp, format::CP50220, INVALID_TERMINATE) == 2);
@@ -2442,21 +2506,21 @@ int main(int, char*[]) {
     assert(length(utf7Scalar, format::UTF_7, INVALID_TERMINATE) == 1);
     // A UTF-7 Base64 run may produce several characters per next() call.
     unsigned char const utf7Pair[] = { '+', 'A', 'E', 'I', 'A', 'Q', 'w', '-', 0 }; // U+0042, U+0043
-    struct state utf7Length = {};
+    struct state utf7Length;
     assert(length(utf7Pair, format::UTF_7, INVALID_TERMINATE, &utf7Length) == 2);
     assert(utf7Length.offset == 8);
-    struct state utf7Cursor = {};
+    struct state utf7Cursor;
     assert(next(utf7Pair, format::UTF_7, &utf7Cursor) == 8);
     assert(utf7Cursor.characterCount == 2 and utf7Cursor.offset == 8);
     // UTF-7 Base64 can represent multiple scalars; don't lose their positions.
-    struct state utf7Unicode = {}; utf7Unicode.reset(format::UTF_7);
+    struct state utf7Unicode; utf7Unicode.reset(format::UTF_7);
     assert(unicode(utf7Pair, format::UTF_7, &utf7Unicode) == 'B');
     assert(utf7Unicode.offset == 0u and utf7Unicode.utf7.remainingCount == 1u);
     assert(unicode(&utf7Pair[utf7Unicode.offset], format::UTF_7, &utf7Unicode) == 'C');
     assert(utf7Unicode.offset == 8u and utf7Unicode.utf7.remainingCount == 0u);
     // Independent pending-output buffers remain safe across subsequent invocations.
     unsigned char const utf7WithSuffix[] = {'+', 'A', 'E', 'I', 'A', 'Q', 'w', '-', 'Z', 0};
-    struct state utf7Reused = {}; utf7Reused.reset(format::UTF_7);
+    struct state utf7Reused; utf7Reused.reset(format::UTF_7);
     assert(unicode(utf7WithSuffix, format::UTF_7, &utf7Reused) == 'B');
     assert(unicode(&utf7WithSuffix[utf7Reused.offset], format::UTF_7, &utf7Reused) == 'C');
     assert(utf7Reused.utf7.remainingCount == 0u and utf7Reused.offset == 8u);
@@ -2465,7 +2529,7 @@ int main(int, char*[]) {
     assert(unicode(utf7Pair, format::UTF_7) == state::UNSUPPORTED);
     assert(unicode(utf7Scalar, format::UTF_7) == 0x1F600u);
     assert(unicode(utf7, format::UTF_7) == 0x20ACu);
-    struct state imapUnicode = {}; imapUnicode.reset(format::UTF_7_IMAP);
+    struct state imapUnicode; imapUnicode.reset(format::UTF_7_IMAP);
     assert(unicode(imap, format::UTF_7_IMAP, &imapUnicode) == 'A');
     assert(unicode(&imap[imapUnicode.offset], format::UTF_7_IMAP, &imapUnicode) == '&');
     assert(unicode(&imap[imapUnicode.offset], format::UTF_7_IMAP, &imapUnicode) == 0x00E9u);
@@ -2475,7 +2539,7 @@ int main(int, char*[]) {
     assert(length(brokenHZ, format::HZ_GB_2312, INVALID_TERMINATE) == state::MALFORMED);
     unsigned char const scsuSupplementary[] = { 0x0Fu, 0xD8u, 0x3Du, 0xDEu, 0x00u, 0, 0 };
     // SCSU Unicode mode may contain zero octets within nonzero code units.
-    struct state bounded = {};
+    struct state bounded;
     assert(length(scsuSupplementary, format::SCSU, INVALID_TERMINATE, &bounded) == 1);
     assert(bounded.offset == 5);
   #endif
