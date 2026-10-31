@@ -739,37 +739,36 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
       }
     } goto done;
 
-    case STRATEGY_FORMAT_SCSU: {
-      /* TODO */
-      // UTR #6 / ICU SCSU: command bytes may change the active strategy
-      // without producing a character. Unicode strategy stores UCS-2 big-endianness.
-      if (not status.scsu.unicoded) {
-        if (text[0] >= 0x01u and text[0] <= 0x08u) width = 2; // SQ0..SQ7
-        else if (text[0] == 0x0Bu) width = 3; // SDX
-        else if (text[0] == 0x0Eu) width = 3; // SQU, quoted UCS-2 unit
-        else if (text[0] == 0x0Fu) { status.scsu.unicoded = true; state.characterCount = 0; }
-        else if (text[0] >= 0x10u and text[0] <= 0x17u) state.characterCount = 0; // SC0..SC7
-        else if (text[0] >= 0x18u and text[0] <= 0x1Fu) { width = 2; state.characterCount = 0; } // SD0..SD7
-        else if (text[0] == 0x0Cu or (text[0] >= 0x01u and text[0] < 0x20u and text[0] != 0x09u and text[0] != 0x0Au and text[0] != 0x0Du)) invalid = state::MALFORMED;
-      } else {
-        if (text[0] >= 0xE0u and text[0] <= 0xE7u) { status.scsu.unicoded = false; state.characterCount = 0; }
-        else if (text[0] >= 0xE8u and text[0] <= 0xEFu) { width = 2; status.scsu.unicoded = false; state.characterCount = 0; }
-        else if (text[0] == 0xF0u) width = 3; // UQU, quote a Unicode code unit
-        else if (text[0] == 0xF1u) { width = 3; status.scsu.unicoded = false; state.characterCount = 0; }
-        else if (text[0] >= 0xF2u) invalid = state::MALFORMED;
+    case STRATEGY_FORMAT_SCSU: /* ->> UTR #6 (ICU SCSU): Command bytes can alter the strategy (big-endian UCS-2) without producing a character */ {
+      if (status.scsu.unicoded) {
+        if      (text[0] >= 0xF2u)                      invalid = state::MALFORMED;
+        else if (text[0] == 0xF0u)                      { state.characterCount = 1u; status.scsu.unicoded = true;  width = 3u; } // ->> UQU: Quote a character
+        else if (text[0] == 0xF1u)                      { state.characterCount = 0u; status.scsu.unicoded = false; width = 3u; }
+        else if (text[0] >= 0xE8u and text[0] <= 0xEFu) { state.characterCount = 0u; status.scsu.unicoded = false; width = 2u; }
+        else if (text[0] >= 0xE0u and text[0] <= 0xE7u) { state.characterCount = 0u; status.scsu.unicoded = false; width = 1u; }
         else {
-          // In Unicode strategy two big-endianness units making a surrogate pair
-          // represent one scalar (four source bytes), not two characters.
-          width = 2;
-          if (length >= 2 and text[0] >= 0xD8u and text[0] <= 0xDBu) {
-            if (text[1] > 0xFFu or length < 4 or text[2] < 0xDCu or text[2] > 0xDFu) invalid = state::MALFORMED;
-            else width = 4;
-          } else if (text[0] >= 0xDCu and text[0] <= 0xDFu) invalid = state::MALFORMED;
+          width = 2u; // ->> Dual code units in a surrogate pair represent one scalar (four bytes), not two characters
+
+          if (length >= 2u and text[0] >= 0xD8u and text[0] <= 0xDBu) {
+            if (length >= 4u and text[1] <= 0xFFu and text[2] >= 0xDCu and text[2] <= 0xDFu) width   = 4u;
+            else /* if … */                                                                  invalid = state::MALFORMED;
+          } else if (text[0] >= 0xDCu and text[0] <= 0xDFu)                                  invalid = state::MALFORMED;
         }
       }
-      if (length < width) invalid = state::MALFORMED;
-      goto done;
-    } break;
+
+      else {
+        if      (text[0] >= 0x01u and text[0] <= 0x08u) { state.characterCount = 1u; status.scsu.unicoded = false; width = 2u; } // ->> SQ0–SQ7
+        else if (text[0] == 0x0Bu)                      { state.characterCount = 1u; status.scsu.unicoded = false; width = 3u; } // ->> SDX
+        else if (text[0] == 0x0Eu)                      { state.characterCount = 1u; status.scsu.unicoded = false; width = 3u; } // ->> SQU: Quoted character
+        else if (text[0] == 0x0Fu)                      { state.characterCount = 0u; status.scsu.unicoded = true;  width = 1u; } //
+        else if (text[0] >= 0x10u and text[0] <= 0x17u) { state.characterCount = 0u; status.scsu.unicoded = false; width = 1u; } // ->> SC0–SC7
+        else if (text[0] >= 0x18u and text[0] <= 0x1Fu) { state.characterCount = 0u; status.scsu.unicoded = false; width = 2u; } // ->> SD0–SD7
+        else if (text[0] == 0x0Cu or (text[0] != 0x09u and text[0] != 0x0Au and text[0] != 0x0Du and text[0] >= 0x01u and text[0] < 0x20u)) invalid = state::MALFORMED;
+      }
+
+      if (length < width)
+      invalid = state::MALFORMED;
+    } goto done;
 
     case STRATEGY_FORMAT_UTF_7:
     case STRATEGY_FORMAT_UTF_7_IMAP: {
