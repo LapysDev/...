@@ -643,7 +643,7 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
   width                = 1u;
 
   switch (strategy) {
-    // ->> Stateful strategies
+    /* ->> Stateful strategies */
     case STRATEGY_ACCENT_PREFIX: {
       width = (                                                                                                //
         ((text[0] >= 0xC1u and text[0] <= 0xCFu))                                                          and // ->> Non-spacing accent byte (0xC1–0xCF)
@@ -781,106 +781,94 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
       if (length >= 1u and text[0] != (STRATEGY_FORMAT_UTF_7_IMAP == strategy ? '&' : '+'))                                                                  { goto done; }
       if (length >= 2u and text[1] == '-')                                                                                                       { width = 2u; goto done; } // ->> Literal `+` or `&`
 
-      state.characterCount = 0;
-      width = 1;
-      while (width < length) {
-        unsigned nextByte = text[width];
-        int digit = nextByte >= 'A' and nextByte <= 'Z' ? static_cast<int>(nextByte - 'A') :
-          nextByte >= 'a' and nextByte <= 'z' ? static_cast<int>(nextByte - 'a' + 26) :
-          nextByte >= '0' and nextByte <= '9' ? static_cast<int>(nextByte - '0' + 52) :
-          nextByte == '+' ? 62 : nextByte == (STRATEGY_FORMAT_UTF_7_IMAP == strategy ? ',' : '/') ? 63 : -1;
-        if (digit < 0) break;
-        accumulator = (accumulator << 6) | static_cast<unsigned>(digit);
-        bits += 6;
-        ++width;
+      state.characterCount = 0u;
+
+      while (length != width) {
+        if      (text[width] == '+')                                                  accumulator = (accumulator << 6u) | 62u;
+        else if (text[width] == (STRATEGY_FORMAT_UTF_7_IMAP == strategy ? ',' : '/')) accumulator = (accumulator << 6u) | 63u;
+        else if (text[width] >= 'A' and text[width] <= 'Z')                           accumulator = (accumulator << 6u) | (text[width] - 'A');
+        else if (text[width] >= 'a' and text[width] <= 'z')                           accumulator = (accumulator << 6u) | (text[width] - 'a' + 26);
+        else if (text[width] >= '0' and text[width] <= '9')                           accumulator = (accumulator << 6u) | (text[width] - '0' + 52);
+        else break;
+
+        bits += 6u;
+        width++;
+
         if (bits >= 16) {
-          bits -= 16;
-          unsigned unit = (accumulator >> bits) & 0xFFFFu;
+          unsigned unit;
+
+          // ...
+          bits        -= 16u;
           accumulator &= (1u << bits) - 1u;
-          if (pending) {
-            if (unit < 0xDC00u or unit > 0xDFFFu) { invalid = state::MALFORMED; break; }
-            pending = 0;
-            ++state.characterCount;
-          } else if (unit >= 0xD800u and unit <= 0xDBFFu) pending = unit;
-          else if (unit >= 0xDC00u and unit <= 0xDFFFu) { invalid = state::MALFORMED; break; }
-          else if (STRATEGY_FORMAT_UTF_7_IMAP == strategy and unit >= 0x20u and unit <= 0x7Eu) { invalid = state::MALFORMED; break; } // must be direct ASCII, or &-
-          else ++state.characterCount;
+          unit         = (accumulator >> bits) & 0xFFFFu;
+
+          if (not pending) {
+            if      (unit >= 0x0020u and unit <= 0x007Eu and STRATEGY_FORMAT_UTF_7_IMAP == strategy) { invalid = state::MALFORMED; break; } // ->> Must be direct ASCII, or `&-`
+            else if (unit >= 0xDC00u and unit <= 0xDFFFu)                                            { invalid = state::MALFORMED; break; }
+            else if (unit >= 0xD800u and unit <= 0xDBFFu)                                            { pending = unit; }
+            else                                                                                     { state.characterCount++; }
+          }
+          else if (not (unit >= 0xDC00u and unit <= 0xDFFFu)) { invalid = state::MALFORMED; break; }
+          else                                                { pending = 0u; state.characterCount++; }
         }
       }
-      if (width == 1 or state.characterCount == 0 or pending or (bits != 0 and accumulator != 0)) invalid = state::MALFORMED;
-      if (STRATEGY_FORMAT_UTF_7_IMAP == strategy and (width >= length or text[width] != '-')) invalid = state::MALFORMED; // no implicit shift termination
-      if (width < length and text[width] == '-') ++width;
-      goto done;
-    } break;
 
-    // Stateless strategies: inspect the lead byte and enough lookahead to determine how many native bytes belong to the encoded character.
-    // For 94×94 character sets, '94' means the 94 graphic byte positions 0x21..0x7E in each of two code-set dimensions (row and column).
-    case STRATEGY_BYTE: goto done;
+      if (pending or 0u == state.characterCount or width == 1u or (0u != accumulator and 0u != bits)) invalid = state::MALFORMED;
+      if (STRATEGY_FORMAT_UTF_7_IMAP == strategy and (length <= width or text[width] != '-'))         invalid = state::MALFORMED; // ->> No implicit shift termination
 
-    case STRATEGY_BYTE_SEPTET: {
-      invalid = text[0] <= 0x7Fu ? 0 : state::MALFORMED;
-      goto done;
-    } break;
+      width += length > width and text[width] == '-';
+    } goto done;
 
-    case STRATEGY_DOUBLE_94: /* Only validate lookahead bytes after determining they belong to this character. */ {
-      // ISO 2022 94-character graphic sets use byte positions 0x21..0x7E.
-      width = length < 2 ? length : 2;
-      { invalid = length >= 2 and (text[0] >= 0x21u and text[0] <= 0x7Eu) and (text[1] >= 0x21u and text[1] <= 0x7Eu) ? 0 : state::MALFORMED; goto done; }
-    } break;
+    /* ->> Stateless strategies */
+    case STRATEGY_BYTE:        /* Do nothing… */                                                                goto done;
+    case STRATEGY_BYTE_SEPTET: invalid = text[0] <= 0x7Fu ? static_cast< ::std::size_t>(-0) : state::MALFORMED; goto done;
+
+    case STRATEGY_DOUBLE_94: /* ->> ISO 2022 94-character graphic sets use byte positions 0x21–0x7E, so only validate lookahead bytes after determining they belong to this character */ {
+      width   = length <  2u ? length : 2u;
+      invalid = length >= 2u and (text[0] >= 0x21u and text[0] <= 0x7Eu) and (text[1] >= 0x21u and text[1] <= 0x7Eu) ? static_cast< ::std::size_t>(-0) : state::MALFORMED;
+    } goto done;
 
     case STRATEGY_FORMAT_BIG5: {
-      if (text[0] < 0x80u) goto done;
-      if (length < 2) { invalid = state::MALFORMED; goto done; }
-      if (text[0] < 0x81u or text[0] > 0xFEu or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or
-          (text[1] >= 0xA1u and text[1] <= 0xFEu))) { invalid = state::MALFORMED; goto done; }
-      width = 2;
-      goto done;
-    } break;
+      if      (text[0] < 0x80u)                                                                                                                               { /* Do nothing… */ }
+      else if (length < 2u or text[0] < 0x81u or text[0] > 0xFEu or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0xA1u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+      else                                                                                                                                                    width   = 2u;
+    } goto done;
 
     case STRATEGY_FORMAT_CESU_8: case STRATEGY_FORMAT_UTF_8: {
-      if (text[0] < 0x80u) goto done;
-      if (text[0] < 0xC2u or text[0] > 0xF4u) { invalid = text[0] == 0xC0u or text[0] == 0xC1u ? state::OVERLONG : state::MALFORMED; goto done; }
-      if (text[0] <= 0xDFu) width = 2;
-      else if (text[0] <= 0xEFu) width = 3;
-      else if (strategy == STRATEGY_FORMAT_UTF_8) width = 4;
-      else { invalid = state::MALFORMED; goto done; }
+      if      (text[0] < 0x80u)                    { /* Do nothing… */ }
+      else if (text[0] < 0xC2u or text[0] > 0xF4u) invalid = text[0] == 0xC0u or text[0] == 0xC1u ? state::OVERLONG : state::MALFORMED;
+      else {
+        if      (text[0] <= 0xDFu)                  width = 2u;
+        else if (text[0] <= 0xEFu)                  width = 3u;
+        else if (STRATEGY_FORMAT_UTF_8 == strategy) width = 4u;
+        else                                      { invalid = state::MALFORMED; goto done; }
 
-      if (length < width) { width = length; { invalid = state::MALFORMED; goto done; } }
-      if ((width >= 2 and text[1] > 0xFFu) or (width >= 3 and text[2] > 0xFFu) or
-          (width == 4 and text[3] > 0xFFu)) { invalid = state::MALFORMED; goto done; }
-      if (not ((text[1] & 0xC0u) == 0x80u) or (width >= 3 and not ((text[2] & 0xC0u) == 0x80u)) or
-          (width == 4 and not ((text[3] & 0xC0u) == 0x80u))) { width = 1; { invalid = state::MALFORMED; goto done; } }
-      if ((text[0] == 0xE0u and text[1] < 0xA0u) or (text[0] == 0xF0u and text[1] < 0x90u)) { invalid = state::OVERLONG; goto done; }
-      if (text[0] == 0xF4u and text[1] > 0x8Fu) { invalid = state::MALFORMED; goto done; }
-
-      if (text[0] == 0xEDu and text[1] >= 0xA0u) {
-        if (strategy == STRATEGY_FORMAT_UTF_8) { invalid = state::MALFORMED; goto done; }
-        if (text[1] >= 0xB0u) { invalid = state::MALFORMED; goto done; } // isolated low surrogate
-        // CESU-8's surrogate pair encodes one supplementary character in 6 bytes.
-        if (length < 6) { width = length; { invalid = state::MALFORMED; goto done; } }
-
-        if (text[3] != 0xEDu or text[4] < 0xB0u or text[4] > 0xBFu or
-            text[5] > 0xFFu or (text[5] & 0xC0u) != 0x80u) { invalid = state::MALFORMED; goto done; }
-        width = 6;
-      }
-      goto done;
-    } break;
-
-    case STRATEGY_FORMAT_GB18030: case STRATEGY_FORMAT_GBK: {
-      if (text[0] < 0x80u) goto done;
-      if (text[0] < 0x81u or text[0] > 0xFEu or length < 2) { invalid = state::MALFORMED; goto done; }
-      if (text[1] >= 0x40u and text[1] <= 0xFEu and text[1] != 0x7Fu) { width = 2; goto done; }
-      if (strategy == STRATEGY_FORMAT_GB18030 and text[1] >= 0x30u and text[1] <= 0x39u) {
-        if (length < 4) { width = length; { invalid = state::MALFORMED; goto done; } }
-        if (text[2] >= 0x81u and text[2] <= 0xFEu and text[3] >= 0x30u and text[3] <= 0x39u) {
-          width = 4;
-          goto done;
+        if      (length < width)                                                                                                                               { invalid = state::MALFORMED; width = length; }
+        else if ((width >= 2u and (text[1] > 0xFFu))          or (width >= 3u and (text[2] > 0xFFu))          or (width == 4u and (text[3] > 0xFFu)))            invalid = state::MALFORMED;
+        else if ((width >= 2u and (text[1] & 0xC0u) != 0x80u) or (width >= 3u and (text[2] & 0xC0u) != 0x80u) or (width == 4u and (text[3] & 0xC0u) != 0x80u)) { invalid = state::MALFORMED; width = 1u; }
+        else if ((text[0] == 0xE0u and text[1] <  0xA0u) or (text[0] == 0xF0u and text[1] < 0x90u))                                                              invalid = state::OVERLONG;
+        else if ((text[0] == 0xF4u and text[1] >  0x8Fu))                                                                                                        invalid = state::MALFORMED;
+        else if ((text[0] == 0xEDu and text[1] >= 0xA0u)) {
+          if      (STRATEGY_FORMAT_UTF_8 == strategy)                                                                           invalid = state::MALFORMED;
+          else if (text[1] >= 0xB0u)                                                                                            invalid = state::MALFORMED;                   // ->> Isolated low surrogate
+          else if (length < 6u)                                                                                               { invalid = state::MALFORMED; width = length; } // ->> CESU-8’s surrogate pair encodes one supplementary character in 6 bytes
+          else if (text[3] != 0xEDu or (text[4] < 0xB0u or text[4] > 0xBFu) or (text[5] > 0xFFu or (text[5] & 0xC0u) != 0x80u)) invalid = state::MALFORMED;
+          else                                                                                                                  width   = 6u;
         }
       }
-      { invalid = state::MALFORMED; goto done; }
-    } break;
+    } goto done;
+
+    case STRATEGY_FORMAT_GB18030: case STRATEGY_FORMAT_GBK: {
+      if      ((text[0] <  0x80u))                                                                                                                                                        { /* Do nothing… */ }
+      else if ((text[0] <  0x81u or  text[0] >  0xFEu) or  length < 2u)                                                                                                                   invalid = state::MALFORMED;
+      else if ((text[1] >= 0x40u and text[1] <= 0xFEu) and text[1] != 0x7Fu)                                                                                                              width   = 2u;
+      else if ((text[1] >= 0x30u and text[1] <= 0x39u) and length < 4u                                                                         and STRATEGY_FORMAT_GB18030 == strategy) { width   = length; invalid = state::MALFORMED; }
+      else if ((text[1] >= 0x30u and text[1] <= 0x39u) and (text[2] >= 0x81u and text[2] <= 0xFEu) and (text[3] >= 0x30u and text[3] <= 0x39u) and STRATEGY_FORMAT_GB18030 == strategy)   width   = 4u;
+      else                                                                                                                                                                                invalid = state::MALFORMED;
+    } goto done;
 
     case STRATEGY_FORMAT_JOHAB: {
+      /* TODO */
       // Johab/CP1361: ASCII, Hangul 84..D3 with 41..7E/81..FE trails,
       // or Hanja and symbols D9..DE/E0..F9 with 31..7E/91..FE trails.
       // Validate byte geometry, not which Hangul combinations are assigned.
@@ -1619,7 +1607,8 @@ static ::std::size_t unicode_shifted(unsigned char const character[], struct sta
   ::uint_least16_t highSurrogate = 0u;
   for (; state -> utf7.offset < state -> utf7.byteCount; ) {
     unsigned const byte = character[state -> utf7.offset++];
-    int const digit = byte >= 'A' and byte <= 'Z' ? static_cast<int>(byte - 'A') :
+    int const digit =
+      byte >= 'A' and byte <= 'Z' ? static_cast<int>(byte - 'A') :
       byte >= 'a' and byte <= 'z' ? static_cast<int>(byte - 'a' + 26u) :
       byte >= '0' and byte <= '9' ? static_cast<int>(byte - '0' + 52u) :
       byte == '+' ? 62 : byte == (imap ? ',' : '/') ? 63 : -1;
