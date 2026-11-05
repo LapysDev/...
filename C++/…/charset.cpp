@@ -15,29 +15,29 @@ enum policy {
   STRATEGY_BYTE,                   // ->> Native byte (typically an octet)
   STRATEGY_BYTE_SEPTET,            // ->> 7-bit byte
   STRATEGY_DOUBLE_94,              // ->> Two bytes between 0x21–0x7E for 94×94 graphics
-  STRATEGY_FORMAT_BIG5,            // ->> Big5 lead/ trail rules
-  STRATEGY_FORMAT_BOCU_1,          // ->> BOCU-1 delta prefix length without code-point mapping
-  STRATEGY_FORMAT_CESU_8,          // ->> UTF-16 code units represented by UTF-8 triplets
+  STRATEGY_FORMAT_BIG5,            // ->> Lead/ trail rules
+  STRATEGY_FORMAT_BOCU_1,          // ->> Delta prefix length without code-point mapping
+  STRATEGY_FORMAT_CESU_8,          // ->> Code units represented by UTF-8 triplets
   STRATEGY_FORMAT_EUC_JP,          // ->> EUC-JP including SS2 and SS3 prefixes
   STRATEGY_FORMAT_EUC_KR,          // ->> EUC-KR ASCII or double-byte column/ row
   STRATEGY_FORMAT_EUC_TW,          // ->> EUC-TW ASCII, CNS plane 1, and SS2 plane selectors
-  STRATEGY_FORMAT_GB2312,          // ->> GB2312 EUC byte pair
-  STRATEGY_FORMAT_GB18030,         // ->> GB18030 one-/ two-/ four-byte syntax
-  STRATEGY_FORMAT_GBK,             // ->> GBK one-/ two-byte syntax
-  STRATEGY_FORMAT_HZ_GB_2312,      // ->> HZ ASCII/ GB2312 tilde-switch escape grammar
-  STRATEGY_FORMAT_ISO_2022_CN,     // ->> ISO-2022-CN G1/ G2 designations and shift controls
+  STRATEGY_FORMAT_GB2312,          // ->> GB2312 EUC’s byte pair
+  STRATEGY_FORMAT_GB18030,         // ->> One-/ two-/ four-byte syntax
+  STRATEGY_FORMAT_GBK,             // ->> One-/ two-byte syntax
+  STRATEGY_FORMAT_HZ_GB_2312,      // ->> Tilde-switch escape grammar
+  STRATEGY_FORMAT_ISO_2022_CN,     // ->> G1/ G2 designations and shift controls
   STRATEGY_FORMAT_ISO_2022_CN_EXT, // ->> ISO-2022-CN-EXT including G3
-  STRATEGY_FORMAT_ISO_2022_JP,     // ->> ISO-2022-JP G0 escape-designated sets
+  STRATEGY_FORMAT_ISO_2022_JP,     // ->> G0 escape-designated sets
   STRATEGY_FORMAT_ISO_2022_JP_2,   // ->> ISO-2022-JP-2 with extended G0/ SS2
   STRATEGY_FORMAT_ISO_2022_KR,     // ->> ISO-2022-KR designation and SI/ SO
-  STRATEGY_FORMAT_JOHAB,           // ->> Johab two-byte Hangul and Hanja/ symbol sequences
-  STRATEGY_FORMAT_KOI7_SWITCHED,   // ->> KOI7 7-bit code unit SI–SO switching
-  STRATEGY_FORMAT_SCSU,            // ->> SCSU single-byte and Unicode modes
-  STRATEGY_FORMAT_SJIS,            // ->> Shift_JIS single-/ double-byte syntax
+  STRATEGY_FORMAT_JOHAB,           // ->> Two-byte Hangul and Hanja/ symbol sequences
+  STRATEGY_FORMAT_KOI7_SWITCHED,   // ->> 7-bit code unit SI/ SO switching
+  STRATEGY_FORMAT_SCSU,            // ->> Single-byte and Unicode modes
+  STRATEGY_FORMAT_SJIS,            // ->> Single-/ double-byte syntax
   STRATEGY_FORMAT_UCS_2,           // ->> Fixed two-octet scalar without surrogates
   STRATEGY_FORMAT_UCS_4,           // ->> Fixed four-octet scalar
-  STRATEGY_FORMAT_UTF_7,           // ->> UTF-7 modified Base64 shifted runs
-  STRATEGY_FORMAT_UTF_7_IMAP,      // ->> IMAP modified UTF-7: &- shift, comma Base64, explicit -
+  STRATEGY_FORMAT_UTF_7,           // ->> Modified Base64 shifted runs
+  STRATEGY_FORMAT_UTF_7_IMAP,      // ->> IMAP-modified UTF-7 with `&-` shift, `,` Base64, and explicit `-`
   STRATEGY_FORMAT_UTF_8,           // ->> UTF-8 scalars
   STRATEGY_FORMAT_UTF_16,          // ->> UTF-16 BOM-selectable endian
   STRATEGY_FORMAT_UTF_16BE,        // ->> UTF-16 big            endian
@@ -771,17 +771,16 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
     } goto done;
 
     case STRATEGY_FORMAT_UTF_7:
-    case STRATEGY_FORMAT_UTF_7_IMAP: {
-      // RFC 2152 UTF-7 and RFC 3501 IMAP modified UTF-7 pack UTF-16 code
-      // units in Base64 without byte-aligned character boundaries. Parse each RUN
-      // and count scalars; one run may yield multiple characters.
-      bool const imap = strategy == STRATEGY_FORMAT_UTF_7_IMAP;
-      if (text[0] > 0x7Fu or (imap and (text[0] < 0x20u or text[0] > 0x7Eu))) { invalid = state::MALFORMED; goto done; }
-      if (text[0] != (imap ? '&' : '+')) goto done;
-      if (length >= 2 and text[1] == '-') { width = 2; goto done; } // literal + or &
+    case STRATEGY_FORMAT_UTF_7_IMAP: /* ->> RFC 2152 (UTF-7) and RFC 3501 (IMAP-modified UTF-7) pack multiple UTF-16 code units in Base64 with no byte-aligned character boundaries */ {
       unsigned accumulator = 0u;
-      unsigned bits = 0u;
-      unsigned pendingHigh = 0u;
+      unsigned bits        = 0u;
+      unsigned pending     = 0u;
+
+      // ...
+      if (length >= 1u and text[0] > 0x7Fu or (STRATEGY_FORMAT_UTF_7_IMAP == strategy and (text[0] < 0x20u or text[0] > 0x7Eu))) { invalid = state::MALFORMED; goto done; }
+      if (length >= 1u and text[0] != (STRATEGY_FORMAT_UTF_7_IMAP == strategy ? '&' : '+'))                                                                  { goto done; }
+      if (length >= 2u and text[1] == '-')                                                                                                       { width = 2u; goto done; } // ->> Literal `+` or `&`
+
       state.characterCount = 0;
       width = 1;
       while (width < length) {
@@ -789,7 +788,7 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
         int digit = nextByte >= 'A' and nextByte <= 'Z' ? static_cast<int>(nextByte - 'A') :
           nextByte >= 'a' and nextByte <= 'z' ? static_cast<int>(nextByte - 'a' + 26) :
           nextByte >= '0' and nextByte <= '9' ? static_cast<int>(nextByte - '0' + 52) :
-          nextByte == '+' ? 62 : nextByte == (imap ? ',' : '/') ? 63 : -1;
+          nextByte == '+' ? 62 : nextByte == (STRATEGY_FORMAT_UTF_7_IMAP == strategy ? ',' : '/') ? 63 : -1;
         if (digit < 0) break;
         accumulator = (accumulator << 6) | static_cast<unsigned>(digit);
         bits += 6;
@@ -798,18 +797,18 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
           bits -= 16;
           unsigned unit = (accumulator >> bits) & 0xFFFFu;
           accumulator &= (1u << bits) - 1u;
-          if (pendingHigh) {
+          if (pending) {
             if (unit < 0xDC00u or unit > 0xDFFFu) { invalid = state::MALFORMED; break; }
-            pendingHigh = 0;
+            pending = 0;
             ++state.characterCount;
-          } else if (unit >= 0xD800u and unit <= 0xDBFFu) pendingHigh = unit;
+          } else if (unit >= 0xD800u and unit <= 0xDBFFu) pending = unit;
           else if (unit >= 0xDC00u and unit <= 0xDFFFu) { invalid = state::MALFORMED; break; }
-          else if (imap and unit >= 0x20u and unit <= 0x7Eu) { invalid = state::MALFORMED; break; } // must be direct ASCII, or &-
+          else if (STRATEGY_FORMAT_UTF_7_IMAP == strategy and unit >= 0x20u and unit <= 0x7Eu) { invalid = state::MALFORMED; break; } // must be direct ASCII, or &-
           else ++state.characterCount;
         }
       }
-      if (width == 1 or state.characterCount == 0 or pendingHigh or (bits != 0 and accumulator != 0)) invalid = state::MALFORMED;
-      if (imap and (width >= length or text[width] != '-')) invalid = state::MALFORMED; // no implicit shift termination
+      if (width == 1 or state.characterCount == 0 or pending or (bits != 0 and accumulator != 0)) invalid = state::MALFORMED;
+      if (STRATEGY_FORMAT_UTF_7_IMAP == strategy and (width >= length or text[width] != '-')) invalid = state::MALFORMED; // no implicit shift termination
       if (width < length and text[width] == '-') ++width;
       goto done;
     } break;

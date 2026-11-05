@@ -1,3 +1,32 @@
-#include <windows.h>
+#include <winver.h> // --> FILEVERSION, PRODUCTVERSION, VS_FFI_FILEFLAGSMASK, VOS_NT_WINDOWS32, VFT_APP, VFT2_UNKNOWN; VERSIONINFO
 
-1 ICON "localhost.ico"
+101 ICON "localhost.ico"
+1   VERSIONINFO
+  FILEVERSION    1,0,0,0
+  PRODUCTVERSION 1,0,0,0
+  FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+  FILEFLAGS      0x0L
+  FILEOS         VOS_NT_WINDOWS32
+  FILETYPE       VFT_APP
+  FILESUBTYPE    VFT2_UNKNOWN
+
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "Comments",         "Loopback-only IPv4 and IPv6 HTTP/1.0 and HTTP/1.1 static-file server, with directory listings and command-line shutdown.\0"
+      VALUE "CompanyName",      "LapysDev\0"
+      VALUE "FileDescription",  "Localhost\0" // ->> Process “name” in Task Manager
+      VALUE "FileVersion",      "1.0.0.0\0"
+      VALUE "InternalName",     "localhost\0"
+      VALUE "OriginalFilename", "localhost.exe\0"
+      VALUE "ProductName",      "Localhost\0"
+      VALUE "ProductVersion",   "1.0.0.0\0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1200
+  END
+END

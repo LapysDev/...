@@ -1,913 +1,1510 @@
-/* rc /nologo /folocalhost.res localhost.rc && cl /nologo /utf-8 /EHsc /O2 /DUNICODE /D_UNICODE localhost.cpp localhost.res /Fe:localhost.exe /link /SUBSYSTEM:WINDOWS ws2_32.lib shell32.lib user32.lib kernel32.lib && del /q localhost.obj localhost.res */
-/* clang++ -std=c++98 -O2 -Wall -Wextra -pthread localhost.cpp -o localhost */
-/* localhost [--shutdown] --root "C:/LapysDev" --port 8000 */
-#ifdef _WIN32
-  #ifndef WIN32_LEAN_AND_MEAN
-    #define WIN32_LEAN_AND_MEAN
-  #endif
-  #ifndef NOMINMAX
-    #define NOMINMAX
-  #endif
-  #include <winsock2.h>
-  #include <ws2tcpip.h>
-  #include <windows.h>
-  #include <shellapi.h>
-  #include <sys/stat.h>
+/* POSIX:   clang++ -std=c++98 -pedantic -O2 -Wall -Wextra -pthread localhost.cpp -o localhost */
+/* Windows: rc /nologo /folocalhost.res localhost.rc && cl /nologo /utf-8 /EHsc /O2 /DUNICODE /D_UNICODE localhost.cpp localhost.res /Fe:localhost.exe /link /SUBSYSTEM:WINDOWS ws2_32.lib shell32.lib user32.lib kernel32.lib && del /q localhost.obj localhost.res */
+/* localhost [--help] [--port 8000] [--root "C:/LapysDev"] [--shutdown] */
+#include <cctype>   // --> ::std::tolower(…)
+#include <cerrno>   // --> EADDRINUSE, EINTR; errno
+#include <cstddef>  // --> ::std::size_t
+#include <cstdio>   // --> ::std::FILE; stdout; ::std::fclose(…), ::std::fopen(…), ::std::fputs(…), ::std::fread(…), ::std::sprintf(…)
+#include <cstdlib>  // --> ::std::calloc(…), ::std::free(…), ::std::getenv(…), ::std::malloc(…), ::std::realloc(…)
+#include <cstring>  // --> ::std::memchr(…), ::std::memcpy(…), ::std::memmove(…), ::std::strcmp(…), ::std::strchr(…), ::std::strlen(…), ::std::strpbrk(…), ::std::strrchr(…), ::std::strstr(…)
+#include <ctime>    // --> ::std::time_t, ::std::tm; ::std::strftime(…), ::std::time(…)
+#include <iso646.h> // --> and, not, or
+#include <stdint.h> // --> ::uint_least16_t, ::uintptr_t
+#if defined _WIN32
+# define NOMINMAX
+# define WIN32_LEAN_AND_MEAN
+#
+# include <cwchar>     // --> ::std::wcslen(…)
+# include <winsock2.h> // --> ::SOCKET, ::WSADATA, ::fd_set, ::sockaddr, ::sockaddr_in, ::timeval; AF_INET, FD_ISSET, FD_SET, FD_ZERO, INADDR_LOOPBACK, INVALID_SOCKET, MAKEWORD, SO_EXCLUSIVEADDRUSE, SO_RCVTIMEO, SO_SNDTIMEO, SOL_SOCKET, SOCK_STREAM; …
+# include <ws2tcpip.h> // --> in6addr_loopback, IPPROTO_IPV6, IPPROTO_TCP, IPV6_V6ONLY; ::sockaddr_in6
+# include <windows.h>  // --> ATTACH_PARENT_PROCESS, CP_UTF8, ERROR_ALREADY_EXISTS, EVENT_MODIFY_STATE, FALSE, FILE_ATTRIBUTE_DIRECTORY, GetFileExInfoStandard, INVALID_FILE_ATTRIBUTES, INVALID_HANDLE_VALUE, MB_ERR_INVALID_CHARS, STD_OUTPUT_HANDLE, TRUE, WAIT_OBJECT_0, WC_ERR_INVALID_CHARS; ::BOOL, ::DWORD, ::HANDLE, ::HINSTANCE, ::LONG, ::LPWSTR, ::UINT_PTR, ::ULONGLONG, ::WIN32_FILE_ATTRIBUTE_DATA, ::WIN32_FIND_DATAW; ::AttachConsole(…), ::FreeConsole(…); …
+#   include <process.h>  // --> ::_beginthreadex(…)
+#   include <shellapi.h> // --> ::CommandLineToArgvW(…)
+#
+# pragma comment(lib, "kernel32.lib")
+# pragma comment(lib, "shell32.lib")
+# pragma comment(lib, "user32.lib")
+# pragma comment(lib, "ws2_32.lib")
+
+extern "C" __declspec(dllimport) ::BOOL    WINAPI AttachConsole       (::DWORD);
+extern "C" WINBASEAPI            ::BOOL    WINAPI CloseHandle         (::HANDLE);
+extern "C" WINSHELLAPI           ::LPWSTR* WINAPI CommandLineToArgvW  (::LPCWSTR, int*);
+extern "C" __declspec(dllimport) ::HANDLE  WINAPI CreateEventW        (::LPSECURITY_ATTRIBUTES, ::BOOL, ::BOOL, ::LPCWSTR);
+extern "C" __declspec(dllimport) ::HANDLE  WINAPI CreateMutexW        (::LPSECURITY_ATTRIBUTES, ::BOOL, ::LPCWSTR);
+extern "C" __declspec(dllimport) ::BOOL    WINAPI FindClose           (::HANDLE);
+extern "C" __declspec(dllimport) ::HANDLE  WINAPI FindFirstFileW      (::LPCWSTR, ::LPWIN32_FIND_DATAW);
+extern "C" __declspec(dllimport) ::BOOL    WINAPI FindClose           (::HANDLE);
+extern "C" __declspec(dllimport) ::DWORD   WINAPI GetFileAttributesW  (::LPCWSTR);
+extern "C" __declspec(dllimport) ::BOOL    WINAPI GetFileAttributesExW(::LPCWSTR, ::GET_FILEEX_INFO_LEVELS, ::LPVOID);
+extern "C" __declspec(dllimport) ::DWORD   WINAPI GetLastError        ();
+extern "C" __declspec(dllimport) ::HANDLE  WINAPI GetStdHandle        (::DWORD);
+extern "C" __declspec(dllimport) ::LPWSTR  WINAPI GetCommandLineW     ();
+extern "C" __declspec(dllimport) ::HLOCAL  WINAPI LocalFree           (::HLOCAL);
+extern "C" __declspec(dllimport) int       WINAPI MultiByteToWideChar (::UINT, ::DWORD, ::LPCCH, int, ::LPWSTR, int);
+extern "C" __declspec(dllimport) ::HANDLE  WINAPI OpenEventW          (::DWORD, ::BOOL, ::LPCWSTR);
+extern "C" __declspec(dllimport) ::BOOL    WINAPI SetEvent            (::HANDLE);
+extern "C" __declspec(dllimport) ::DWORD   WINAPI WaitForSingleObject (::HANDLE, ::DWORD);
+extern "C" __declspec(dllimport) int       WINAPI WideCharToMultiByte (::UINT, ::DWORD, ::LPCWCH, int, ::LPSTR, int, ::LPCCH, ::LPBOOL);
+extern "C" __declspec(dllimport) ::BOOL    WINAPI WriteFile           (::HANDLE, ::LPCVOID, ::DWORD, ::LPDWORD, ::LPOVERLAPPED);
+
+extern "C" _ACRTIMP              ::uintptr_t  __cdecl _beginthreadex(void*, unsigned, unsigned (__stdcall*)(void*), void*, unsigned, unsigned*);
+extern "C" _ACRTIMP              ::errno_t    __cdecl _gmtime64_s   (struct ::tm*, ::__time64_t const*);
+extern "C" _ACRTIMP              ::std::FILE* __cdecl _wfopen       (wchar_t const[], wchar_t const[]);
+extern "C" __declspec(dllimport) ::SOCKET     WSAAPI  accept        (::SOCKET, struct ::sockaddr*, int*);
+extern "C" __declspec(dllimport) int          WSAAPI  bind          (::SOCKET, struct ::sockaddr const*, int);
+extern "C" __declspec(dllimport) int          WSAAPI  closesocket   (::SOCKET);
+extern "C" __declspec(dllimport) int          WSAAPI  connect       (::SOCKET, struct ::sockaddr const*, int);
+extern "C" __declspec(dllimport) int          WSAAPI  listen        (::SOCKET, int);
+extern "C" __declspec(dllimport) int          WSAAPI  recv          (::SOCKET, char*, int, int);
+extern "C" __declspec(dllimport) int          WSAAPI  select        (int, ::fd_set*, ::fd_set*, ::fd_set*, ::timeval const*);
+extern "C" WINSOCK_API_LINKAGE   int          WSAAPI  send          (::SOCKET, char const[], int, int);
+extern "C" __declspec(dllimport) int          WSAAPI  setsockopt    (::SOCKET, int, int, char const*, int);
+extern "C" __declspec(dllimport) ::SOCKET     WSAAPI  socket        (int, int, int);
+extern "C" __declspec(dllimport) int          WSAAPI  WSACleanup    ();
+extern "C" __declspec(dllimport) int          WSAAPI  WSAStartup    (::WORD, ::LPWSADATA);
+# if not defined htonl
+  extern "C" __declspec(dllimport) ::u_long WSAAPI htonl(::u_long);
+# endif
+# if not defined htons
+  extern "C" __declspec(dllimport) ::u_short WSAAPI htons(::u_short);
+# endif
+#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+# include <arpa/inet.h>  // --> htonl(…), htons(…)
+# include <dirent.h>     // --> ::DIR, ::dirent; ::closedir(…), ::opendir(…), ::readdir(…)
+# include <netinet/in.h> // --> INADDR_LOOPBACK, IPPROTO_IPV6, IPPROTO_TCP, IPV6_V6ONLY; ::sockaddr_in, ::sockaddr_in6; in6addr_loopback
+# include <pthread.h>    // --> PTHREAD_MUTEX_INITIALIZER; ::pthread_t, ::pthread_mutex_t; ::pthread_create(…), ::pthread_detach(…), ::pthread_mutex_lock(…), ::pthread_mutex_unlock(…)
+# include <signal.h>     // --> SIG_IGN, SIGINT, SIGPIPE, SIGTERM; ::sig_atomic_t, ::sigaction; ::sigaction(…), ::sigemptyset(…)
+# include <sys/select.h> // --> FD_ISSET, FD_SET, FD_ZERO; ::fd_set, ::timeval; ::select(…).
+# include <sys/socket.h> // --> AF_*, MSG_NOSIGNAL, SO_*, SOCK_STREAM; ::socklen_t, ::sockaddr; ::accept(…), ::bind(…), ::connect(…), ::listen(…), ::recv(…), ::send(…), ::setsockopt(…), ::socket(…)
+# include <sys/stat.h>   // --> S_ISDIR, S_ISREG, S_ISSOCK; ::mode_t, ::stat; ::lstat(…), ::stat(…), ::umask(…)
+# include <sys/types.h>  // --> ::off_t, ::ssize_t, ::uid_t
+# include <sys/un.h>     // --> AF_UNIX; ::sockaddr_un
+# include <unistd.h>     // --> W_OK, X_OK; ::access(…), ::close(…), ::geteuid(…), ::getuid(…), ::unlink(…)
+
+extern "C" int              accept              (int, struct ::sockaddr*, ::socklen_t*);
+extern "C" int              access              (char const[], int)                          /* throw() */;
+extern "C" int              bind                (int, struct ::sockaddr const*, ::socklen_t) /* throw() */;
+extern "C" int              close               (int);
+extern "C" int              closedir            (::DIR*);
+extern "C" int              connect             (int, struct ::sockaddr const*, ::socklen_t);
+extern "C" ::uid_t          geteuid             ()                              /* throw() */;
+extern "C" ::uid_t          getuid              ()                              /* throw() */;
+extern "C" struct ::tm*     gmtime_r            (::time_t const*, struct ::tm*) /* throw() */;
+extern "C" int              listen              (int, int)                      /* throw() */;
+extern "C" int              lstat               (char const[], struct ::stat*)  /* throw() */;
+extern "C" ::DIR*           opendir             (char const[]);
+extern "C" int              pthread_create      (::pthread_t*, ::pthread_attr_t const*, void* (*)(void*), void*) /* throw() */;
+extern "C" int              pthread_detach      (::pthread_t)                                                    /* throw() */;
+extern "C" int              pthread_mutex_lock  (::pthread_mutex_t*)                                             /* throw() */;
+extern "C" int              pthread_mutex_unlock(::pthread_mutex_t*)                                             /* throw() */;
+extern "C" ::ssize_t        recv                (int, void*, ::std::size_t, int);
+extern "C" struct ::dirent* readdir             (::DIR*);
+extern "C" int              select              (int, ::fd_set*, ::fd_set*, ::fd_set*, struct ::timeval*);
+extern "C" ::ssize_t        send                (int, void const*, ::std::size_t, int);
+extern "C" int              setsockopt          (int, int, int, void const*, ::socklen_t)             /* throw() */;
+extern "C" int              sigaction           (int, struct ::sigaction const*, struct ::sigaction*) /* throw() */;
+extern "C" int              sigemptyset         (::sigset_t*)                                         /* throw() */;
+extern "C" int              socket              (int, int, int)                                       /* throw() */;
+extern "C" int              stat                (char const[], struct ::stat*)                        /* throw() */;
+extern "C" ::mode_t         umask               (::mode_t)                                            /* throw() */;
+extern "C" int              unlink              (char const[])                                        /* throw() */;
 #else
-  #include <sys/types.h>
-  #include <sys/socket.h>
-  #include <sys/select.h>
-  #include <sys/stat.h>
-  #include <sys/un.h>
-  #include <netinet/in.h>
-  #include <arpa/inet.h>
-  #include <unistd.h>
-  #include <fcntl.h>
-  #include <dirent.h>
-  #include <pthread.h>
-  #include <signal.h>
-  #include <errno.h>
+  #error [!]: Unsupported platform
 #endif
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cctype>
-#include <ctime>
-#include <string>
-#include <vector>
-#include <algorithm>
-
-#ifdef _WIN32
-  typedef SOCKET socket_handle;
-  typedef ::std::wstring file_path;
-  typedef ULONGLONG file_size;
-  static socket_handle const INVALID_SOCKET_HANDLE = INVALID_SOCKET;
-#else
-  typedef int socket_handle;
-  typedef ::std::string file_path;
-  typedef off_t file_size;
-  static socket_handle const INVALID_SOCKET_HANDLE = -1;
-#endif
-
-static unsigned short const DEFAULT_PORT = 8000;
-static unsigned int const MAX_REQUEST_BYTES = 16384;
-static long const MAX_WORKERS = 128;
-static file_path rootDirectory;
-static unsigned short port = DEFAULT_PORT;
-static socket_handle listeners[2] = { INVALID_SOCKET_HANDLE, INVALID_SOCKET_HANDLE };
-
-#ifdef _WIN32
-  static wchar_t const* const MUTEX_NAME = L"Local\\LapysDev.Localhost.Instance";
-  static wchar_t const* const EVENT_NAME = L"Local\\LapysDev.Localhost.Shutdown";
-  static HANDLE instanceMutex = NULL;
-  static HANDLE shutdownEvent = NULL;
-  static volatile LONG activeWorkers = 0;
-#else
-  static socket_handle controlSocket = INVALID_SOCKET_HANDLE;
-  static ::std::string controlPath;
-  static volatile sig_atomic_t stopping = 0;
-  static pthread_mutex_t workerMutex = PTHREAD_MUTEX_INITIALIZER;
-  static long activeWorkers = 0;
-#endif
-
-static void log_message(char const* message) {
-#ifdef _WIN32
-  ::OutputDebugStringA(message);
-  ::OutputDebugStringA("\n");
-  HANDLE stream = ::GetStdHandle(STD_OUTPUT_HANDLE);
-  DWORD written = 0;
-  if (stream != NULL && stream != INVALID_HANDLE_VALUE) {
-    ::WriteFile(stream, message, static_cast<DWORD>(::std::strlen(message)), &written, NULL);
-    ::WriteFile(stream, "\r\n", 2, &written, NULL);
-  }
-#else
-  ::std::fprintf(stderr, "%s\n", message);
-#endif
-}
-
-static void close_socket(socket_handle socket) {
-  if (socket == INVALID_SOCKET_HANDLE) return;
-#ifdef _WIN32
-  ::closesocket(socket);
-#else
-  ::close(socket);
-#endif
-}
-
-static bool send_all(socket_handle socket, char const* data, ::std::size_t length) {
-  while (length) {
-    int count = static_cast<int>(length > 32768 ? 32768 : length);
-#ifdef _WIN32
-    int sent = ::send(socket, data, count, 0);
-#else
-    int flags = 0;
-    #ifdef MSG_NOSIGNAL
-      flags = MSG_NOSIGNAL;
-    #endif
-    int sent = ::send(socket, data, count, flags);
-#endif
-    if (sent <= 0) {
-#ifndef _WIN32
-      if (sent < 0 && errno == EINTR) continue;
-#endif
-      return false;
-    }
-    data += sent;
-    length -= static_cast< ::std::size_t>(sent);
-  }
-  return true;
-}
-
-static ::std::string number_string(unsigned long value) {
-  char buffer[64];
-  ::std::sprintf(buffer, "%lu", value);
-  return buffer;
-}
-
-static ::std::string lowercase(::std::string text) {
-  for (::std::size_t index = 0; index < text.size(); ++index)
-    text[index] = static_cast<char>(::std::tolower(static_cast<unsigned char>(text[index])));
-  return text;
-}
-
-#ifdef _WIN32
-static ::std::string utf8(file_path const& text) {
-  if (text.empty()) return "";
-  int length = ::WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), NULL, 0, NULL, NULL);
-  if (length <= 0) return "";
-  ::std::string output(static_cast< ::std::size_t>(length), '\0');
-  ::WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), &output[0], length, NULL, NULL);
-  return output;
-}
-
-static bool from_utf8(::std::string const& input, file_path& output) {
-  output.clear();
-  if (input.empty()) return true;
-  int length = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, input.data(), static_cast<int>(input.size()), NULL, 0);
-  if (length <= 0) return false;
-  output.resize(static_cast< ::std::size_t>(length));
-  return ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, input.data(), static_cast<int>(input.size()), &output[0], length) == length;
-}
-
-static ::std::string native_path(file_path const& path) { return utf8(path); }
-#else
-static ::std::string native_path(file_path const& path) { return path; }
-#endif
-
-static ::std::string html_escape(::std::string const& input) {
-  ::std::string output;
-  for (::std::size_t index = 0; index < input.size(); ++index) {
-    switch (input[index]) {
-      case '&': output += "&amp;"; break;
-      case '<': output += "&lt;"; break;
-      case '>': output += "&gt;"; break;
-      case '"': output += "&quot;"; break;
-      case '\'': output += "&#x27;"; break;
-      default: output += input[index]; break;
-    }
-  }
-  return output;
-}
-
-static bool url_safe(unsigned char value) {
-  return (value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z') ||
-    (value >= '0' && value <= '9') || value == '-' || value == '_' || value == '.' || value == '~';
-}
-
-static ::std::string url_encode(::std::string const& input) {
-  char const hex[] = "0123456789ABCDEF";
-  ::std::string output;
-  for (::std::size_t index = 0; index < input.size(); ++index) {
-    unsigned char value = static_cast<unsigned char>(input[index]);
-    if (url_safe(value)) output += static_cast<char>(value);
-    else {
-      output += '%';
-      output += hex[value >> 4];
-      output += hex[value & 15];
-    }
-  }
-  return output;
-}
-
-static int hex_digit(char value) {
-  if (value >= '0' && value <= '9') return value - '0';
-  if (value >= 'a' && value <= 'f') return value - 'a' + 10;
-  if (value >= 'A' && value <= 'F') return value - 'A' + 10;
-  return -1;
-}
-
-static bool url_decode(::std::string const& input, ::std::string& output) {
-  output.clear();
-  for (::std::size_t index = 0; index < input.size(); ++index) {
-    unsigned char value = static_cast<unsigned char>(input[index]);
-    if (value == '%') {
-      if (index + 2 >= input.size()) return false;
-      int upper = hex_digit(input[index + 1]);
-      int lower = hex_digit(input[index + 2]);
-      if (upper < 0 || lower < 0) return false;
-      value = static_cast<unsigned char>((upper << 4) | lower);
-      index += 2;
-    }
-    if (!value || value == '\\') return false; // Reject NUL and platform-ambiguous separators.
-    output += static_cast<char>(value);
-  }
-  return true;
-}
-
-static file_path append_path(file_path const& parent, file_path const& name) {
-#ifdef _WIN32
-  wchar_t separator = L'\\';
-#else
-  char separator = '/';
-#endif
-  if (parent.empty()) return name;
-  if (parent[parent.size() - 1] == separator) return parent + name;
-  return parent + separator + name;
-}
-
-static bool resolve_path(::std::string const& url, file_path& output, ::std::string& canonical) {
-  // Decode BEFORE splitting: encoded slashes and traversal also get normalized.
-  ::std::string decoded;
-  if (url.empty() || url[0] != '/' || !url_decode(url, decoded)) return false;
-  ::std::vector< ::std::string> components;
-  ::std::size_t position = 0;
-  while (position < decoded.size()) {
-    ::std::size_t end = decoded.find('/', position);
-    if (end == ::std::string::npos) end = decoded.size();
-    ::std::string segment = decoded.substr(position, end - position);
-    if (segment == "..") {
-      if (!components.empty()) components.pop_back();
-    } else if (!segment.empty() && segment != ".") components.push_back(segment);
-    position = end + 1;
-  }
-  output = rootDirectory;
-  canonical = "/";
-  for (::std::size_t index = 0; index < components.size(); ++index) {
-#ifdef _WIN32
-    file_path name;
-    if (!from_utf8(components[index], name) || name.find(L':') != file_path::npos) return false;
-    // Win32 strips trailing dots/spaces from path components. Disallow aliases.
-    if (name.empty() || name[name.size() - 1] == L'.' || name[name.size() - 1] == L' ') return false;
-#else
-    file_path name = components[index];
-#endif
-    output = append_path(output, name);
-    canonical += url_encode(components[index]);
-    if (index + 1 != components.size()) canonical += '/';
-  }
-  if (!decoded.empty() && decoded[decoded.size() - 1] == '/' && canonical[canonical.size() - 1] != '/') canonical += '/';
-  return true;
-}
-
-static bool is_directory(file_path const& path) {
-#ifdef _WIN32
-  DWORD attributes = ::GetFileAttributesW(path.c_str());
-  return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
-  struct stat attributes = {};
-  return ::stat(path.c_str(), &attributes) == 0 && S_ISDIR(attributes.st_mode);
-#endif
-}
-
-static bool is_regular_file(file_path const& path, file_size& size) {
-#ifdef _WIN32
-  WIN32_FILE_ATTRIBUTE_DATA attributes = {};
-  if (!::GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &attributes) ||
-      (attributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) return false;
-  size = (static_cast<file_size>(attributes.nFileSizeHigh) << 32) | attributes.nFileSizeLow;
-  return true;
-#else
-  struct stat attributes = {};
-  if (::stat(path.c_str(), &attributes) != 0 || !S_ISREG(attributes.st_mode)) return false;
-  size = static_cast<file_size>(attributes.st_size);
-  return true;
-#endif
-}
-
-static ::FILE* open_file(file_path const& path) {
-#ifdef _WIN32
-  return ::_wfopen(path.c_str(), L"rb");
-#else
-  return ::std::fopen(path.c_str(), "rb");
-#endif
-}
-
-struct directory_entry {
-  ::std::string name;
-  bool directory;
+/* ... */
+struct directory /* final */ {
+  char *name; // ->> Directory names are stored as UTF-8 bytes on Windows and native bytes on POSIX
+  bool  directory;
 };
 
-static bool entry_less(directory_entry const& first, directory_entry const& second) {
-  return lowercase(first.name) < lowercase(second.name);
-}
+struct string /* final */ {
+  char         *value;
+  ::std::size_t capacity;
+  ::std::size_t length;
 
-static bool list_directory(file_path const& path, ::std::vector<directory_entry>& entries) {
-#ifdef _WIN32
-  WIN32_FIND_DATAW item = {};
-  file_path wildcard = append_path(path, L"*");
-  HANDLE search = ::FindFirstFileW(wildcard.c_str(), &item);
-  if (search == INVALID_HANDLE_VALUE) return false;
-  do {
-    if (::wcscmp(item.cFileName, L".") == 0 || ::wcscmp(item.cFileName, L"..") == 0) continue;
-    directory_entry entry = { utf8(item.cFileName), (item.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 };
-    entries.push_back(entry);
-  } while (::FindNextFileW(search, &item));
-  ::FindClose(search);
-#else
-  DIR* directory = ::opendir(path.c_str());
-  if (!directory) return false;
-  struct dirent* item = NULL;
-  while ((item = ::readdir(directory)) != NULL) {
-    if (::std::strcmp(item->d_name, ".") == 0 || ::std::strcmp(item->d_name, "..") == 0) continue;
-    file_path child = append_path(path, item->d_name);
-    directory_entry entry = { item->d_name, is_directory(child) };
-    entries.push_back(entry);
-  }
-  ::closedir(directory);
-#endif
-  ::std::sort(entries.begin(), entries.end(), entry_less);
-  return true;
-}
+  /* ... */
+  inline  string() /* noexcept */ : value(NULL), capacity(0u), length(0u) {}
+  inline ~string() /* noexcept */ { ::std::free(value); }
 
-static ::std::string mime_type(file_path const& path) {
-  ::std::string name = lowercase(native_path(path));
-  ::std::size_t dot = name.find_last_of('.');
-  ::std::string extension = dot == ::std::string::npos ? "" : name.substr(dot);
-  if (extension == ".avif") return "image/avif";
-  if (extension == ".bmp") return "image/bmp";
-  if (extension == ".css") return "text/css";
-  if (extension == ".csv") return "text/csv";
-  if (extension == ".gif") return "image/gif";
-  if (extension == ".htm" || extension == ".html") return "text/html";
-  if (extension == ".ico") return "image/x-icon";
-  if (extension == ".jpeg" || extension == ".jpg") return "image/jpeg";
-  if (extension == ".js" || extension == ".mjs") return "text/javascript";
-  if (extension == ".json" || extension == ".map") return "application/json";
-  if (extension == ".mp3") return "audio/mpeg";
-  if (extension == ".mp4") return "video/mp4";
-  if (extension == ".otf") return "font/otf";
-  if (extension == ".pdf") return "application/pdf";
-  if (extension == ".png") return "image/png";
-  if (extension == ".svg") return "image/svg+xml";
-  if (extension == ".txt" || extension == ".log" || extension == ".py" || extension == ".cpp" || extension == ".h") return "text/plain";
-  if (extension == ".wasm") return "application/wasm";
-  if (extension == ".webp") return "image/webp";
-  if (extension == ".woff") return "font/woff";
-  if (extension == ".woff2") return "font/woff2";
-  if (extension == ".xml") return "application/xml";
-  if (extension == ".zip") return "application/zip";
-  return "application/octet-stream";
-}
+  /* ... */
+  inline bool append(char const character) /* noexcept */ { return this -> append(&character, 1u); }
+  inline bool append(char const text[])    /* noexcept */ { return this -> append(text, ::std::strlen(text)); }
 
-static ::std::string http_date() {
-  char buffer[64] = {};
-  ::std::time_t now = ::std::time(NULL);
-  ::std::tm utc = {};
-#ifdef _WIN32
-  __time64_t timestamp = static_cast<__time64_t>(now);
-  if (::_gmtime64_s(&utc, &timestamp) == 0)
-    ::std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", &utc);
-#else
-  if (::gmtime_r(&now, &utc))
-    ::std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", &utc);
-#endif
-  return buffer;
-}
+  bool append(char const text[], ::std::size_t const count) /* noexcept */ {
+    if (SIZE_MAX - this -> length - 1u < count)
+    return false;
 
-static ::std::string unsigned64_string(file_size value) {
-  if (!value) return "0";
-  ::std::string output;
-  while (value) {
-    output.insert(output.begin(), static_cast<char>('0' + value % 10));
-    value /= 10;
-  }
-  return output;
-}
+    if (capacity < count + length + 1u) {
+      ::std::size_t nextCapacity = 0u == this -> capacity ? 64u : this -> capacity;
 
-static bool response_headers(socket_handle socket, int status, char const* label,
-                             ::std::string const& type, file_size size,
-                             ::std::string const& extra = "") {
-  ::std::string header = "HTTP/1.0 " + number_string(static_cast<unsigned long>(status)) + " " + label + "\r\n";
-  header += "Server: Localhost\r\n";
-  header += "Date: " + http_date() + "\r\n";
-  header += "Content-Type: " + type + "\r\n";
-  header += "Content-Length: " + unsigned64_string(size) + "\r\n";
-  header += "X-Content-Type-Options: nosniff\r\n";
-  header += "Connection: close\r\n";
-  header += extra;
-  header += "\r\n";
-  return send_all(socket, header.data(), header.size());
-}
-
-static void send_document(socket_handle socket, int status, char const* label, ::std::string const& document, bool head,
-                          ::std::string const& extra = "") {
-  if (response_headers(socket, status, label, "text/html; charset=utf-8", document.size(), extra) && !head)
-    send_all(socket, document.data(), document.size());
-}
-
-static void send_error(socket_handle socket, int status, char const* label, bool head) {
-  ::std::string document = "<!doctype html><html><head><meta charset=\"utf-8\"><title>";
-  document += number_string(static_cast<unsigned long>(status)) + " " + label;
-  document += "</title></head><body><h1>" + number_string(static_cast<unsigned long>(status)) + " " + label + "</h1></body></html>\n";
-  send_document(socket, status, label, document, head);
-}
-
-static void set_client_timeout(socket_handle socket) {
-#ifdef _WIN32
-  DWORD timeout = 10000;
-  ::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char const*>(&timeout), sizeof(timeout));
-  ::setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char const*>(&timeout), sizeof(timeout));
-#else
-  timeval timeout = { 10, 0 };
-  ::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-  ::setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-  #ifdef SO_NOSIGPIPE
-    int enabled = 1;
-    ::setsockopt(socket, SOL_SOCKET, SO_NOSIGPIPE, &enabled, sizeof(enabled));
-  #endif
-#endif
-}
-
-static void handle_request(socket_handle client) {
-  set_client_timeout(client);
-  ::std::string request;
-  char buffer[4096];
-  while (request.size() < MAX_REQUEST_BYTES && request.find("\r\n\r\n") == ::std::string::npos &&
-         request.find("\n\n") == ::std::string::npos) {
-    int count = ::recv(client, buffer, static_cast<int>(sizeof(buffer)), 0);
-    if (count <= 0) return;
-    request.append(buffer, static_cast< ::std::size_t>(count));
-  }
-  if (request.find("\r\n\r\n") == ::std::string::npos && request.find("\n\n") == ::std::string::npos) {
-    send_error(client, 431, "Request Header Fields Too Large", false);
-    return;
-  }
-  ::std::size_t lineEnd = request.find('\n');
-  if (lineEnd == ::std::string::npos || lineEnd > 8192) { send_error(client, 414, "URI Too Long", false); return; }
-  ::std::string line = request.substr(0, lineEnd);
-  if (!line.empty() && line[line.size() - 1] == '\r') line.erase(line.size() - 1);
-  ::std::size_t firstSpace = line.find(' ');
-  ::std::size_t secondSpace = firstSpace == ::std::string::npos ? ::std::string::npos : line.find(' ', firstSpace + 1);
-  if (firstSpace == ::std::string::npos || secondSpace == ::std::string::npos || line.find(' ', secondSpace + 1) != ::std::string::npos) {
-    send_error(client, 400, "Bad Request", false);
-    return;
-  }
-  ::std::string method = line.substr(0, firstSpace);
-  bool head = method == "HEAD";
-  if (method != "GET" && !head) { send_error(client, 501, "Not Implemented", false); return; }
-  ::std::string target = line.substr(firstSpace + 1, secondSpace - firstSpace - 1);
-  for (::std::size_t index = 0; index < target.size(); ++index)
-    if (static_cast<unsigned char>(target[index]) < 0x20 || target[index] == 0x7f) {
-      send_error(client, 400, "Bad Request", head);
-      return;
-    }
-  if (target.empty() || target[0] != '/') { send_error(client, 400, "Bad Request", head); return; }
-  ::std::size_t delimiter = target.find_first_of("?#");
-  ::std::string uriPath = target.substr(0, delimiter);
-  ::std::string suffix = delimiter == ::std::string::npos ? "" : target.substr(delimiter);
-  file_path path;
-  ::std::string canonical;
-  if (!resolve_path(uriPath, path, canonical)) { send_error(client, 400, "Bad Request", head); return; }
-
-  if (is_directory(path)) {
-    if (uriPath[uriPath.size() - 1] != '/') {
-      ::std::string location = canonical;
-      if (location[location.size() - 1] != '/') location += '/';
-      location += suffix;
-      ::std::string html = "<!doctype html><html><body><a href=\"" + html_escape(location) + "\">Moved Permanently</a></body></html>\n";
-      send_document(client, 301, "Moved Permanently", html, head, "Location: " + location + "\r\n");
-      return;
-    }
-#ifdef _WIN32
-    file_path indexPaths[] = { append_path(path, L"index.html"), append_path(path, L"index.htm") };
-#else
-    file_path indexPaths[] = { append_path(path, "index.html"), append_path(path, "index.htm") };
-#endif
-    for (int index = 0; index < 2; ++index) {
-      file_size bytes = 0;
-      if (is_regular_file(indexPaths[index], bytes)) {
-        path = indexPaths[index];
+      // ...
+      for (::std::size_t const required = count + length + 1u; nextCapacity < required; nextCapacity *= 2u)
+      if (SIZE_MAX / 2u < nextCapacity) {
+        nextCapacity = required;
         break;
       }
+
+      if (void *const allocation = ::std::realloc(this -> value, nextCapacity)) {
+        this -> capacity = nextCapacity;
+        this -> value    = static_cast<char*>(allocation);
+      } else return false;
     }
-    if (is_directory(path)) {
-      ::std::vector<directory_entry> entries;
-      if (!list_directory(path, entries)) { send_error(client, 403, "Forbidden", head); return; }
-      ::std::string html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Directory listing for ";
-      html += html_escape(uriPath) + "</title></head><body><h1>Directory listing for " + html_escape(uriPath);
-      html += "</h1><hr><ul>\n";
-      for (::std::size_t index = 0; index < entries.size(); ++index) {
-        ::std::string filename = entries[index].name + (entries[index].directory ? "/" : "");
-        ::std::string link = url_encode(entries[index].name) + (entries[index].directory ? "/" : "");
-        html += "<li><a href=\"" + html_escape(link) + "\">" + html_escape(filename) + "</a></li>\n";
-      }
-      html += "</ul><hr></body></html>\n";
-      send_document(client, 200, "OK", html, head);
-      return;
-    }
+
+    if (count) { (void) ::std::memmove(&this -> value[this -> length], text, count); }
+    value[length += count] = '\0';
+
+    return true;
   }
 
-  file_size size = 0;
-  if (!is_regular_file(path, size)) { send_error(client, 404, "File Not Found", head); return; }
-  ::FILE* stream = open_file(path);
-  if (!stream) { send_error(client, 403, "Forbidden", head); return; }
-  if (response_headers(client, 200, "OK", mime_type(path), size) && !head) {
-    while (!::std::feof(stream)) {
-      ::std::size_t count = ::std::fread(buffer, 1, sizeof(buffer), stream);
-      if (!count || !send_all(client, buffer, count)) break;
-    }
+  inline void clear() /* noexcept */ {
+    this -> length = 0u;
+    if (NULL != this -> value) this -> value[0] = '\0';
   }
-  ::std::fclose(stream);
-}
 
-static bool worker_begin() {
-#ifdef _WIN32
-  LONG current = 0;
-  do {
-    current = ::InterlockedCompareExchange(&activeWorkers, 0, 0);
-    if (current >= MAX_WORKERS) return false;
-  } while (::InterlockedCompareExchange(&activeWorkers, current + 1, current) != current);
-  return true;
-#else
-  ::pthread_mutex_lock(&workerMutex);
-  bool accepted = activeWorkers < MAX_WORKERS;
-  if (accepted) ++activeWorkers;
-  ::pthread_mutex_unlock(&workerMutex);
-  return accepted;
-#endif
-}
-
-static void worker_end() {
-#ifdef _WIN32
-  ::InterlockedDecrement(&activeWorkers);
-#else
-  ::pthread_mutex_lock(&workerMutex);
-  --activeWorkers;
-  ::pthread_mutex_unlock(&workerMutex);
-#endif
-}
-
-#ifdef _WIN32
-static DWORD WINAPI client_thread(void* parameter) {
-  socket_handle client = static_cast<socket_handle>(reinterpret_cast<UINT_PTR>(parameter));
-  handle_request(client);
-  close_socket(client);
-  worker_end();
-  return 0;
-}
-#else
-static void* client_thread(void* parameter) {
-  socket_handle client = *static_cast<socket_handle*>(parameter);
-  delete static_cast<socket_handle*>(parameter);
-  handle_request(client);
-  close_socket(client);
-  worker_end();
-  return NULL;
-}
-#endif
-
-static void start_client(socket_handle client) {
-  if (!worker_begin()) {
-    close_socket(client);
-    return;
+  inline bool set(char const text[]) /* noexcept */ {
+    this -> clear();
+    return this -> append(text);
   }
-#ifdef _WIN32
-  HANDLE thread = ::CreateThread(NULL, 0, client_thread, reinterpret_cast<void*>(static_cast<UINT_PTR>(client)), 0, NULL);
-  if (thread) ::CloseHandle(thread);
-  else { close_socket(client); worker_end(); }
-#else
-  pthread_t thread;
-  socket_handle* parameter = new socket_handle(client);
-  if (::pthread_create(&thread, NULL, client_thread, parameter) == 0) ::pthread_detach(thread);
-  else { delete parameter; close_socket(client); worker_end(); }
+};
+
+/* ... */
+enum server_limit {
+  ASCII_DELETE                 = 0x7Fu,
+  ASCII_SPACE                  = 0x20u,
+  CONTROL_BACKLOG              = 4u,
+  CONTROL_NAME_MAXIMUM_LENGTH  = 80u,
+  HEADER_MAXIMUM_LENGTH        = 16384u,
+  LISTEN_BACKLOG               = 64u,
+  PORT_MAXIMUM                 = 65535u,
+  REQUEST_LINE_MAXIMUM_LENGTH  = 8192u,
+  SOCKET_SEND_LIMIT            = 32768u,
+  TIMEOUT_CLIENT_SECONDS       = 10u,
+  TIMEOUT_CONTROL_MICROSECONDS = 250000u,
+  TIMEOUT_CONTROL_SECONDS      = 1u,
+  TIMEOUT_SELECT_MICROSECONDS  = 200000u,
+  TIMEOUT_SOCKET_MILLISECONDS  = TIMEOUT_CLIENT_SECONDS * 1000u,
+  WORKER_MAXIMUM               = 128u
+};
+
+enum http_status /* : ::uint_least16_t : 9 */ {
+  HTTP_BAD_REQUEST         = 400u,
+  HTTP_FORBIDDEN           = 403u,
+  HTTP_METHOD_NOT_ALLOWED  = 405u,
+  HTTP_NO_CONTENT          = 204u,
+  HTTP_NOT_FOUND           = 404u,
+  HTTP_OK                  = 200u,
+  HTTP_REDIRECT            = 301u,
+  HTTP_REQUEST_TOO_LARGE   = 431u,
+  HTTP_REQUEST_TOO_LONG    = 414u,
+  HTTP_UNSUPPORTED_METHOD  = 501u,
+  HTTP_UNSUPPORTED_VERSION = 505u
+};
+
+#if defined _WIN32
+  typedef ::SOCKET socket_t; // --> WinSock handle
+
+  static int      const INVALID_COMMAND_LINE  = EXIT_FAILURE + 1;
+  static socket_t const INVALID_SOCKET_HANDLE = INVALID_SOCKET;
+
+  static ::HANDLE        localhostMutex    = NULL;
+  static ::HANDLE        localhostShutdown = NULL;
+  static ::LONG volatile workerCount       = 0L;
+#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  typedef int socket_t; // --> POSIX descriptor
+
+  static int      const INVALID_COMMAND_LINE  = EXIT_FAILURE + 1;
+  static socket_t const INVALID_SOCKET_HANDLE = -1;
+
+  static socket_t                control                                                                  = INVALID_SOCKET_HANDLE;
+  static char                    controlPath[sizeof static_cast<struct ::sockaddr_un*>(NULL) -> sun_path] = {};
+  static ::sig_atomic_t volatile localhostShutdown                                                        = static_cast< ::sig_atomic_t>(false);
+  static long                    workerCount                                                              = 0L;
+  static ::pthread_mutex_t       workerMutex                                                              = PTHREAD_MUTEX_INITIALIZER;
 #endif
+static socket_t         listeners[2] = {INVALID_SOCKET_HANDLE, INVALID_SOCKET_HANDLE};
+static ::uint_least16_t port         = 8000u; // ->> HTTP/TCP ports fit in at least 16 bits
+static struct string    root;
+
+extern "C" {
+  static bool         append_html        (struct string*, char const[])                                                     /* noexcept */;
+  static bool         append_url         (struct string*, char const[])                                                     /* noexcept */;
+  static void         close_control      ()                                                                                 /* noexcept */;
+  static void         close_socket       (socket_t)                                                                         /* noexcept */;
+  static void         finish             ()                                                                                 /* noexcept */;
+  static void         handle_request     (socket_t)                                                                         /* noexcept */;
+  static bool         is_directory       (char const[])                                                                     /* noexcept */;
+  static bool         is_static_file     (char const[], void*)                                                              /* noexcept */;
+  static bool         list_directory     (char const[], struct directory*[], ::std::size_t*)                                /* noexcept */;
+  static char const*  mime_type          (char const[])                                                                     /* noexcept */;
+  static ::std::FILE* open_file          (char const[])                                                                     /* noexcept */;
+  static socket_t     open_listener      (unsigned char const)                                                              /* noexcept */;
+  static int          request_shutdown   ()                                                                                 /* noexcept */;
+  static bool         resolve_path       (char const[], struct string*, struct string*)                                     /* noexcept */;
+  static bool         send_all           (socket_t, char const[], ::std::size_t)                                            /* noexcept */;
+  static void         send_document      (socket_t, unsigned, char const[], struct string const*, bool const, char const[]) /* noexcept */;
+  static void         send_error         (socket_t, unsigned, char const[], bool const)                                     /* noexcept */;
+  static void         set_client_timeout (socket_t)                                                                         /* noexcept */;
+  static void         start_client       (socket_t)                                                                         /* noexcept */;
+  static bool         start_control      ()                                                                                 /* noexcept */;
+  static void         worker_end         ()                                                                                 /* noexcept */;
+  #if defined _WIN32
+    static bool     response_headers(socket_t, unsigned, char const[], char const[], ::ULONGLONG, char const[]) /* noexcept */;
+    static wchar_t* widen_path      (char const[])                                                              /* noexcept */;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    static bool control_name    (struct string*)                                                        /* noexcept */;
+    static bool response_headers(socket_t, unsigned, char const[], char const[], ::off_t, char const[]) /* noexcept */;
+  #endif
 }
 
-static socket_handle open_listener(bool ipv6) {
-  socket_handle server = ::socket(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (server == INVALID_SOCKET_HANDLE) return INVALID_SOCKET_HANDLE;
-#ifdef _WIN32
-  // Windows: an exclusive listener prevents socket hijacking by another process.
-  BOOL exclusive = TRUE;
-  ::setsockopt(server, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<char const*>(&exclusive), sizeof(exclusive));
-#else
-  int reuse = 1;
-  ::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-#endif
-  if (ipv6) {
-    int ipv6Only = 1;
-#ifdef _WIN32
-    ::setsockopt(server, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<char const*>(&ipv6Only), sizeof(ipv6Only));
-#else
-    ::setsockopt(server, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6Only, sizeof(ipv6Only));
-#endif
-    sockaddr_in6 address = {};
-    address.sin6_family = AF_INET6;
-    address.sin6_port = ::htons(port);
-    address.sin6_addr = in6addr_any;
-    if (::bind(server, reinterpret_cast<sockaddr const*>(&address), sizeof(address)) != 0 ||
-        ::listen(server, 64) != 0) { close_socket(server); return INVALID_SOCKET_HANDLE; }
-  } else {
-    sockaddr_in address = {};
-    address.sin_family = AF_INET;
-    address.sin_port = ::htons(port);
-    address.sin_addr.s_addr = ::htonl(INADDR_ANY);
-    if (::bind(server, reinterpret_cast<sockaddr const*>(&address), sizeof(address)) != 0 ||
-        ::listen(server, 64) != 0) { close_socket(server); return INVALID_SOCKET_HANDLE; }
+/* ... */
+static bool append_html(struct string* const html, char const text[]) /* noexcept */ {
+  for (::std::size_t index = 0u; '\0' != text[index]; ++index)
+  switch (text[index]) {
+    case '&':  if (not html -> append("&amp;"))     return false; break;
+    case '<':  if (not html -> append("&lt;"))      return false; break;
+    case '>':  if (not html -> append("&gt;"))      return false; break;
+    case '"':  if (not html -> append("&quot;"))    return false; break;
+    case '\'': if (not html -> append("&#x27;"))    return false; break;
+    default:   if (not html -> append(text[index])) return false;
   }
-  return server;
-}
 
-#ifdef _WIN32
-static int request_shutdown() {
-  HANDLE event = ::OpenEventW(EVENT_MODIFY_STATE, FALSE, EVENT_NAME);
-  if (!event) { log_message("Localhost is not running."); return 1; }
-  BOOL success = ::SetEvent(event);
-  ::CloseHandle(event);
-  if (success) log_message("Localhost shutdown requested.");
-  return success ? 0 : 1;
-}
-
-static bool start_control() {
-  instanceMutex = ::CreateMutexW(NULL, FALSE, MUTEX_NAME);
-  if (!instanceMutex) return false;
-  if (::GetLastError() == ERROR_ALREADY_EXISTS) {
-    log_message("Localhost is already running.");
-    ::CloseHandle(instanceMutex);
-    instanceMutex = NULL;
-    return false;
-  }
-  shutdownEvent = ::CreateEventW(NULL, TRUE, FALSE, EVENT_NAME);
-  if (!shutdownEvent) {
-    ::CloseHandle(instanceMutex);
-    instanceMutex = NULL;
-    return false;
-  }
   return true;
 }
 
-static void close_control() {
-  if (shutdownEvent) ::CloseHandle(shutdownEvent);
-  if (instanceMutex) ::CloseHandle(instanceMutex);
-  shutdownEvent = instanceMutex = NULL;
-}
-#else
-static void signal_stop(int) { stopping = 1; }
+static bool append_url(struct string* const output, char const text[]) /* noexcept */ {
+  for (::std::size_t index = 0u; '\0' != text[index]; ++index) {
+    unsigned char const character = static_cast<unsigned char>(text[index]);
 
-static ::std::string control_name() {
-  char suffix[64];
-  ::std::sprintf(suffix, "lapysdev-localhost-%lu.sock", static_cast<unsigned long>(::getuid()));
-  char const* runtimeDirectory = ::std::getenv("XDG_RUNTIME_DIR");
-  ::std::string prefix = "/tmp";
-  if (runtimeDirectory && *runtimeDirectory) {
-    struct stat directory = {};
-    if (::stat(runtimeDirectory, &directory) == 0 && S_ISDIR(directory.st_mode) &&
-        ::access(runtimeDirectory, W_OK | X_OK) == 0) prefix = runtimeDirectory;
-  }
-  if (prefix[prefix.size() - 1] != '/') prefix += '/';
-  return prefix + suffix;
-}
+    // ->> Non-ASCII UTF-8 bytes are percent-encoded byte-by-byte, preserving emoji
+    if (character == '-' or character == '_' or character == '.' or character == '~' or (character >= 'a' and character <= 'z') or (character >= 'A' and character <= 'Z') or (character >= '0' and character <= '9')) {
+      if (not output -> append(static_cast<char>(character)))
+      return false;
+    }
 
-static bool make_control_address(sockaddr_un& address) {
-  ::std::memset(&address, 0, sizeof(address));
-  controlPath = control_name();
-  if (controlPath.size() >= sizeof(address.sun_path)) return false;
-  address.sun_family = AF_UNIX;
-  ::std::memcpy(address.sun_path, controlPath.c_str(), controlPath.size() + 1);
-  return true;
-}
-
-static int request_shutdown() {
-  sockaddr_un address = {};
-  if (!make_control_address(address)) return 1;
-  socket_handle client = ::socket(AF_UNIX, SOCK_STREAM, 0);
-  if (client == INVALID_SOCKET_HANDLE) return 1;
-  bool success = ::connect(client, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0 &&
-                 send_all(client, "S", 1);
-  if (success) {
-    timeval controlTimeout = { 0, 1000000 };
-    ::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &controlTimeout, sizeof(controlTimeout));
-    char confirmation = '\0';
-    success = ::recv(client, &confirmation, 1, 0) == 1 && confirmation == 'K';
-  }
-  close_socket(client);
-  log_message(success ? "Localhost shutdown requested." : "Localhost is not running.");
-  return success ? 0 : 1;
-}
-
-static bool start_control() {
-  sockaddr_un address = {};
-  if (!make_control_address(address)) return false;
-  controlSocket = ::socket(AF_UNIX, SOCK_STREAM, 0);
-  if (controlSocket == INVALID_SOCKET_HANDLE) return false;
-  mode_t oldMask = ::umask(0077);
-  int bound = ::bind(controlSocket, reinterpret_cast<sockaddr*>(&address), sizeof(address));
-  if (bound < 0 && errno == EADDRINUSE) {
-    socket_handle probe = ::socket(AF_UNIX, SOCK_STREAM, 0);
-    bool running = probe != INVALID_SOCKET_HANDLE &&
-      ::connect(probe, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0;
-    close_socket(probe);
-    if (running) log_message("Localhost is already running.");
     else {
-      struct stat entry = {};
-      if (::lstat(controlPath.c_str(), &entry) == 0 && S_ISSOCK(entry.st_mode) && entry.st_uid == ::geteuid()) {
-        ::unlink(controlPath.c_str());
-        bound = ::bind(controlSocket, reinterpret_cast<sockaddr*>(&address), sizeof(address));
-      }
+      if (not output -> append('%')) return false;
+      if (not output -> append("0123456789ABCDEF"[(character >> 4u) & 0x0Fu])) return false;
+      if (not output -> append("0123456789ABCDEF"[(character >> 0u) & 0x0Fu])) return false;
     }
   }
-  ::umask(oldMask);
-  if (bound < 0 || ::listen(controlSocket, 4) != 0) {
-    close_socket(controlSocket);
-    controlSocket = INVALID_SOCKET_HANDLE;
-    return false;
-  }
+
   return true;
 }
 
-static void close_control() {
-  close_socket(controlSocket);
-  controlSocket = INVALID_SOCKET_HANDLE;
-  if (!controlPath.empty()) ::unlink(controlPath.c_str());
-}
+#if defined _WIN32
+  static unsigned __stdcall client_thread(void* const parameter) /* noexcept */ {
+    socket_t const client = static_cast<socket_t>(reinterpret_cast< ::UINT_PTR>(parameter));
+
+    handle_request(client);
+    close_socket(client);
+    worker_end();
+    return 0u;
+  }
+#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  static void* client_thread(void* const parameter) /* noexcept */ {
+    socket_t const client = *static_cast<socket_t*>(parameter);
+
+    ::std::free(parameter);
+    handle_request(client);
+    close_socket(client);
+    worker_end();
+    return NULL;
+  }
 #endif
 
-static void cleanup() {
-  for (int index = 0; index < 2; ++index) {
+static void close_control() /* noexcept */ {
+  #if defined _WIN32
+    if (NULL != localhostMutex) (void) ::CloseHandle(localhostMutex);
+    if (NULL != localhostShutdown) (void) ::CloseHandle(localhostShutdown);
+    localhostMutex    = NULL;
+    localhostShutdown = NULL;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    close_socket(control);
+    if ('\0' != *controlPath) (void) ::unlink(controlPath);
+    control        = INVALID_SOCKET_HANDLE;
+    *controlPath   = '\0';
+  #endif
+}
+
+static void close_socket(socket_t const socket) /* noexcept */ {
+  if (INVALID_SOCKET_HANDLE != socket)
+  #if defined _WIN32
+    (void) ::closesocket(socket);
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    (void) ::close(socket);
+  #endif
+}
+
+#if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  static bool control_name(struct string* const name) /* noexcept */ {
+    struct ::stat attributes = {};
+    char const   *directory  = ::std::getenv("XDG_RUNTIME_DIR");
+    char          suffix[CONTROL_NAME_MAXIMUM_LENGTH];
+
+    // ... ->> An owner-specific local-domain socket lets a second instance request shutdown
+    directory = NULL == directory or '\0' == *directory or 0 != ::stat(directory, &attributes) or not S_ISDIR(attributes.st_mode) or 0 != ::access(directory, W_OK | X_OK) ? "/tmp" : directory; // ->> Runtime directory is preferred with `/tmp` as fallback
+    (void) ::std::sprintf(suffix, "lapysdev-localhost-%lu.sock", static_cast<unsigned long>(::getuid()));
+
+    if (not name -> append(directory))                                                                     return false;
+    if (0u != name -> length and '/' != name -> value[name -> length - 1u]) { if (not name -> append('/')) return false; }
+    if (not name -> append(suffix))                                                                        return false;
+
+    return name -> length < sizeof controlPath;
+  }
+#endif
+
+static void finish() /* noexcept */ {
+  for (unsigned char index = 0u; index != sizeof listeners / sizeof(socket_t); ++index) {
     close_socket(listeners[index]);
     listeners[index] = INVALID_SOCKET_HANDLE;
   }
+
   close_control();
-#ifdef _WIN32
-  ::WSACleanup();
-#endif
+
+  #if defined _WIN32
+    (void) ::WSACleanup();
+  #endif
 }
 
-static int run_server() {
-  if (!is_directory(rootDirectory)) {
-    log_message("Error: --root does not name an existing directory.");
-    return 1;
+static void handle_request(socket_t const client) /* noexcept */ {
+  #if defined _WIN32
+    ::ULONGLONG size = 0u;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    ::off_t size = 0;
+  #endif
+  struct /* final */ {
+    ::std::size_t length;
+    char          memory[HEADER_MAXIMUM_LENGTH + 1u];
+    char         *lineEnd;
+    char const   *method;
+    char         *spaces[2];
+    char const   *target;
+    char const   *version;
+  }             request   = {0u, {}, NULL, NULL, {NULL, NULL}, NULL, NULL};
+  ::std::size_t headerEnd = 0u;
+
+  // Header
+  set_client_timeout(client); // ->> One request per connection
+
+  while (HEADER_MAXIMUM_LENGTH > request.length) {
+    #if defined _WIN32
+      int const received = ::recv(client, &request.memory[request.length], static_cast<int>(HEADER_MAXIMUM_LENGTH - request.length), 0);
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      ::ssize_t const received = ::recv(client, &request.memory[request.length], HEADER_MAXIMUM_LENGTH - request.length, 0);
+    #endif
+
+    // ...
+    if (received <= 0)
+    return;
+
+    request.length                += static_cast< ::std::size_t>(received);
+    request.memory[request.length] = '\0';
+
+    if (char *const marker = ::std::strstr(request.memory, "\r\n" "\r\n")) {
+      headerEnd = static_cast< ::std::size_t>(marker - request.memory) + 4u;
+      break;
+    }
+    if (char *const marker = ::std::strstr(request.memory, "\n" "\n")) {
+      headerEnd = static_cast< ::std::size_t>(marker - request.memory) + 2u;
+      break;
+    }
   }
-#ifdef _WIN32
-  WSADATA winsock = {};
-  if (::WSAStartup(MAKEWORD(2, 2), &winsock) != 0) {
-    log_message("Error: Winsock startup failed.");
-    return 1;
+
+  if (0u == headerEnd)
+  return send_error(client, HTTP_REQUEST_TOO_LARGE, "Request Header Fields Too Large", false);
+
+  request.lineEnd = ::std::strchr(request.memory, '\n');
+
+  if (NULL == request.lineEnd or REQUEST_LINE_MAXIMUM_LENGTH < request.lineEnd - request.memory)
+  return send_error(client, HTTP_REQUEST_TOO_LONG, "URI Too Long", false);
+
+  request.spaces[0]                                                                          =                             ::std::strchr(request.memory,        ' ');
+  request.spaces[1]                                                                          = NULL != request.spaces[0] ? ::std::strchr(request.spaces[0] + 1, ' ') : NULL;
+  request.lineEnd[request.lineEnd > request.memory and request.lineEnd[-1] == '\r' ? -1 : 0] = '\0';
+
+  if (NULL == request.spaces[0] or NULL == request.spaces[1] or NULL != ::std::strchr(request.spaces[1] + 1, ' '))
+  return send_error(client, HTTP_BAD_REQUEST, "Bad Request", false);
+
+  request.method       = request.memory;
+  request.spaces[0][0] = '\0';
+  request.spaces[1][0] = '\0';
+  request.target       = request.spaces[0] + 1;
+  request.version      = request.spaces[1] + 1;
+
+  if (0 != ::std::strcmp(request.version, "HTTP/1.0") and 0 != ::std::strcmp(request.version, "HTTP/1.1"))
+  return send_error(client, HTTP_UNSUPPORTED_VERSION, "HTTP Version Not Supported", 0 == ::std::strcmp(request.method, "HEAD"));
+
+  if (0 != ::std::strcmp(request.method, "GET") and 0 != ::std::strcmp(request.method, "HEAD") and 0 != ::std::strcmp(request.method, "OPTIONS") and 0 != ::std::strcmp(request.method, "TRACE"))
+  return send_error(client, 0 == ::std::strcmp(request.method, "CONNECT") ? HTTP_METHOD_NOT_ALLOWED : HTTP_UNSUPPORTED_METHOD, 0 == ::std::strcmp(request.method, "CONNECT") ? "Method Not Allowed" : "Not Implemented", false); // ->> `CONNECT` needs a bidirectional proxy tunnel, which this static file server does not implement
+
+  for (::std::size_t index = 0u; '\0' != request.target[index]; ++index) {
+    if (ASCII_DELETE == request.target[index] or ASCII_SPACE >= static_cast<unsigned char>(request.target[index]))
+    return send_error(client, HTTP_BAD_REQUEST, "Bad Request", 0 == ::std::strcmp(request.method, "HEAD"));
   }
-#endif
-  if (!start_control()) {
-    log_message("Error: unable to acquire the single-instance control endpoint.");
-#ifdef _WIN32
-    ::WSACleanup();
-#endif
-    return 1;
-  }
-  listeners[0] = open_listener(false);
-  listeners[1] = open_listener(true);
-  if (listeners[0] == INVALID_SOCKET_HANDLE || listeners[1] == INVALID_SOCKET_HANDLE) {
-    log_message("Error: failed to bind both IPv4 and IPv6 (check the port and IPv6 availability).");
-    cleanup();
-    return 1;
-  }
-  log_message(("Serving: " + native_path(rootDirectory)).c_str());
-  log_message(("IPv4: http://127.0.0.1:" + number_string(port)).c_str());
-  log_message(("IPv6: http://[::1]:" + number_string(port)).c_str());
-#ifndef _WIN32
-  struct sigaction action = {};
-  action.sa_handler = signal_stop;
-  ::sigemptyset(&action.sa_mask);
-  ::sigaction(SIGINT, &action, NULL);
-  ::sigaction(SIGTERM, &action, NULL);
-  ::signal(SIGPIPE, SIG_IGN);
-#endif
-  for (;;) {
-#ifdef _WIN32
-    if (::WaitForSingleObject(shutdownEvent, 0) == WAIT_OBJECT_0) break;
-#else
-    if (stopping) break;
-#endif
-    fd_set incoming;
-    FD_ZERO(&incoming);
-    FD_SET(listeners[0], &incoming);
-    FD_SET(listeners[1], &incoming);
-#ifndef _WIN32
-    FD_SET(controlSocket, &incoming);
-#endif
-    timeval timeout = { 0, 200000 };
-#ifdef _WIN32
-    int selected = ::select(0, &incoming, NULL, NULL, &timeout);
-#else
-    int largest = listeners[0] > listeners[1] ? listeners[0] : listeners[1];
-    if (controlSocket > largest) largest = controlSocket;
-    int selected = ::select(largest + 1, &incoming, NULL, NULL, &timeout);
-#endif
-    if (selected <= 0) continue;
-#ifndef _WIN32
-    if (FD_ISSET(controlSocket, &incoming)) {
-      socket_handle client = ::accept(controlSocket, NULL, NULL);
-      if (client != INVALID_SOCKET_HANDLE) {
-        timeval controlTimeout = { 0, 250000 };
-        ::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &controlTimeout, sizeof(controlTimeout));
-        char command = '\0';
-        if (::recv(client, &command, 1, 0) == 1 && command == 'S') {
-          send_all(client, "K", 1);
-          stopping = 1;
+
+  if (request.target[0] != '/' and not (0 == ::std::strcmp(request.method, "OPTIONS") and 0 == ::std::strcmp(request.target, "*")))
+  return send_error(client, HTTP_BAD_REQUEST, "Bad Request", 0 == ::std::strcmp(request.method, "HEAD"));
+
+  // Method
+  if (0 == ::std::strcmp(request.method, "OPTIONS"))
+    (void) response_headers(client, HTTP_NO_CONTENT, "No Content", "text/plain", size, "Allow: GET, HEAD, OPTIONS, TRACE" "\r\n");
+
+  else if (0 == ::std::strcmp(request.method, "TRACE")) /* ->> `TRACE` reflects the request as a message/ HTTP but deliberately removes credential headers */ {
+    struct string echo;
+
+    // ...
+    if (not echo.append(request.method))  return;
+    if (not echo.append(' '))             return;
+    if (not echo.append(request.target))  return;
+    if (not echo.append(' '))             return;
+    if (not echo.append(request.version)) return;
+    if (not echo.append("\r\n"))          return;
+
+    for (char *current = request.lineEnd + 1, *const end = &request.memory[headerEnd]; current < end and *current != '\r' and *current != '\n'; ) {
+      char const *const blocks[]  = {"authorization" ":", "cookie" ":", "proxy-authorization" ":", "proxy-cookie" ":", "set-cookie" ":"}; // --> ::std::tolower(…)
+      char *const       next      = static_cast<char*>(::std::memchr(current, '\n', static_cast< ::std::size_t>(end - current)));
+      char              saved     = '\0';
+      bool              sensitive = false;
+      char             *stop      = next;
+
+      // ...
+      if (NULL == next) break;
+
+      stop -= current < stop and stop[-1] == '\r';
+      saved = *stop;
+      *stop = '\0';
+
+      for (char const *const *block = blocks; block != &blocks[sizeof blocks / sizeof(char const*)]; ++block) {
+        ::std::size_t       match = 0u;
+        ::std::size_t const width = ::std::strlen(*block);
+
+        // ...
+        if (width <= ::std::strlen(current)) {
+          while (match != width and (*block)[match] == ::std::tolower(static_cast<unsigned char>(current[match])))
+          ++match;
+
+          if (match == width)
+          sensitive = true;
         }
-        close_socket(client);
       }
+
+      if (false == sensitive) {
+        if (not echo.append(current)) return;
+        if (not echo.append("\r\n")) return;
+      }
+
+      *stop   = saved;
+      current = next + 1;
     }
-    if (stopping) break;
-#endif
-    for (int index = 0; index < 2; ++index) {
-      if (FD_ISSET(listeners[index], &incoming)) {
-        socket_handle client = ::accept(listeners[index], NULL, NULL);
-        if (client != INVALID_SOCKET_HANDLE) start_client(client);
-      }
+
+    if (echo.append("\r\n")) {
+      #if defined _WIN32
+        size = static_cast< ::ULONGLONG>(echo.length);
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        size = static_cast< ::off_t>(echo.length);
+      #endif
+
+      if (response_headers(client, HTTP_OK, "OK", "message/http", size, ""))
+      (void) send_all(client, echo.value, echo.length);
     }
   }
-  cleanup();
-  log_message("Localhost stopped.");
-  return 0;
+
+  else {
+    struct string       canonical;
+    char const   *const delimiter = ::std::strpbrk(request.target, "?#");
+    struct string       path;
+    ::std::FILE        *stream    = NULL;
+    struct string       uri;
+
+    // ...
+    if (not uri.append(request.target, delimiter ? static_cast< ::std::size_t>(delimiter - request.target) : ::std::strlen(request.target)))
+    return;
+
+    if (not resolve_path(uri.value, &path, &canonical))
+    return send_error(client, HTTP_BAD_REQUEST, "Bad Request", 0 == ::std::strcmp(request.method, "HEAD"));
+
+    if (is_directory(path.value)) {
+      struct string     candidate; // ->> `index.html` takes precedence over `index.htm` when a directory has both
+      char const* const indexFiles[] = {"index.html", "index.htm"};
+
+      // ...
+      if (uri.length and uri.value[uri.length - 1u] != '/') {
+        struct string document, extra;
+        struct string location;
+
+        // ...
+        if (not location.append(canonical.value))                                                                  return;
+        if (0u != location.length and '/' != location.value[location.length - 1u]) { if (not location.append('/')) return; }
+        if (NULL != delimiter and not location.append(delimiter))                                                  return;
+
+        if (not document.append("<!DOCTYPE html>" "<html><body><a href=\""))      return;
+        if (not append_html(&document, location.value))                           return;
+        if (not document.append("\">Moved Permanently</a></body></html>" "\r\n")) return;
+
+        if (not extra.append("Location: "))   return;
+        if (not extra.append(location.value)) return;
+        if (not extra.append("\r\n"))         return;
+
+        return send_document(client, HTTP_REDIRECT, "Moved Permanently", &document, 0 == ::std::strcmp(request.method, "HEAD"), extra.value);
+      }
+
+      for (char const *const *indexFile = indexFiles; indexFile != &indexFiles[sizeof indexFiles / sizeof(char const*)]; ++indexFile) {
+        if (not candidate.set(path.value))                                                                                                                                return;
+        if (0u != candidate.length and '/' != candidate.value[candidate.length - 1u] and '\\' != candidate.value[candidate.length - 1u]) { if (not candidate.append('/')) return; }
+        if (not candidate.append(*indexFile))                                                                                                                             return;
+
+        if (is_static_file(candidate.value, NULL)) {
+          if (not path.set(candidate.value)) return;
+          else                               break;
+        }
+      }
+
+      if (is_directory(path.value)) {
+        ::std::size_t     count    = 0u;
+        struct string     document;
+        struct directory *entries  = NULL;
+        bool              success  = true;
+
+        // ...
+        if (not list_directory(path.value, &entries, &count))
+        return send_error(client, HTTP_FORBIDDEN, "Forbidden", 0 == ::std::strcmp(request.method, "HEAD"));
+
+        if (success) success = document.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/><title>Directory listing for ");
+        if (success) success = append_html(&document, uri.value);
+        if (success) success = document.append("</title></head><body><h1>Directory listing for ");
+        if (success) success = append_html(&document, uri.value);
+        if (success) success = document.append("</h1><hr><ul>" "\r\n");
+
+        for (::std::size_t index = 0u; index < count and success; ++index) {
+          if (success)                              success = document.append("<li><a href=\"");
+          if (success)                              success = append_url(&document, entries[index].name);
+          if (success and entries[index].directory) success = document.append('/');
+          if (success)                              success = document.append("\">");
+          if (success)                              success = append_html(&document, entries[index].name);
+          if (success and entries[index].directory) success = document.append('/');
+          if (success)                              success = document.append("</a></li>" "\r\n");
+        }
+
+        while (count)
+          ::std::free(entries[--count].name);
+        ::std::free(entries);
+
+        if (success and document.append("</ul><hr></body></html>" "\r\n"))
+        return send_document(client, HTTP_OK, "OK", &document, 0 == ::std::strcmp(request.method, "HEAD"), "");
+      }
+    }
+
+    if (not is_static_file(path.value, &size))
+    return send_error(client, HTTP_NOT_FOUND, "File Not Found", 0 == ::std::strcmp(request.method, "HEAD"));
+
+    stream = open_file(path.value);
+
+    if (NULL == stream)
+    return send_error(client, HTTP_FORBIDDEN, "Forbidden", 0 == ::std::strcmp(request.method, "HEAD"));
+
+    if (response_headers(client, HTTP_OK, "OK", mime_type(path.value), size, "") and not (0 == ::std::strcmp(request.method, "HEAD"))) {
+      unsigned char payload[16384];
+      ::std::size_t received = 0u;
+
+      while ((received = ::std::fread(payload, 1u, sizeof payload, stream))) {
+        if (not send_all(client, reinterpret_cast<char const*>(payload), received))
+        break;
+      }
+    }
+
+    (void) ::std::fclose(stream);
+  }
 }
 
-static bool parse_port(::std::string const& text, unsigned short& result) {
-  if (text.empty()) return false;
-  unsigned long value = 0;
-  for (::std::size_t index = 0; index < text.size(); ++index) {
-    if (text[index] < '0' || text[index] > '9') return false;
-    value = value * 10 + static_cast<unsigned long>(text[index] - '0');
-    if (value > 65535) return false;
+static bool is_directory(char const path[]) /* noexcept */ {
+  #if defined _WIN32
+    if (wchar_t* const widepath = widen_path(path)) {
+      ::DWORD const attributes = ::GetFileAttributesW(widepath);
+
+      ::std::free(widepath);
+      return INVALID_FILE_ATTRIBUTES != attributes and 0u != (attributes & FILE_ATTRIBUTE_DIRECTORY);
+    }
+
+    return false;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    struct ::stat attributes = {};
+    return ::stat(path, &attributes) == 0 and S_ISDIR(attributes.st_mode);
+  #endif
+}
+
+static bool is_static_file(char const path[], void* const size) /* noexcept */ {
+  #if defined _WIN32
+    if (wchar_t* const widepath = widen_path(path)) {
+      ::WIN32_FILE_ATTRIBUTE_DATA attributes = {};
+      bool const                  found      = 0 != ::GetFileAttributesExW(widepath, GetFileExInfoStandard, &attributes) and 0u == (attributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+
+      // ...
+      ::std::free(widepath);
+      if (found and NULL != size) *static_cast< ::ULONGLONG*>(size) = (static_cast< ::ULONGLONG>(attributes.nFileSizeHigh) << 32u) | (static_cast< ::ULONGLONG>(attributes.nFileSizeLow) << 0u);
+
+      return found;
+    }
+
+    return false;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    struct ::stat attributes = {};
+
+    // ...
+    if (0 == ::stat(path, &attributes) and S_ISREG(attributes.st_mode)) {
+      if (NULL != size) *static_cast< ::off_t*>(size) = attributes.st_size;
+      return true;
+    }
+
+    return false;
+  #endif
+}
+
+static bool list_directory(char const path[], struct directory* entries[], ::std::size_t* const count) /* noexcept */ {
+  bool success = true;
+  #if defined _WIN32
+    wchar_t      *widepath = widen_path(path);        if (NULL == widepath)                                                                                                                                                  return false;
+    ::std::size_t length   = ::std::wcslen(widepath); if (wchar_t *const wildcard = static_cast<wchar_t*>(::std::realloc(widepath, (length + 3u) * sizeof(wchar_t)))) { widepath = wildcard; } else { ::std::free(widepath); return false; }
+    ::WIN32_FIND_DATAW entry  = {};
+    ::HANDLE           search = NULL;
+
+    // ...
+    if (0u != length and L'\\' != widepath[length - 1u] and L'/' != widepath[length - 1u]) widepath[length++] = L'\\';
+    widepath[length++] = L'*';
+    widepath[length++] = L'\0';
+
+    search = ::FindFirstFileW(widepath, &entry);
+    ::std::free(widepath);
+
+    if (INVALID_HANDLE_VALUE == search)
+    return false;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    struct ::dirent *entry  = NULL;
+    ::DIR *const     search = ::opendir(path);
+
+    // ...
+    if (NULL == search)
+    return false;
+  #endif
+
+  // ...
+  *count   = 0u;
+  *entries = NULL;
+
+  while (true) {
+    #if defined _WIN32
+      bool const directory = entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+      int  const length    = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, entry.cFileName, -1, NULL, 0, NULL, NULL);
+      char      *name      = NULL;
+
+      // ...
+      if (length > 0) {
+        name = static_cast<char*>(::std::malloc(static_cast< ::std::size_t>(length)));
+
+        if (0 == ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, entry.cFileName, -1, name, length, NULL, NULL)) {
+          ::std::free(name);
+          name = NULL;
+        }
+      }
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      entry = ::readdir(search);
+      if (NULL == entry) break;
+
+      bool                directory = false;
+      ::std::size_t const length    = ::std::strlen(entry -> d_name);
+      char         *const name      = static_cast<char*>(::std::malloc(length + 1u));
+      struct string       subpath;
+
+      // ...
+      if (NULL != name) (void) ::std::memcpy(name, entry -> d_name, length + 1u);
+      if (NULL != name and subpath.append(path)) {
+        if (0u != subpath.length and '/' != subpath.value[subpath.length - 1u]) { if (not subpath.append('/')) success = false; }
+        if (success and subpath.append(name)) directory = is_directory(subpath.value); else success = false;
+      }
+    #endif
+
+    // ...
+    if      (NULL == name)                                                    { success = false; break; }
+    else if (0 == ::std::strcmp(name, ".") or 0 == ::std::strcmp(name, "..")) { ::std::free(name); }
+    else if (SIZE_MAX / sizeof(struct directory) == *count)                   { ::std::free(name); success = false; break; }
+    else if (void *const allocation = ::std::realloc(*entries, (*count + 1u) * sizeof(struct directory))) {
+      *entries                     = static_cast< struct directory*>(allocation);
+      (*entries)[*count].name      = name;
+      (*entries)[*count].directory = directory;
+      *count                      += 1u;
+    } else { ::std::free(name); success = false; break; }
+
+    #if defined _WIN32
+      if (FALSE == ::FindNextFileW(search, &entry))
+      break;
+    #endif
   }
-  if (!value) return false;
-  result = static_cast<unsigned short>(value);
+
+  #if defined _WIN32
+    (void) ::FindClose(search);
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    (void) ::closedir(search);
+  #endif
+
+  if (not success) {
+    while (*count)
+      ::std::free((*entries)[--*count].name);
+    ::std::free(*entries);
+    *entries = NULL;
+
+    return false;
+  }
+
   return true;
 }
 
-static int parse_options(int count, file_path const* values, bool& shutdown, bool& help) {
-  shutdown = false;
-  help = false;
-#ifdef _WIN32
-  rootDirectory = L"C:\\LapysDev";
-#else
-  rootDirectory = "C:\\LapysDev";
-#endif
-  for (int index = 1; index < count; ++index) {
-    ::std::string option = lowercase(native_path(values[index]));
-    if (option == "--shutdown") {
-      if (count != 2) return 2;
-      shutdown = true;
-      return 0;
+static char const* mime_type(char const path[]) /* noexcept */ {
+  if (char const *const extension = ::std::strrchr(path, '.'))
+  for (struct format /* final */ { char const extension[7], *type /* [31] */; } const formats[] = {
+    {".avif", "image/avif"}, {".bmp", "image/bmp"},
+    {".cpp",  "text/plain"}, {".css", "text/css; charset=utf-8"}, {".csv", "text/csv"},
+    {".gif",  "image/gif"},
+    {".h",    "text/plain"}, {".htm", "text/html; charset=utf-8"}, {".html", "text/html; charset=utf-8"},
+    {".ico",  "image/x-icon"},
+    {".jpeg", "image/jpeg"}, {".jpg", "image/jpeg"}, {".js", "text/javascript; charset=utf-8"}, {".json", "application/json; charset=utf-8"},
+    {".log",  "text/plain"},
+    {".map",  "application/json"}, {".mjs", "text/javascript; charset=utf-8"}, {".mp3", "audio/mpeg"}, {".mp4", "video/mp4"},
+    {".otf",  "font/otf"},
+    {".pdf",  "application/pdf"},  {".png",  "image/png"}, {".py", "text/plain"},
+    {".svg",  "image/svg+xml"},    {".txt",  "text/plain; charset=utf-8"},
+    {".wasm", "application/wasm"}, {".webp", "image/webp"}, {".woff", "font/woff"}, {".woff2", "font/woff2"},
+    {".xml",  "application/xml"},  {".zip",   "application/zip"}
+  }, *format = formats; format != &formats[sizeof formats / sizeof(struct format)]; ++format) {
+    ::std::size_t index = 0u;
+
+    // ...
+    for (; '\0' != extension[index] and '\0' != format -> extension[index]; ++index) {
+      if (format -> extension[index] != ::std::tolower(static_cast<unsigned char>(extension[index])))
+      break;
     }
-    if (option == "--help" || option == "-h") {
-      if (count != 2) return 2;
-      help = true;
-      return 0;
-    }
-    if (option == "--root" && index + 1 < count) rootDirectory = values[++index];
-    else if (option == "--port" && index + 1 < count) {
-      if (!parse_port(native_path(values[++index]), port)) return 2;
-    } else return 2;
+
+    if ('\0' == extension[index] and '\0' == format -> extension[index])
+    return format -> type;
   }
-  return 0;
+
+  return "application/octet-stream"; // ->> Must be contiguously 8-bits despite `CHAR_BIT`
 }
 
-/* Main */
-static int entry_point(int count, file_path const* values) {
-  bool shutdown = false;
-  bool help = false;
-  int result = parse_options(count, values, shutdown, help);
-  if (result || help) {
-    log_message("Usage: localhost [--root DIRECTORY] [--port 1..65535] | -shutdown | --help");
-    return result;
-  }
-  if (shutdown) return request_shutdown();
-  return run_server();
+static ::std::FILE* open_file(char const path[]) /* noexcept */ {
+  #if defined _WIN32
+    if (wchar_t *const widepath = widen_path(path)) {
+      ::std::FILE *const stream = ::_wfopen(widepath, L"rb");
+
+      ::std::free(widepath);
+      return stream;
+    }
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    return ::std::fopen(path, "rb");
+  #endif
+
+  return NULL;
 }
 
-#ifdef _WIN32
-  static int windows_entry_point(int count, wchar_t** arguments) {
-    ::std::vector<file_path> values;
-    for (int index = 0; index < count; ++index) values.push_back(arguments[index]);
-    return entry_point(count, &values[0]);
+static socket_t open_listener(unsigned char const ipVersion) /* noexcept */ {
+  socket_t const server = ::socket(ipVersion == 6u ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+  // ...
+  if (INVALID_SOCKET_HANDLE == server) return INVALID_SOCKET_HANDLE;
+  #if defined _WIN32
+    ::BOOL const exclusive = TRUE;
+    (void) ::setsockopt(server, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<char const*>(&exclusive), sizeof exclusive);
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    int const reuse = static_cast<int>(true);
+    (void) ::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof reuse);
+  #endif
+
+  switch (ipVersion) {
+    case 4u: {
+      struct ::sockaddr_in address = {};
+
+      // ...
+      address.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
+      address.sin_family      = AF_INET;
+      address.sin_port        = ::htons(static_cast<unsigned short>(port));
+
+      if (0 != ::bind(server, reinterpret_cast<struct ::sockaddr const*>(&address), sizeof address) or 0 != ::listen(server, LISTEN_BACKLOG)) {
+        close_socket(server);
+        return INVALID_SOCKET_HANDLE;
+      }
+    } break;
+
+    case 6u: {
+      struct ::sockaddr_in6 address  = {};
+      int const             ipv6only = 1;
+
+      // ...
+      #if defined _WIN32
+        (void) ::setsockopt(server, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<char const*>(&ipv6only), sizeof ipv6only);
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        (void) ::setsockopt(server, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6only, sizeof ipv6only);
+      #endif
+
+      address.sin6_addr   = in6addr_loopback;
+      address.sin6_family = AF_INET6;
+      address.sin6_port   = ::htons(static_cast<unsigned short>(port));
+
+      if (0 != ::bind(server, reinterpret_cast<struct ::sockaddr const*>(&address), sizeof address) or 0 != ::listen(server, LISTEN_BACKLOG)) {
+        close_socket(server);
+        return INVALID_SOCKET_HANDLE;
+      }
+    } break;
   }
 
-  #ifdef LOCALHOST_CONSOLE
-    int wmain(int count, wchar_t** arguments) { return windows_entry_point(count, arguments); }
-  #else
-    int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
-      int count = 0;
-      LPWSTR* arguments = ::CommandLineToArgvW(::GetCommandLineW(), &count);
-      if (!arguments || count < 1) return 2;
-      int result = windows_entry_point(count, arguments);
-      ::LocalFree(arguments);
-      return result;
+  return server;
+}
+
+static int request_shutdown() /* noexcept */ {
+  #if defined _WIN32
+    if (::HANDLE const event = ::OpenEventW(EVENT_MODIFY_STATE, FALSE, L"Local\\LapysDev.Localhost.Shutdown")) {
+      bool const success = 0 != ::SetEvent(event);
+
+      (void) ::CloseHandle(event);
+      return success ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    struct string name;
+
+    if (control_name(&name)) {
+      struct ::sockaddr_un address = {};
+      socket_t const       client  = ::socket(AF_UNIX, SOCK_STREAM, 0);
+      bool                 success = false;
+
+      if (INVALID_SOCKET_HANDLE != client) {
+        (void) ::std::memcpy(address.sun_path, name.value, name.length + 1u);
+        address.sun_family = AF_UNIX;
+        success            = 0 == ::connect(client, reinterpret_cast<struct ::sockaddr*>(&address), sizeof address) and send_all(client, "S", 1u);
+
+        if (success) {
+          char                   confirmation = '\0';
+          struct ::timeval const timeout      = {TIMEOUT_CONTROL_SECONDS, 0u};
+
+          (void) ::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
+          success = ::recv(client, &confirmation, 1, 0) == 1 and confirmation == 'K';
+        }
+
+        close_socket(client);
+        return success ? EXIT_SUCCESS : EXIT_FAILURE;
+      }
     }
   #endif
-#else
-  int main(int count, char** arguments) {
-    ::std::vector<file_path> values;
-    for (int index = 0; index < count; ++index) values.push_back(arguments[index]);
-    return entry_point(count, &values[0]);
+  return EXIT_FAILURE;
+}
+
+static bool resolve_path(char const url[], struct string* const path, struct string* const canonical) /* noexcept */ {
+  struct string decoded;
+
+  // ... ->> Percent-decode before removing dot segments so encoded traversal cannot escape `root` directory
+  if (NULL == url or *url != '/')
+  return false;
+
+  if (not canonical -> set("/") or not path -> set(root.value))
+  return false;
+
+  for (::std::size_t index = 0u; '\0' != url[index]; ++index) {
+    signed char   digits[2] = {-1, -1};
+    unsigned char value     = static_cast<unsigned char>(url[index]);
+
+    // ...
+    if (value == '%') {
+      for (unsigned char subindex = 0u; subindex != sizeof digits / sizeof(digits[0]); ++subindex) {
+        char const character = url[index + subindex + 1u];
+
+        // ...
+        if ('\0' == character)
+        return false;
+
+        if      (character >= '0' and character <= '9') digits[subindex] = character - '0';
+        else if (character >= 'A' and character <= 'F') digits[subindex] = character - 'A' + 10;
+        else if (character >= 'a' and character <= 'f') digits[subindex] = character - 'a' + 10;
+
+        if (digits[subindex] < 0)
+        return false;
+      }
+
+      index += 2u;
+      value  = static_cast<unsigned char>((digits[0] << 4u) | (digits[1] << 0u));
+    }
+
+    if (ASCII_DELETE == value or ASCII_SPACE > value or '\0' == value or value == '\\') return false;
+    if (not decoded.append(static_cast<char>(value)))                                   return false;
+  }
+
+  for (::std::size_t index = 0u; decoded.length > index; ) {
+    char const *segment = "";
+    char        separator;
+
+    // ...
+    while (decoded.length != index and decoded.value[index] == '/') ++index;
+    if    (decoded.length == index)                                   break;
+    segment = &decoded.value[index];
+
+    while (decoded.length != index and decoded.value[index] != '/') ++index;
+    separator            = decoded.value[index];
+    decoded.value[index] = '\0';
+
+    if (0 == ::std::strcmp(segment, "..")) {
+      /* ... */ {
+        while (path -> length > root.length and path -> value[path -> length - 1u] != '/' and path -> value[path -> length - 1u] != '\\') --path -> length;
+        if    (path -> length > root.length)                                                                                              --path -> length;
+
+        path -> value[path -> length] = '\0';
+      }
+
+      if (canonical -> length > 1u) {
+        while (canonical -> length > 1u and canonical -> value[canonical -> length - 1u] != '/') --canonical -> length;
+        if    (canonical -> length > 1u)                                                         --canonical -> length;
+
+        canonical -> value[canonical -> length] = '\0';
+      }
+    }
+
+    else if (0 != ::std::strcmp(segment, ".") and '\0' != *segment) {
+      #if defined _WIN32 // ->> Reject Windows device separators and trailing aliases to avoid ambiguous paths
+        ::std::size_t const length = ::std::strlen(segment);
+
+        if (segment[length - 1u] == '.' or segment[length - 1u] == ' ' or NULL != ::std::strpbrk(segment, ":*?\"<>|"))
+        return false;
+      #endif
+
+      if (0u != path -> length and '/' != path -> value[path -> length - 1u] and '\\' != path -> value[path -> length - 1u]) {
+        if (not path -> append('/')) return false;
+      }
+      if (not path -> append(segment)) return false;
+      if (1u < canonical -> length and not canonical -> append('/')) return false;
+      if (not append_url(canonical, segment)) return false;
+    }
+
+    decoded.value[index] = separator;
+  }
+
+  if (decoded.length and decoded.value[decoded.length - 1u] == '/' and canonical -> value[canonical -> length - 1u] != '/' and not canonical -> append('/'))
+  return false;
+
+  return true;
+}
+
+static bool response_headers(
+  socket_t const client,
+  unsigned const status,
+  char     const label[],
+  char     const type [],
+  #if defined _WIN32
+    ::ULONGLONG const size,
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    ::off_t const size,
+  #endif
+  char const extra[]
+) /* noexcept */ {
+  ::std::size_t    count      = 0u;
+  char             date  [64] = "Thu, 01 Jan 1970 00:00:00 GMT";
+  char             digits[64] = "0";
+  char             number[64] = "???.??";
+  struct string    response;
+  struct ::std::tm utc        = {};
+  ::std::time_t const now     = ::std::time(NULL);
+  #if defined _WIN32
+    ::ULONGLONG value = size;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    ::off_t value = size;
+  #endif
+
+  // ...
+  #if defined _WIN32
+    ::__time64_t const timestamp = static_cast< ::__time64_t>(now);
+    if (0 == ::_gmtime64_s(&utc, &timestamp))
+    (void) ::std::strftime(date, sizeof date, "%a, %d %b %Y %H:%M:%S GMT", &utc);
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    if (NULL != ::gmtime_r(&now, &utc))
+    (void) ::std::strftime(date, sizeof date, "%a, %d %b %Y %H:%M:%S GMT", &utc);
+  #endif
+
+  (void) ::std::sprintf(number, "%u", status);
+
+  if (not response.append("HTTP/1.0 "))                                return false;
+  if (not response.append(number))                                     return false;
+  if (not response.append(' '))                                        return false;
+  if (not response.append(label))                                      return false;
+  if (not response.append("\r\n" "Server: Localhost" "\r\n" "Date: ")) return false;
+  if (not response.append(date))                                       return false;
+  if (not response.append("\r\n" "Content-Type: "))                    return false;
+  if (not response.append(type))                                       return false;
+  if (not response.append("\r\n" "Content-Length: "))                  return false;
+
+  do {
+    digits[count++] = static_cast<char>('0' + (value % 10u));
+    value          /= 10u;
+  } while (count < sizeof digits and value);
+
+  while (count) {
+    if (not response.append(digits[--count]))
+    return false;
+  }
+
+  if (not response.append("\r\n" "X-Content-Type-Options: nosniff" "\r\n" "Connection: close" "\r\n")) return false;
+  if (not response.append(extra))                                                                      return false;
+  if (not response.append("\r\n"))                                                                     return false;
+
+  return send_all(client, response.value, response.length);
+}
+
+static bool send_all(socket_t const client, char const data[], ::std::size_t length) /* noexcept */ {
+  // ... ->> `send(…)` may write fewer bytes than requested, so retry until all data is sent
+  while (length) {
+    ::std::size_t const amount = SOCKET_SEND_LIMIT < length ? static_cast< ::std::size_t>(SOCKET_SEND_LIMIT) : length;
+    #if defined _WIN32
+      int const written = ::send(client, data, static_cast<int>(amount), 0);
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #if defined MSG_NOSIGNAL
+        ::ssize_t const written = ::send(client, data, amount, MSG_NOSIGNAL);
+      #else
+        ::ssize_t const written = ::send(client, data, amount, 0x00);
+      #endif
+    #endif
+
+      // ...
+    if (written <= 0) {
+      #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        if (EINTR == errno)
+        continue;
+      #endif
+      return false;
+    }
+
+    data   += written;
+    length -= static_cast< ::std::size_t>(written);
+  }
+
+  return true;
+}
+
+static void send_document(socket_t const client, unsigned const status, char const label[], struct string const* const document, bool const head, char const extra[]) /* noexcept */ {
+  #if defined _WIN32
+    ::ULONGLONG const size = static_cast< ::ULONGLONG>(document -> length);
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    ::off_t const size = static_cast< ::off_t>(document -> length);
+  #endif
+
+  if (response_headers(client, status, label, "text/html; charset=utf-8", size, extra) and not head)
+  (void) send_all(client, document -> value, document -> length);
+}
+
+static void send_error(socket_t const client, unsigned const status, char const label[], bool const head) /* noexcept */ {
+  struct string document;
+  char          number[64] = "???.??";
+
+  // ...
+  (void) ::std::sprintf(number, "%u", status);
+  if (not document.append("<!DOCTYPE html>" "<html><head><meta charset=\"UTF-8\"/><title>")) return;
+  if (not document.append(number))                                                           return;
+  if (not document.append(' '))                                                              return;
+  if (not document.append(label))                                                            return;
+  if (not document.append("</title></head><body><h1>"))                                      return;
+  if (not document.append(number))                                                           return;
+  if (not document.append(' '))                                                              return;
+  if (not document.append(label))                                                            return;
+  if (not document.append("</h1></body></html>" "\r\n"))                                     return;
+
+  send_document(client, status, label, &document, head, HTTP_METHOD_NOT_ALLOWED == status ? "Allow: GET, HEAD, OPTIONS, TRACE" "\r\n" : "");
+}
+
+static void set_client_timeout(socket_t const client) /* noexcept */ {
+  #if defined _WIN32
+    ::DWORD const timeout = TIMEOUT_SOCKET_MILLISECONDS;
+
+    (void) ::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char const*>(&timeout), sizeof timeout);
+    (void) ::setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char const*>(&timeout), sizeof timeout);
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    struct ::timeval const timeout = {TIMEOUT_CLIENT_SECONDS, 0};
+
+    (void) ::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
+    (void) ::setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof timeout);
+    #if defined SO_NOSIGPIPE
+      (void) ::setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &static_cast<int const&>(1), sizeof(int));
+    #endif
+  #endif
+}
+
+static void start_client(socket_t const client) /* noexcept */ {
+  // ... ->> Active worker counts are bounded and guarded by platform-specific atomics/ mutexes
+  #if defined _WIN32
+    ::LONG current = 0L;
+
+    // ...
+    do {
+      current = ::InterlockedCompareExchange(&workerCount, 0L, 0L);
+
+      if (WORKER_MAXIMUM <= current)
+      return close_socket(client);
+    } while (current != ::InterlockedCompareExchange(&workerCount, current + 1L, current));
+
+    if (::HANDLE const thread = reinterpret_cast< ::HANDLE>(::_beginthreadex(NULL, 0u, &client_thread, reinterpret_cast<void*>(static_cast< ::UINT_PTR>(client)), 0u, NULL)))
+    return (void) ::CloseHandle(thread);
+
+    close_socket(client);
+    worker_end  ();
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    bool accepted = false;
+
+    // ...
+    (void) ::pthread_mutex_lock(&workerMutex);
+      accepted     = WORKER_MAXIMUM > workerCount;
+      workerCount += accepted;
+    (void) ::pthread_mutex_unlock(&workerMutex);
+
+    if (not accepted)
+    return close_socket(client);
+
+    if (socket_t* const parameter = static_cast<socket_t*>(::std::malloc(sizeof(socket_t)))) {
+      ::pthread_t thread;
+
+      // ...
+      *parameter = client;
+
+      if (0 == ::pthread_create(&thread, NULL, &client_thread, parameter))
+      return (void) ::pthread_detach(thread);
+
+      ::std::free(parameter);
+    }
+
+    close_socket(client);
+    worker_end  ();
+  #endif
+}
+
+static bool start_control() /* noexcept */ {
+  // ->> The control endpoint enforces single-instance startup and private shutdown
+  #if defined _WIN32
+    localhostMutex = ::CreateMutexW(NULL, FALSE, L"Local\\LapysDev.Localhost.Instance");
+
+    if (NULL == localhostMutex)
+    return false;
+
+    if (ERROR_ALREADY_EXISTS == ::GetLastError() or NULL == (localhostShutdown = ::CreateEventW(NULL, TRUE, FALSE, L"Local\\LapysDev.Localhost.Shutdown"))) {
+      (void) ::CloseHandle(localhostMutex);
+      localhostMutex = NULL;
+
+      return false;
+    }
+
+    return true;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    struct ::sockaddr_un address = {};
+    int                  bound   = static_cast<int>(false);
+    ::mode_t             mask    = 0000;
+    struct string        name;
+
+    // ...
+    if (not control_name(&name))
+    return false;
+
+    address.sun_family = AF_UNIX;
+    (void) ::std::memcpy(controlPath,      name.value,  name.length + 1u);
+    (void) ::std::memcpy(address.sun_path, controlPath, name.length + 1u);
+    control = ::socket(AF_UNIX, SOCK_STREAM, 0);
+
+    if (INVALID_SOCKET_HANDLE == control)
+    return false;
+
+    mask  = ::umask(0077u);
+    bound = ::bind(control, reinterpret_cast<struct ::sockaddr*>(&address), sizeof address);
+
+    if (0 != bound and EADDRINUSE == errno) {
+      socket_t const probe   = ::socket(AF_UNIX, SOCK_STREAM, 0);
+      bool     const running = INVALID_SOCKET_HANDLE != probe and 0 == ::connect(probe, reinterpret_cast<struct ::sockaddr*>(&address), sizeof address);
+
+      // ...
+      close_socket(probe);
+
+      if (not running) {
+        struct ::stat entry = {};
+        if (0 == ::lstat(controlPath, &entry) and S_ISSOCK(entry.st_mode) and entry.st_uid == ::geteuid()) {
+          (void) ::unlink(controlPath);
+          bound = ::bind(control, reinterpret_cast<struct ::sockaddr*>(&address), sizeof address);
+        }
+      }
+    }
+
+    (void) ::umask(mask);
+    if (0 != bound or 0 != ::listen(control, CONTROL_BACKLOG)) {
+      close_socket(control);
+
+      control        = INVALID_SOCKET_HANDLE;
+      controlPath[0] = '\0';
+
+      return false;
+    }
+
+    return true;
+  #endif
+}
+
+#if defined _WIN32
+  static wchar_t* widen_path(char const path[]) /* noexcept */ {
+    int      length   = 0;
+    wchar_t *widepath = NULL;
+
+    // ...
+    length = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0);
+    if (length <= 0) return NULL;
+
+    widepath = static_cast<wchar_t*>(::std::malloc(static_cast< ::std::size_t>(length) * sizeof(wchar_t)));
+    if (not widepath) return NULL;
+
+    if (length != ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, widepath, length)) {
+      ::std::free(widepath);
+      return NULL;
+    }
+
+    return widepath;
+  }
+#endif
+
+static void worker_end() /* noexcept */ {
+  #if defined _WIN32
+    (void) ::InterlockedDecrement(&workerCount);
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    (void) ::pthread_mutex_lock(&workerMutex);
+    --workerCount;
+    (void) ::pthread_mutex_unlock(&workerMutex);
+  #endif
+}
+
+/* Main -|> Consider dynamic API support (e.g. `api/status`), PHP CGI, or SQL database clients. */
+static int comain(int const count, char const* const arguments[]) /* noexcept */ {
+  bool help     = false;
+  bool shutdown = false;
+  int  status   = EXIT_SUCCESS;
+
+  // ...
+  #if defined _WIN32
+    if (not root.set("C:\\LapysDev"))
+    return EXIT_FAILURE;
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    if (not root.set("."))
+    return EXIT_FAILURE;
+  #endif
+
+  // ->> Parse before initializing sockets: Invalid command lines do not launch the server
+  for (int index = 1; index < count; ++index) {
+    char const* const option = arguments[index];
+
+    // ...
+    if (0 == ::std::strcmp(option, "--help") or 0 == ::std::strcmp(option, "-h")) {
+      if (2 != count) return INVALID_COMMAND_LINE;
+      help = true;
+      break;
+    }
+    if (0 == ::std::strcmp(option, "--shutdown")) {
+      if (2 != count) return INVALID_COMMAND_LINE;
+      shutdown = true;
+      break;
+    }
+    if (0 == ::std::strcmp(option, "--root") and index + 1 < count) {
+      if (not root.set(arguments[++index])) return EXIT_FAILURE;
+    } else if (0 == ::std::strcmp(option, "--port") and index + 1 < count) {
+      char const* value  = arguments[++index];
+      unsigned long number = 0uL;
+
+      if ('\0' == *value) return INVALID_COMMAND_LINE;
+      for (; '\0' != *value; ++value) {
+        if ('0' > *value or '9' < *value) return INVALID_COMMAND_LINE;
+        number = number * 10uL + static_cast<unsigned long>(*value - '0');
+        if (PORT_MAXIMUM < number) return INVALID_COMMAND_LINE;
+      }
+      if (0uL == number) return INVALID_COMMAND_LINE;
+      port = static_cast< ::uint_least16_t>(number);
+    } else return INVALID_COMMAND_LINE;
+  }
+
+  // ->> Received HTTP bytes are not converted through the process locale.
+  if (help or shutdown) {
+    char const* message = NULL;
+
+    // ->> Continue only while each filesystem and conversion operation succeeds.
+    if (shutdown) {
+      status  = request_shutdown();
+      message = EXIT_SUCCESS == status ? "[.]: Localhost shutdown requested." "\r\n" : "[.]: Localhost is not running." "\r\n";
+    } else message = "[?]: localhost [--root \"DIRECTORY\"] [--port 1..65535] | --shutdown | --help" "\r\n";
+
+    #if defined _WIN32
+      ::BOOL const   attached = ::AttachConsole(ATTACH_PARENT_PROCESS);
+      ::HANDLE const stream   = ::GetStdHandle(STD_OUTPUT_HANDLE);
+
+      if (INVALID_HANDLE_VALUE != stream and NULL != stream) {
+        ::DWORD written = 0u;
+        (void) ::WriteFile(stream, message, static_cast< ::DWORD>(::std::strlen(message)), &written, NULL);
+      }
+
+      // ->> The Windows-subsystem executable temporarily borrows the calling shell’s console only to report command results
+      if (FALSE != attached)
+      (void) ::FreeConsole();
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      (void) ::std::fputs(message, stdout);
+    #endif
+
+    return status;
+  }
+
+  if (not is_directory(root.value))
+  return EXIT_FAILURE;
+
+  #if defined _WIN32
+    ::WSADATA winsock = {};
+
+    if (0 != ::WSAStartup(MAKEWORD(2, 2), &winsock))
+    return EXIT_FAILURE;
+  #endif
+
+  if (not start_control()) {
+    #if defined _WIN32
+      (void) ::WSACleanup();
+    #endif
+
+    return EXIT_FAILURE;
+  }
+
+  listeners[0] = open_listener(4u);
+  listeners[1] = open_listener(6u);
+
+  if (INVALID_SOCKET_HANDLE == listeners[0] or INVALID_SOCKET_HANDLE == listeners[1]) {
+    finish();
+    return EXIT_FAILURE;
+  }
+
+  #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    struct /* final */ {
+      struct ::sigaction action;
+      struct ::sigaction ignored;
+
+      static void stop(int) /* noexcept */ {
+        localhostShutdown = static_cast< ::sig_atomic_t>(true);
+      }
+    } signal = {};
+
+    // ...
+    signal.action.sa_handler = &signal.stop;
+    (void) ::sigemptyset(&signal.action.sa_mask);
+    (void) ::sigaction  (SIGINT,  &signal.action, NULL);
+    (void) ::sigaction  (SIGTERM, &signal.action, NULL);
+
+    signal.ignored.sa_handler = SIG_IGN;
+    (void) ::sigemptyset(&signal.ignored.sa_mask);
+    (void) ::sigaction  (SIGPIPE, &signal.ignored, NULL);
+  #endif
+
+  for (;;) {
+    #if defined _WIN32
+      if (WAIT_OBJECT_0 == ::WaitForSingleObject(localhostShutdown, 0u)) break;
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      if (0 != localhostShutdown) break;
+    #endif
+    ::fd_set         incoming;
+    struct ::timeval timeout = {0, TIMEOUT_SELECT_MICROSECONDS};
+
+    // ...
+    FD_ZERO(&incoming);
+    FD_SET (listeners[0], &incoming);
+    FD_SET (listeners[1], &incoming);
+    #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      FD_SET(control, &incoming);
+    #endif
+
+    #if defined _WIN32
+      int const selected = ::select(0, &incoming, NULL, NULL, &timeout);
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      int       largest  = listeners[0] > listeners[1] ? listeners[0] : listeners[1];
+      int const selected = ::select((control > largest ? control : largest) + 1, &incoming, NULL, NULL, &timeout);
+    #endif
+
+    if (selected <= 0)
+    continue;
+
+    #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      if (FD_ISSET(control, &incoming)) {
+        socket_t client = ::accept(control, NULL, NULL);
+
+        if (INVALID_SOCKET_HANDLE != client) {
+          char                   command        = '\0';
+          struct ::timeval const controlTimeout = {0, TIMEOUT_CONTROL_MICROSECONDS};
+
+          // ...
+          (void) ::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &controlTimeout, sizeof controlTimeout);
+
+          if (::recv(client, &command, 1, 0) == 1 and command == 'S') {
+            (void) send_all(client, "K", 1u);
+            localhostShutdown = static_cast< ::sig_atomic_t>(true);
+          }
+
+          close_socket(client);
+        }
+      }
+
+      if (localhostShutdown)
+      break;
+    #endif
+
+    for (unsigned char index = 0u; index < sizeof listeners / sizeof(socket_t); ++index)
+    if (FD_ISSET(listeners[index], &incoming)) {
+      socket_t client = ::accept(listeners[index], NULL, NULL);
+
+      if (INVALID_SOCKET_HANDLE != client)
+      start_client(client);
+    }
+  }
+
+  finish();
+  return EXIT_SUCCESS;
+}
+
+#if defined _WIN32
+  int WINAPI wWinMain(::HINSTANCE, ::HINSTANCE, ::LPWSTR, int) {
+    int       count     = 0;
+    int       result    = INVALID_COMMAND_LINE;
+    ::LPWSTR* arguments = ::CommandLineToArgvW(::GetCommandLineW(), &count);
+
+    // ...
+    if (NULL == arguments or 1 > count)
+    return INVALID_COMMAND_LINE;
+
+    char** const values = static_cast<char**>(::std::calloc(static_cast< ::std::size_t>(count), sizeof(char*)));
+    if (NULL != values) {
+      bool ready = true;
+
+      // ...
+      for (int index = 0; index < count; ++index) {
+        int const length = ::WideCharToMultiByte(CP_UTF8, 0u, arguments[index], -1, NULL, 0, NULL, NULL);
+
+        // ...
+        if (length <= 0) {
+          ready = false;
+          break;
+        }
+
+        values[index] = static_cast<char*>(::std::malloc(static_cast< ::std::size_t>(length)));
+
+        if (NULL == values[index] or length != ::WideCharToMultiByte(CP_UTF8, 0u, arguments[index], -1, values[index], length, NULL, NULL)) {
+          ready = false;
+          break;
+        }
+      }
+
+      if (ready)
+      result = comain(count, const_cast<char const* const*>(values));
+
+      for (int index = 0; index < count; ++index) ::std::free(values[index]);
+      ::std::free(values);
+    }
+
+    (void) ::LocalFree(arguments);
+    return result;
+  }
+#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  int main(int count, char* arguments[]) {
+    return comain(count, const_cast<char const* const*>(arguments));
   }
 #endif

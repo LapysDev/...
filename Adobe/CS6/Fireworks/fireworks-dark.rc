@@ -1,30 +1,27 @@
-// The lowest numbered icon is Windows Explorer's executable icon.
-101 ICON "Adobe Fireworks (Dark).ico"
+#include <winver.h> // --> FILEVERSION, PRODUCTVERSION, VS_FFI_FILEFLAGSMASK, VOS_NT_WINDOWS32, VFT_APP, VFT2_UNKNOWN; VERSIONINFO
 
-// Only the running notification-area icon uses the alternate artwork.
-102 ICON "Adobe Fireworks (Dark) (Alt.).ico"
+101 ICON "Adobe Fireworks (Dark).ico"        // ->> The lowest numbered icon is Windows Explorer's executable icon
+102 ICON "Adobe Fireworks (Dark) (Alt.).ico" // ->> Only the running notification-area icon uses the alternate artwork
+1   VERSIONINFO
+  FILEVERSION    2,0,11,0
+  PRODUCTVERSION 2,0,11,0
+  FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+  FILEFLAGS      0x0L
+  FILEOS         VOS_NT_WINDOWS32
+  FILETYPE       VFT_APP
+  FILESUBTYPE    VFT2_UNKNOWN
 
-#include <winver.h>
-
-1 VERSIONINFO
- FILEVERSION 2,0,11,0
- PRODUCTVERSION 2,0,11,0
- FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
- FILEFLAGS 0x0L
- FILEOS VOS_NT_WINDOWS32
- FILETYPE VFT_APP
- FILESUBTYPE VFT2_UNKNOWN
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
     BLOCK "040904B0"
     BEGIN
-      VALUE "FileDescription", "Adobe Fireworks CS6 dark mode filter\0"
-      VALUE "FileVersion", "2.0.11.0\0"
-      VALUE "InternalName", "Fireworks-Dark\0"
+      VALUE "FileDescription",  "Adobe Fireworks CS6 dark mode filter\0"
+      VALUE "FileVersion",      "2.0.11.0\0"
+      VALUE "InternalName",     "Fireworks-Dark\0"
       VALUE "OriginalFilename", "fireworks-dark.exe\0"
-      VALUE "ProductName", "Adobe Fireworks CS6 (Dark)\0"
-      VALUE "ProductVersion", "2.0.11.0\0"
+      VALUE "ProductName",      "Adobe Fireworks CS6 (Dark)\0"
+      VALUE "ProductVersion",   "2.0.11.0\0"
     END
   END
   BLOCK "VarFileInfo"

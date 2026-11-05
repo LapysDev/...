@@ -20,10 +20,11 @@ DOCUMENT_VIEWPORT_CACHE: Dict[int, "ViewportCache"]                        = {}
 IGNORED_SCOPE_SELECTOR : str                                               = "comment, constant"
 MULTI_LINE_QUOTES      : Tuple[Tuple[str, str], ...]                       = (("'", "'"), ("\"", "\""), ("“", "”"), ("`", "`"), ("ˋ", "ˊ"), ("⹁", ","), ("❛", "❜"), ("❝", "❞"), ("«", "»"), ("「", "」"), ("『", "』"))
 PACKAGE_NAME           : str                                               = "Polychrome"
-PACKAGE_VERSION        : str                                               = "3.5.2"
+PACKAGE_VERSION        : str                                               = "3.5.4"
 PENDING_CHANGES        : Dict[int, Tuple[int, List[Tuple[int, int, str]]]] = {}
 POSITION_LIMIT         : int                                               = (1 << 32) - 1 # --> Unsigned 32-bit character positions
 POLYCHROME_SCOPES      : Tuple[str, ...]                                   = tuple("polychrome.depth." + str(depth) for depth in range(len(COLORS)))
+PREPROCESSOR_PATTERNS  : Dict[str, re.Pattern[str]]                        = {"cpp": re.compile(r"#[ \t]*(elifdef|elifndef|elif|else|endif|ifdef|ifndef|if)\b"), "haxe": re.compile(r"#[ \t]*(elseif|else|end|if)\b"), "swift": re.compile(r"#[ \t]*(elseif|else|endif|if)\b"), "vb": re.compile(r"#[ \t]*(elseif|else|end[ \t]+if|if)\b", re.IGNORECASE)}
 QUOTE_MAP              : Dict[str, str]                                    = dict(MULTI_LINE_QUOTES + (("/", "/"), ("‘", "’")))
 REGION_FLAGS           : int                                               = sublime.DRAW_NO_OUTLINE | getattr(sublime, "HIDE_ON_MINIMAP", 0)
 REGION_KEYS            : Tuple[str, ...]                                   = POLYCHROME_SCOPES
@@ -35,7 +36,7 @@ SINGLE_LINE_QUOTES     : Tuple[Tuple[str, str], ...]                       = (("
 SINGLE_LINE_QUOTE_MAP  : Dict[str, str]                                    = dict(SINGLE_LINE_QUOTES)
 STATUS_KEY             : str                                               = "polychrome.progress"
 SYNTAX_HIGHLIGHT_LIMIT : int                                               = 16384
-TOKEN_CHARACTERS       : Tuple[str, ...]                                   = tuple(sorted(DELIMITER_SET | frozenset("".join(opening + closing for opening, closing in MULTI_LINE_QUOTES + SINGLE_LINE_QUOTES)) | frozenset("\\\r\n")))
+TOKEN_CHARACTERS       : Tuple[str, ...]                                   = tuple(sorted(DELIMITER_SET | frozenset("".join(opening + closing for opening, closing in MULTI_LINE_QUOTES + SINGLE_LINE_QUOTES)) | frozenset("#\\\r\n")))
 TOKEN_INDEX            : Dict[str, int]                                    = dict((token, index) for index, token in enumerate(TOKEN_CHARACTERS))
 TOKEN_PATTERN          : re.Pattern[str]                                   = re.compile("[" + re.escape("".join(TOKEN_CHARACTERS)) + "]")
 VIEWPORT_POLL_DELAY    : int                                               = 250
@@ -71,8 +72,6 @@ class DocumentCache:
     if self.viewport is not None and viewport_points is not None:
       self.viewport.points = viewport_points
 
-
-# ...
 class PolychromeEventListener(sublime_plugin.EventListener):
   def on_activated_async(self, view: sublime.View) -> None:
     _schedule_repaint(view, 0, True)
@@ -152,7 +151,6 @@ class ViewportCache:
     self.layout  : Tuple[Tuple[float, float], Tuple[float, float]] = ((0.0, 0.0), (0.0, 0.0))
     self.points  : array                                           = array(position_typecode)
     self.revision: int                                             = revision
-
 
 # ...
 def _encode(view: sublime.View, cache: DocumentCache, begin: int, end: int) -> Generator[int, None, ViewportCache]:
@@ -261,28 +259,63 @@ def _paint_string_pairs(view: sublime.View, entries: List[List[Any]], points_by_
 
 def _parse(view: sublime.View, cache: DocumentCache, revision: int, begin: int, end: int) -> Generator[int, None, None]:
   # ->> Parse only the validated prefix; produce regions only in the bounded paint window.
-  closing_positions: Dict[str, array]      = dict((quote, array(cache.points.typecode)) for quote in set(QUOTE_MAP.values()))
-  escaped          : bool                  = False
-  filename         : str                   = (view.file_name() or "").lower() if hasattr(view, "file_name") else ""
-  last_point       : int                   = -2
-  line_ends        : List[int]             = []
-  line_index       : int                   = 0
-  line_starts      : List[int]             = [begin]
-  newlines         : array                 = array(cache.points.typecode)
-  paint_text       : str                   = view.substr(sublime.Region(begin, end))
-  paintable        : bool                  = False
-  points_by_depth  : List[List[int]]       = [[] for color in COLORS]
-  powershell       : bool                  = filename.endswith((".ps1", ".ps1xml", ".psd1", ".psm1", ".psrc", ".pssc")) or "powershell" in str(cache.syntax).lower()
-  quote            : Optional[str]         = None
-  stack            : List[str]             = []
-  string_delimiters: List[List[Any]]       = []
-  string_stack     : List[Tuple[str, int]] = []
+  closing_positions  : Dict[str, array]      = dict((quote, array(cache.points.typecode)) for quote in set(QUOTE_MAP.values()))
+  escaped            : bool                  = False
+  filename           : str                   = (view.file_name() or "").lower() if hasattr(view, "file_name") else ""
+  last_point         : int                   = -2
+  line_ends          : List[int]             = []
+  line_index         : int                   = 0
+  line_starts        : List[int]             = [begin]
+  newlines           : array                 = array(cache.points.typecode)
+  paint_text         : str                   = view.substr(sublime.Region(begin, end))
+  paintable          : bool                  = False
+  points_by_depth    : List[List[int]]       = [[] for color in COLORS]
+  powershell         : bool                  = filename.endswith((".ps1", ".ps1xml", ".psd1", ".psm1", ".psrc", ".pssc")) or "powershell" in str(cache.syntax).lower()
+  preprocessor       : List[Tuple[List[str], Optional[List[str]], bool, bool]] = []
+  preprocessor_style : str                   = ""
+  quote              : Optional[str]         = None
+  stack              : List[str]             = []
+  string_delimiters  : List[List[Any]]       = []
+  string_stack       : List[Tuple[str, int]] = []
+  syntax_name        : str                   = str(cache.syntax).replace("\\", "/").rsplit("/", 1)[-1].lower().replace(".sublime-syntax", "")
 
   for match in re.finditer("[\r\n]", paint_text):
     match: Match[str]
     line_ends.append(begin + match.start())
     line_starts.append(begin + match.end())
   line_ends.append(end)
+
+  # ->> Select only languages with hash-prefixed conditional compilation directives.
+  # ->> Their branch spellings differ, but delimiter-stack reconciliation is shared.
+  if syntax_name == "haxe":
+    preprocessor_style = "haxe"
+  elif syntax_name == "swift":
+    preprocessor_style = "swift"
+  elif syntax_name in ("basic", "visual basic", "visual basic .net", "vb", "vb.net", "vbnet"):
+    preprocessor_style = "vb"
+  elif syntax_name in ("assembly", "c", "c#", "c++", "cg", "cuda", "f#", "fortran", "fsharp", "glsl", "hlsl", "metal", "objective c", "objective c++", "objective-c", "objective-c++", "opencl", "shaderlab"):
+    preprocessor_style = "cpp"
+
+  if not preprocessor_style and hasattr(view, "match_selector"):
+    for selector, style in (("source.haxe, source.hx", "haxe"), ("source.swift", "swift"), ("source.vb, source.vbnet", "vb"), ("source.c, source.c++, source.cs, source.objc, source.objc++, source.cuda, source.glsl, source.hlsl, source.metal, source.opencl, source.fortran, source.fsharp, source.fs, source.assembly", "cpp")):
+      selector: str
+      style   : str
+      try:
+        if view.match_selector(0, selector):
+          preprocessor_style = style
+          break
+      except Exception:
+        pass
+
+  if not preprocessor_style and not cache.syntax:
+    if filename.endswith(".hx"):
+      preprocessor_style = "haxe"
+    elif filename.endswith(".swift"):
+      preprocessor_style = "swift"
+    elif filename.endswith(".vb"):
+      preprocessor_style = "vb"
+    elif filename.endswith((".c", ".c++", ".cc", ".cl", ".cpp", ".cs", ".cu", ".cuh", ".cxx", ".f", ".f03", ".f08", ".f90", ".f95", ".for", ".fs", ".fsi", ".fsx", ".fx", ".glsl", ".h", ".h++", ".hh", ".hlsl", ".hpp", ".hxx", ".inl", ".ipp", ".metal", ".mm", ".tpp", ".vert", ".frag", ".geom", ".comp")):
+      preprocessor_style = "cpp"
 
   # ->> Syntax modes and embedded PowerShell are recognised independently of extensions.
   if not powershell and hasattr(view, "match_selector"):
@@ -355,6 +388,32 @@ def _parse(view: sublime.View, cache: DocumentCache, revision: int, begin: int, 
     if escaped:
       escaped = False
       continue
+
+    if preprocessor_style and token == "#" and quote is None:
+      line: sublime.Region = view.line(point)
+      if not view.substr(sublime.Region(line.begin(), point)).strip() and not view.substr(sublime.Region(max(0, line.begin() - 3), line.begin())).endswith(("\\\n", "\\\r\n")):
+        directive_match: Optional[Match[str]] = PREPROCESSOR_PATTERNS[preprocessor_style].match(view.substr(sublime.Region(point, min(point + 32, line.end()))))
+        if directive_match is not None:
+          directive: str = directive_match.group(1).lower().replace(" ", "").replace("\t", "")
+          if directive in ("if", "ifdef", "ifndef"):
+            # ->> Nested conditionals independently save the delimiter stack on entry.
+            preprocessor.append((stack[:], None, False, False))
+          elif preprocessor:
+            base, previous, divergent, has_else = preprocessor[-1]
+            if directive in ("elif", "elifdef", "elifndef", "elseif", "else") and not has_else:
+              divergent        = divergent or (previous is not None and previous != stack)
+              previous         = stack[:] if previous is None else previous
+              preprocessor[-1] = (base, previous, divergent, directive == "else")
+              stack            = base[:]
+            elif directive in ("endif", "end"):
+              # ->> An absent #else never invents an empty alternate branch.
+              # ->> One explicit branch carries forward; multiple branches must agree.
+              preprocessor.pop()
+              if divergent or (previous is not None and previous != stack):
+                stack = base[:]
+              elif previous is not None:
+                stack = previous[:]
+          continue
 
     if quote is not None:
       if token == QUOTE_MAP[quote]:
