@@ -643,6 +643,158 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
   width                = 1u;
 
   switch (strategy) {
+    /* ->> Stateless strategies */
+    case STRATEGY_BYTE:        /* Do nothing… */                                                                goto done;
+    case STRATEGY_BYTE_SEPTET: invalid = text[0] <= 0x7Fu ? static_cast< ::std::size_t>(-0) : state::MALFORMED; goto done;
+
+    case STRATEGY_DOUBLE_94: /* ->> ISO 2022 94-character graphic sets use byte positions 0x21–0x7E, so only validate lookahead bytes after determining they belong to this character */ {
+      width   = length <  2u ? length : 2u;
+      invalid = length >= 2u and (text[0] >= 0x21u and text[0] <= 0x7Eu) and (text[1] >= 0x21u and text[1] <= 0x7Eu) ? static_cast< ::std::size_t>(-0) : state::MALFORMED;
+    } goto done;
+
+    case STRATEGY_FORMAT_BIG5: {
+      if      (text[0] < 0x80u)                                                                                                                               { /* Do nothing… */ }
+      else if (length < 2u or text[0] < 0x81u or text[0] > 0xFEu or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0xA1u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+      else                                                                                                                                                    width   = 2u;
+    } goto done;
+
+    case STRATEGY_FORMAT_CESU_8: case STRATEGY_FORMAT_UTF_8: {
+      if      (text[0] < 0x80u)                    { /* Do nothing… */ }
+      else if (text[0] < 0xC2u or text[0] > 0xF4u) invalid = text[0] == 0xC0u or text[0] == 0xC1u ? state::OVERLONG : state::MALFORMED;
+      else {
+        if      (text[0] <= 0xDFu)                  width = 2u;
+        else if (text[0] <= 0xEFu)                  width = 3u;
+        else if (STRATEGY_FORMAT_UTF_8 == strategy) width = 4u;
+        else                                      { invalid = state::MALFORMED; goto done; }
+
+        if      (length < width)                                                                                                                               { invalid = state::MALFORMED; width = length; }
+        else if ((width >= 2u and (text[1] > 0xFFu))          or (width >= 3u and (text[2] > 0xFFu))          or (width == 4u and (text[3] > 0xFFu)))            invalid = state::MALFORMED;
+        else if ((width >= 2u and (text[1] & 0xC0u) != 0x80u) or (width >= 3u and (text[2] & 0xC0u) != 0x80u) or (width == 4u and (text[3] & 0xC0u) != 0x80u)) { invalid = state::MALFORMED; width = 1u; }
+        else if ((text[0] == 0xE0u and text[1] <  0xA0u) or (text[0] == 0xF0u and text[1] < 0x90u))                                                              invalid = state::OVERLONG;
+        else if ((text[0] == 0xF4u and text[1] >  0x8Fu))                                                                                                        invalid = state::MALFORMED;
+        else if ((text[0] == 0xEDu and text[1] >= 0xA0u)) {
+          if      (STRATEGY_FORMAT_UTF_8 == strategy)                                                                           invalid = state::MALFORMED;
+          else if (text[1] >= 0xB0u)                                                                                            invalid = state::MALFORMED;                   // ->> Isolated low surrogate
+          else if (length < 6u)                                                                                               { invalid = state::MALFORMED; width = length; } // ->> CESU-8’s surrogate pair encodes one supplementary character in 6 bytes
+          else if (text[3] != 0xEDu or (text[4] < 0xB0u or text[4] > 0xBFu) or (text[5] > 0xFFu or (text[5] & 0xC0u) != 0x80u)) invalid = state::MALFORMED;
+          else                                                                                                                  width   = 6u;
+        }
+      }
+    } goto done;
+
+    case STRATEGY_FORMAT_GB18030: case STRATEGY_FORMAT_GBK: {
+      if      ((text[0] <  0x80u))                                                                                                                                                        { /* Do nothing… */ }
+      else if ((text[0] <  0x81u or  text[0] >  0xFEu) or  length < 2u)                                                                                                                   invalid = state::MALFORMED;
+      else if ((text[1] >= 0x40u and text[1] <= 0xFEu) and text[1] != 0x7Fu)                                                                                                              width   = 2u;
+      else if ((text[1] >= 0x30u and text[1] <= 0x39u) and length < 4u                                                                         and STRATEGY_FORMAT_GB18030 == strategy) { width   = length; invalid = state::MALFORMED; }
+      else if ((text[1] >= 0x30u and text[1] <= 0x39u) and (text[2] >= 0x81u and text[2] <= 0xFEu) and (text[3] >= 0x30u and text[3] <= 0x39u) and STRATEGY_FORMAT_GB18030 == strategy)   width   = 4u;
+      else                                                                                                                                                                                invalid = state::MALFORMED;
+    } goto done;
+
+    case STRATEGY_FORMAT_JOHAB: {
+      /* TODO */
+      // Johab/CP1361: ASCII, Hangul 84..D3 with 41..7E/81..FE trails,
+      // or Hanja and symbols D9..DE/E0..F9 with 31..7E/91..FE trails.
+      // Validate byte geometry, not which Hangul combinations are assigned.
+      if (text[0] < 0x80u) goto done;
+      width = length < 2 ? length : 2;
+      if (length < 2) { invalid = state::MALFORMED; goto done; }
+      if (text[0] >= 0x84u and text[0] <= 0xD3u) {
+        if (not ((text[1] >= 0x41u and text[1] <= 0x7Eu) or (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+      } else if ((text[0] >= 0xD9u and text[0] <= 0xDEu) or (text[0] >= 0xE0u and text[0] <= 0xF9u)) {
+        if (not ((text[1] >= 0x31u and text[1] <= 0x7Eu) or (text[1] >= 0x91u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+      } else invalid = state::MALFORMED;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_EUC_JP: {
+      if (text[0] < 0x80u) goto done;
+      if (text[0] == 0x8Eu) {
+        if (length < 2 or text[1] < 0xA1u or text[1] > 0xDFu) { invalid = state::MALFORMED; goto done; }
+        width = 2;
+        goto done;
+      }
+      if (text[0] == 0x8Fu) {
+        if (length < 3 or not (text[1] >= 0xA1u and text[1] <= 0xFEu) or not (text[2] >= 0xA1u and text[2] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
+        width = 3;
+        goto done;
+      }
+      if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
+      width = 2;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_EUC_KR: case STRATEGY_FORMAT_GB2312: {
+      // EUC 94-character rows/columns use 0xA1..0xFE.
+      if (text[0] < 0x80u) goto done;
+      if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
+      width = 2;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_EUC_TW: {
+      // EUC-TW: ASCII (1), CNS plane 1 (2), or SS2 8E A1..B0 with a CNS pair (4).
+      // A1..B0 covers planes 1..16; this validates syntax, not assigned repertoire.
+      if (text[0] < 0x80u) goto done;
+      if (text[0] == 0x8Eu) {
+        width = length < 4 ? length : 4;
+        if (length < 4 or text[1] < 0xA1u or text[1] > 0xB0u or
+            text[2] < 0xA1u or text[2] > 0xFEu or text[3] < 0xA1u or text[3] > 0xFEu) invalid = state::MALFORMED;
+        goto done;
+      }
+      width = length < 2 ? length : 2;
+      if (length < 2 or text[0] < 0xA1u or text[0] > 0xFEu or text[1] < 0xA1u or text[1] > 0xFEu) invalid = state::MALFORMED;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_SJIS: {
+      if (text[0] <= 0x7Fu or (text[0] >= 0xA1u and text[0] <= 0xDFu)) goto done;
+      if (not ((text[0] >= 0x81u and text[0] <= 0x9Fu) or (text[0] >= 0xE0u and text[0] <= 0xFCu)) or
+          length < 2 or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0x80u and text[1] <= 0xFCu))) { invalid = state::MALFORMED; goto done; }
+      width = 2;
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: {
+      width = length < 2 ? length : 2;
+      if (length < 2 or text[1] > 0xFFu) { invalid = state::MALFORMED; goto done; }
+
+      unsigned unit = ENDIAN_BIG != endianness ? text[0] | (text[1] << 8) : (text[0] << 8) | text[1];
+      if (strategy == STRATEGY_FORMAT_UCS_2) { invalid = unit >= 0xD800u and unit <= 0xDFFFu ? state::MALFORMED : 0; goto done; }
+      if (unit >= 0xDC00u and unit <= 0xDFFFu) { invalid = state::MALFORMED; goto done; }
+      if (unit >= 0xD800u and unit <= 0xDBFFu) {
+        if (length < 4) { width = length; { invalid = state::MALFORMED; goto done; } }
+        if (text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; goto done; }
+        unsigned low = ENDIAN_BIG != endianness ? text[2] | (text[3] << 8) : (text[2] << 8) | text[3];
+        if (low < 0xDC00u or low > 0xDFFFu) { invalid = state::MALFORMED; goto done; }
+        width = 4;
+      }
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: {
+      width = length < 4 ? length : 4;
+      if (length < 4 or text[1] > 0xFFu or text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; goto done; }
+      ::uint_least32_t value = ENDIAN_BIG != endianness ?
+        static_cast< ::uint_least32_t>(text[0]) | (static_cast< ::uint_least32_t>(text[1]) << 8) |
+          (static_cast< ::uint_least32_t>(text[2]) << 16) | (static_cast< ::uint_least32_t>(text[3]) << 24) :
+        (static_cast< ::uint_least32_t>(text[0]) << 24) | (static_cast< ::uint_least32_t>(text[1]) << 16) |
+          (static_cast< ::uint_least32_t>(text[2]) << 8) | static_cast< ::uint_least32_t>(text[3]);
+      if (value > 0x10FFFFu or (value >= 0xD800u and value <= 0xDFFFu)) { invalid = state::MALFORMED; goto done; }
+      goto done;
+    } break;
+
+    case STRATEGY_FORMAT_WINDOWS_949: {
+      // Unified Hangul Code extends EUC-KR: lead 81..FE; ASCII-letter and
+      // high-byte trails (41..5A, 61..7A, 81..FE) allow additional Hangul.
+      if (text[0] < 0x80u) goto done;
+      width = length < 2 ? length : 2;
+      if (length < 2 or text[0] < 0x81u or text[0] > 0xFEu or
+          not ((text[1] >= 0x41u and text[1] <= 0x5Au) or (text[1] >= 0x61u and text[1] <= 0x7Au) or
+               (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+      goto done;
+    } break;
+
     /* ->> Stateful strategies */
     case STRATEGY_ACCENT_PREFIX: {
       width = (                                                                                                //
@@ -818,158 +970,6 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
 
       width += length > width and text[width] == '-';
     } goto done;
-
-    /* ->> Stateless strategies */
-    case STRATEGY_BYTE:        /* Do nothing… */                                                                goto done;
-    case STRATEGY_BYTE_SEPTET: invalid = text[0] <= 0x7Fu ? static_cast< ::std::size_t>(-0) : state::MALFORMED; goto done;
-
-    case STRATEGY_DOUBLE_94: /* ->> ISO 2022 94-character graphic sets use byte positions 0x21–0x7E, so only validate lookahead bytes after determining they belong to this character */ {
-      width   = length <  2u ? length : 2u;
-      invalid = length >= 2u and (text[0] >= 0x21u and text[0] <= 0x7Eu) and (text[1] >= 0x21u and text[1] <= 0x7Eu) ? static_cast< ::std::size_t>(-0) : state::MALFORMED;
-    } goto done;
-
-    case STRATEGY_FORMAT_BIG5: {
-      if      (text[0] < 0x80u)                                                                                                                               { /* Do nothing… */ }
-      else if (length < 2u or text[0] < 0x81u or text[0] > 0xFEu or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0xA1u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
-      else                                                                                                                                                    width   = 2u;
-    } goto done;
-
-    case STRATEGY_FORMAT_CESU_8: case STRATEGY_FORMAT_UTF_8: {
-      if      (text[0] < 0x80u)                    { /* Do nothing… */ }
-      else if (text[0] < 0xC2u or text[0] > 0xF4u) invalid = text[0] == 0xC0u or text[0] == 0xC1u ? state::OVERLONG : state::MALFORMED;
-      else {
-        if      (text[0] <= 0xDFu)                  width = 2u;
-        else if (text[0] <= 0xEFu)                  width = 3u;
-        else if (STRATEGY_FORMAT_UTF_8 == strategy) width = 4u;
-        else                                      { invalid = state::MALFORMED; goto done; }
-
-        if      (length < width)                                                                                                                               { invalid = state::MALFORMED; width = length; }
-        else if ((width >= 2u and (text[1] > 0xFFu))          or (width >= 3u and (text[2] > 0xFFu))          or (width == 4u and (text[3] > 0xFFu)))            invalid = state::MALFORMED;
-        else if ((width >= 2u and (text[1] & 0xC0u) != 0x80u) or (width >= 3u and (text[2] & 0xC0u) != 0x80u) or (width == 4u and (text[3] & 0xC0u) != 0x80u)) { invalid = state::MALFORMED; width = 1u; }
-        else if ((text[0] == 0xE0u and text[1] <  0xA0u) or (text[0] == 0xF0u and text[1] < 0x90u))                                                              invalid = state::OVERLONG;
-        else if ((text[0] == 0xF4u and text[1] >  0x8Fu))                                                                                                        invalid = state::MALFORMED;
-        else if ((text[0] == 0xEDu and text[1] >= 0xA0u)) {
-          if      (STRATEGY_FORMAT_UTF_8 == strategy)                                                                           invalid = state::MALFORMED;
-          else if (text[1] >= 0xB0u)                                                                                            invalid = state::MALFORMED;                   // ->> Isolated low surrogate
-          else if (length < 6u)                                                                                               { invalid = state::MALFORMED; width = length; } // ->> CESU-8’s surrogate pair encodes one supplementary character in 6 bytes
-          else if (text[3] != 0xEDu or (text[4] < 0xB0u or text[4] > 0xBFu) or (text[5] > 0xFFu or (text[5] & 0xC0u) != 0x80u)) invalid = state::MALFORMED;
-          else                                                                                                                  width   = 6u;
-        }
-      }
-    } goto done;
-
-    case STRATEGY_FORMAT_GB18030: case STRATEGY_FORMAT_GBK: {
-      if      ((text[0] <  0x80u))                                                                                                                                                        { /* Do nothing… */ }
-      else if ((text[0] <  0x81u or  text[0] >  0xFEu) or  length < 2u)                                                                                                                   invalid = state::MALFORMED;
-      else if ((text[1] >= 0x40u and text[1] <= 0xFEu) and text[1] != 0x7Fu)                                                                                                              width   = 2u;
-      else if ((text[1] >= 0x30u and text[1] <= 0x39u) and length < 4u                                                                         and STRATEGY_FORMAT_GB18030 == strategy) { width   = length; invalid = state::MALFORMED; }
-      else if ((text[1] >= 0x30u and text[1] <= 0x39u) and (text[2] >= 0x81u and text[2] <= 0xFEu) and (text[3] >= 0x30u and text[3] <= 0x39u) and STRATEGY_FORMAT_GB18030 == strategy)   width   = 4u;
-      else                                                                                                                                                                                invalid = state::MALFORMED;
-    } goto done;
-
-    case STRATEGY_FORMAT_JOHAB: {
-      /* TODO */
-      // Johab/CP1361: ASCII, Hangul 84..D3 with 41..7E/81..FE trails,
-      // or Hanja and symbols D9..DE/E0..F9 with 31..7E/91..FE trails.
-      // Validate byte geometry, not which Hangul combinations are assigned.
-      if (text[0] < 0x80u) goto done;
-      width = length < 2 ? length : 2;
-      if (length < 2) { invalid = state::MALFORMED; goto done; }
-      if (text[0] >= 0x84u and text[0] <= 0xD3u) {
-        if (not ((text[1] >= 0x41u and text[1] <= 0x7Eu) or (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
-      } else if ((text[0] >= 0xD9u and text[0] <= 0xDEu) or (text[0] >= 0xE0u and text[0] <= 0xF9u)) {
-        if (not ((text[1] >= 0x31u and text[1] <= 0x7Eu) or (text[1] >= 0x91u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
-      } else invalid = state::MALFORMED;
-      goto done;
-    } break;
-
-    case STRATEGY_FORMAT_EUC_JP: {
-      if (text[0] < 0x80u) goto done;
-      if (text[0] == 0x8Eu) {
-        if (length < 2 or text[1] < 0xA1u or text[1] > 0xDFu) { invalid = state::MALFORMED; goto done; }
-        width = 2;
-        goto done;
-      }
-      if (text[0] == 0x8Fu) {
-        if (length < 3 or not (text[1] >= 0xA1u and text[1] <= 0xFEu) or not (text[2] >= 0xA1u and text[2] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
-        width = 3;
-        goto done;
-      }
-      if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
-      width = 2;
-      goto done;
-    } break;
-
-    case STRATEGY_FORMAT_EUC_KR: case STRATEGY_FORMAT_GB2312: {
-      // EUC 94-character rows/columns use 0xA1..0xFE.
-      if (text[0] < 0x80u) goto done;
-      if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
-      width = 2;
-      goto done;
-    } break;
-
-    case STRATEGY_FORMAT_EUC_TW: {
-      // EUC-TW: ASCII (1), CNS plane 1 (2), or SS2 8E A1..B0 with a CNS pair (4).
-      // A1..B0 covers planes 1..16; this validates syntax, not assigned repertoire.
-      if (text[0] < 0x80u) goto done;
-      if (text[0] == 0x8Eu) {
-        width = length < 4 ? length : 4;
-        if (length < 4 or text[1] < 0xA1u or text[1] > 0xB0u or
-            text[2] < 0xA1u or text[2] > 0xFEu or text[3] < 0xA1u or text[3] > 0xFEu) invalid = state::MALFORMED;
-        goto done;
-      }
-      width = length < 2 ? length : 2;
-      if (length < 2 or text[0] < 0xA1u or text[0] > 0xFEu or text[1] < 0xA1u or text[1] > 0xFEu) invalid = state::MALFORMED;
-      goto done;
-    } break;
-
-    case STRATEGY_FORMAT_SJIS: {
-      if (text[0] <= 0x7Fu or (text[0] >= 0xA1u and text[0] <= 0xDFu)) goto done;
-      if (not ((text[0] >= 0x81u and text[0] <= 0x9Fu) or (text[0] >= 0xE0u and text[0] <= 0xFCu)) or
-          length < 2 or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0x80u and text[1] <= 0xFCu))) { invalid = state::MALFORMED; goto done; }
-      width = 2;
-      goto done;
-    } break;
-
-    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: {
-      width = length < 2 ? length : 2;
-      if (length < 2 or text[1] > 0xFFu) { invalid = state::MALFORMED; goto done; }
-
-      unsigned unit = ENDIAN_BIG != endianness ? text[0] | (text[1] << 8) : (text[0] << 8) | text[1];
-      if (strategy == STRATEGY_FORMAT_UCS_2) { invalid = unit >= 0xD800u and unit <= 0xDFFFu ? state::MALFORMED : 0; goto done; }
-      if (unit >= 0xDC00u and unit <= 0xDFFFu) { invalid = state::MALFORMED; goto done; }
-      if (unit >= 0xD800u and unit <= 0xDBFFu) {
-        if (length < 4) { width = length; { invalid = state::MALFORMED; goto done; } }
-        if (text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; goto done; }
-        unsigned low = ENDIAN_BIG != endianness ? text[2] | (text[3] << 8) : (text[2] << 8) | text[3];
-        if (low < 0xDC00u or low > 0xDFFFu) { invalid = state::MALFORMED; goto done; }
-        width = 4;
-      }
-      goto done;
-    } break;
-
-    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: {
-      width = length < 4 ? length : 4;
-      if (length < 4 or text[1] > 0xFFu or text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; goto done; }
-      ::uint_least32_t value = ENDIAN_BIG != endianness ?
-        static_cast< ::uint_least32_t>(text[0]) | (static_cast< ::uint_least32_t>(text[1]) << 8) |
-          (static_cast< ::uint_least32_t>(text[2]) << 16) | (static_cast< ::uint_least32_t>(text[3]) << 24) :
-        (static_cast< ::uint_least32_t>(text[0]) << 24) | (static_cast< ::uint_least32_t>(text[1]) << 16) |
-          (static_cast< ::uint_least32_t>(text[2]) << 8) | static_cast< ::uint_least32_t>(text[3]);
-      if (value > 0x10FFFFu or (value >= 0xD800u and value <= 0xDFFFu)) { invalid = state::MALFORMED; goto done; }
-      goto done;
-    } break;
-
-    case STRATEGY_FORMAT_WINDOWS_949: {
-      // Unified Hangul Code extends EUC-KR: lead 81..FE; ASCII-letter and
-      // high-byte trails (41..5A, 61..7A, 81..FE) allow additional Hangul.
-      if (text[0] < 0x80u) goto done;
-      width = length < 2 ? length : 2;
-      if (length < 2 or text[0] < 0x81u or text[0] > 0xFEu or
-          not ((text[1] >= 0x41u and text[1] <= 0x5Au) or (text[1] >= 0x61u and text[1] <= 0x7Au) or
-               (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
-      goto done;
-    } break;
 
     default:;
   }

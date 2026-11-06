@@ -1,6 +1,7 @@
-/* POSIX:   clang++ -std=c++98 -pedantic -O2 -Wall -Wextra -pthread localhost.cpp -o localhost */
-/* Windows: rc /nologo /folocalhost.res localhost.rc && cl /nologo /utf-8 /EHsc /O2 /DUNICODE /D_UNICODE localhost.cpp localhost.res /Fe:localhost.exe /link /SUBSYSTEM:WINDOWS ws2_32.lib shell32.lib user32.lib kernel32.lib && del /q localhost.obj localhost.res */
-/* localhost [--help] [--port 8000] [--root "C:/LapysDev"] [--shutdown] */
+/* POSIX:      clang++ -std=c++98 -pedantic -O2 -Wall -Wextra -pthread localhost.cpp -o localhost */
+/* Windows:    rc /nologo /folocalhost.res localhost.rc && cl /nologo /utf-8 /EHsc /O2 /DUNICODE /D_UNICODE localhost.cpp localhost.res /Fe:localhost.exe /link /SUBSYSTEM:WINDOWS ws2_32.lib shell32.lib user32.lib kernel32.lib && del /q localhost.obj localhost.res */
+/* PowerShell: New-NetFirewallRule -Action Allow -Direction Inbound -DisplayName "LapysDev Server" -LocalPort 8000 -Profile Private -Program (Resolve-Path "C:\LapysDev\tools\localhost.exe").Path -Protocol TCP -RemoteAddress LocalSubnet4 */
+/* localhost [--bind 127.0.0.1 | --lan] [--help] [--port 8000] [--root "C:/LapysDev"] [--shutdown] */
 #include <cctype>   // --> ::std::tolower(…)
 #include <cerrno>   // --> EADDRINUSE, EINTR; errno
 #include <cstddef>  // --> ::std::size_t
@@ -9,7 +10,7 @@
 #include <cstring>  // --> ::std::memchr(…), ::std::memcpy(…), ::std::memmove(…), ::std::strcmp(…), ::std::strchr(…), ::std::strlen(…), ::std::strpbrk(…), ::std::strrchr(…), ::std::strstr(…)
 #include <ctime>    // --> ::std::time_t, ::std::tm; ::std::strftime(…), ::std::time(…)
 #include <iso646.h> // --> and, not, or
-#include <stdint.h> // --> ::uint_least16_t, ::uintptr_t
+#include <stdint.h> // --> ::uint_least8_t, ::uint_least16_t, ::uint_least32_t, ::uintptr_t
 #if defined _WIN32
 # define NOMINMAX
 # define WIN32_LEAN_AND_MEAN
@@ -44,7 +45,7 @@ extern "C" __declspec(dllimport) int       WINAPI MultiByteToWideChar (::UINT, :
 extern "C" __declspec(dllimport) ::HANDLE  WINAPI OpenEventW          (::DWORD, ::BOOL, ::LPCWSTR);
 extern "C" __declspec(dllimport) ::BOOL    WINAPI SetEvent            (::HANDLE);
 extern "C" __declspec(dllimport) ::DWORD   WINAPI WaitForSingleObject (::HANDLE, ::DWORD);
-extern "C" __declspec(dllimport) int       WINAPI WideCharToMultiByte (::UINT, ::DWORD, ::LPCWCH, int, ::LPSTR, int, ::LPCCH, ::LPBOOL);
+extern "C" __declspec(dllimport) int       WINAPI WideCharToMultiByte (::UINT, ::DWORD, ::LPCWCH, int, ::LPSTR, int, ::LPCCH, ::LPBOOL);800
 extern "C" __declspec(dllimport) ::BOOL    WINAPI WriteFile           (::HANDLE, ::LPCVOID, ::DWORD, ::LPDWORD, ::LPOVERLAPPED);
 
 extern "C" _ACRTIMP              ::uintptr_t  __cdecl _beginthreadex(void*, unsigned, unsigned (__stdcall*)(void*), void*, unsigned, unsigned*);
@@ -223,7 +224,8 @@ enum http_status /* : ::uint_least16_t : 9 */ {
   static ::pthread_mutex_t       workerMutex                                                              = PTHREAD_MUTEX_INITIALIZER;
 #endif
 static socket_t         listeners[2] = {INVALID_SOCKET_HANDLE, INVALID_SOCKET_HANDLE};
-static ::uint_least16_t port         = 8000u; // ->> HTTP/TCP ports fit in at least 16 bits
+static ::uint_least32_t bindIPv4     = INADDR_LOOPBACK; // ->> Host-order IPv4; `--bind` selects a particular network interface
+static ::uint_least16_t port         = 8000u;           // ->> HTTP/TCP ports fit in at least 16 bits
 static struct string    root;
 
 extern "C" {
@@ -296,34 +298,37 @@ static bool append_url(struct string* const output, char const text[]) /* noexce
   static unsigned __stdcall client_thread(void* const parameter) /* noexcept */ {
     socket_t const client = static_cast<socket_t>(reinterpret_cast< ::UINT_PTR>(parameter));
 
+    // ...
     handle_request(client);
     close_socket(client);
     worker_end();
+
     return 0u;
   }
 #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
   static void* client_thread(void* const parameter) /* noexcept */ {
     socket_t const client = *static_cast<socket_t*>(parameter);
 
+    // ...
     ::std::free(parameter);
     handle_request(client);
     close_socket(client);
     worker_end();
+
     return NULL;
   }
 #endif
 
 static void close_control() /* noexcept */ {
   #if defined _WIN32
-    if (NULL != localhostMutex) (void) ::CloseHandle(localhostMutex);
-    if (NULL != localhostShutdown) (void) ::CloseHandle(localhostShutdown);
-    localhostMutex    = NULL;
-    localhostShutdown = NULL;
+    if (NULL != localhostMutex)    { (void) ::CloseHandle(localhostMutex);    localhostMutex    = NULL; }
+    if (NULL != localhostShutdown) { (void) ::CloseHandle(localhostShutdown); localhostShutdown = NULL; }
   #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
     close_socket(control);
     if ('\0' != *controlPath) (void) ::unlink(controlPath);
-    control        = INVALID_SOCKET_HANDLE;
-    *controlPath   = '\0';
+
+    control      = INVALID_SOCKET_HANDLE;
+    *controlPath = '\0';
   #endif
 }
 
@@ -514,7 +519,7 @@ static void handle_request(socket_t const client) /* noexcept */ {
     struct string       canonical;
     char const   *const delimiter = ::std::strpbrk(request.target, "?#");
     struct string       path;
-    ::std::FILE        *stream    = NULL;
+    ::std::FILE        *stream = NULL;
     struct string       uri;
 
     // ...
@@ -561,10 +566,10 @@ static void handle_request(socket_t const client) /* noexcept */ {
       }
 
       if (is_directory(path.value)) {
-        ::std::size_t     count    = 0u;
+        ::std::size_t     count = 0u;
         struct string     document;
-        struct directory *entries  = NULL;
-        bool              success  = true;
+        struct directory *entries = NULL;
+        bool              success = true;
 
         // ...
         if (not list_directory(path.value, &entries, &count))
@@ -663,10 +668,10 @@ static bool is_static_file(char const path[], void* const size) /* noexcept */ {
 static bool list_directory(char const path[], struct directory* entries[], ::std::size_t* const count) /* noexcept */ {
   bool success = true;
   #if defined _WIN32
-    wchar_t      *widepath = widen_path(path);        if (NULL == widepath)                                                                                                                                                  return false;
-    ::std::size_t length   = ::std::wcslen(widepath); if (wchar_t *const wildcard = static_cast<wchar_t*>(::std::realloc(widepath, (length + 3u) * sizeof(wchar_t)))) { widepath = wildcard; } else { ::std::free(widepath); return false; }
-    ::WIN32_FIND_DATAW entry  = {};
-    ::HANDLE           search = NULL;
+    wchar_t           *widepath = widen_path(path);        if (NULL == widepath)                                                                                                                                                  return false;
+    ::std::size_t      length   = ::std::wcslen(widepath); if (wchar_t *const wildcard = static_cast<wchar_t*>(::std::realloc(widepath, (length + 3u) * sizeof(wchar_t)))) { widepath = wildcard; } else { ::std::free(widepath); return false; }
+    ::HANDLE           search   = NULL;
+    ::WIN32_FIND_DATAW entry    = {};
 
     // ...
     if (0u != length and L'\\' != widepath[length - 1u] and L'/' != widepath[length - 1u]) widepath[length++] = L'\\';
@@ -819,20 +824,6 @@ static socket_t open_listener(unsigned char const ipVersion) /* noexcept */ {
   #endif
 
   switch (ipVersion) {
-    case 4u: {
-      struct ::sockaddr_in address = {};
-
-      // ...
-      address.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
-      address.sin_family      = AF_INET;
-      address.sin_port        = ::htons(static_cast<unsigned short>(port));
-
-      if (0 != ::bind(server, reinterpret_cast<struct ::sockaddr const*>(&address), sizeof address) or 0 != ::listen(server, LISTEN_BACKLOG)) {
-        close_socket(server);
-        return INVALID_SOCKET_HANDLE;
-      }
-    } break;
-
     case 6u: {
       struct ::sockaddr_in6 address  = {};
       int const             ipv6only = 1;
@@ -847,6 +838,20 @@ static socket_t open_listener(unsigned char const ipVersion) /* noexcept */ {
       address.sin6_addr   = in6addr_loopback;
       address.sin6_family = AF_INET6;
       address.sin6_port   = ::htons(static_cast<unsigned short>(port));
+
+      if (0 != ::bind(server, reinterpret_cast<struct ::sockaddr const*>(&address), sizeof address) or 0 != ::listen(server, LISTEN_BACKLOG)) {
+        close_socket(server);
+        return INVALID_SOCKET_HANDLE;
+      }
+    } break;
+
+    case 4u: default: {
+      struct ::sockaddr_in address = {};
+
+      // ...
+      address.sin_addr.s_addr = ::htonl(bindIPv4);
+      address.sin_family      = AF_INET;
+      address.sin_port        = ::htons(static_cast<unsigned short>(port));
 
       if (0 != ::bind(server, reinterpret_cast<struct ::sockaddr const*>(&address), sizeof address) or 0 != ::listen(server, LISTEN_BACKLOG)) {
         close_socket(server);
@@ -1005,8 +1010,7 @@ static bool response_headers(
   char             digits[64] = "0";
   char             number[64] = "???.??";
   struct string    response;
-  struct ::std::tm utc        = {};
-  ::std::time_t const now     = ::std::time(NULL);
+  struct ::std::tm utc = {};
   #if defined _WIN32
     ::ULONGLONG value = size;
   #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
@@ -1015,11 +1019,10 @@ static bool response_headers(
 
   // ...
   #if defined _WIN32
-    ::__time64_t const timestamp = static_cast< ::__time64_t>(now);
-    if (0 == ::_gmtime64_s(&utc, &timestamp))
+    if (0 == ::_gmtime64_s(&utc, &static_cast< ::__time64_t const&>(static_cast< ::__time64_t>(::std::time(NULL)))))
     (void) ::std::strftime(date, sizeof date, "%a, %d %b %Y %H:%M:%S GMT", &utc);
   #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
-    if (NULL != ::gmtime_r(&now, &utc))
+    if (NULL != ::gmtime_r(&static_cast< ::std::time_t const&>(::std::time(NULL)), &utc))
     (void) ::std::strftime(date, sizeof date, "%a, %d %b %Y %H:%M:%S GMT", &utc);
   #endif
 
@@ -1290,35 +1293,91 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
   #endif
 
   // ->> Parse before initializing sockets: Invalid command lines do not launch the server
-  for (int index = 1; index < count; ++index) {
+  for (unsigned index = 1u; count > index; ++index) {
     char const* const option = arguments[index];
 
     // ...
-    if (0 == ::std::strcmp(option, "--help") or 0 == ::std::strcmp(option, "-h")) {
-      if (2 != count) return INVALID_COMMAND_LINE;
-      help = true;
-      break;
-    }
     if (0 == ::std::strcmp(option, "--shutdown")) {
-      if (2 != count) return INVALID_COMMAND_LINE;
+      if (count != 2)
+      return INVALID_COMMAND_LINE;
+
       shutdown = true;
       break;
     }
-    if (0 == ::std::strcmp(option, "--root") and index + 1 < count) {
-      if (not root.set(arguments[++index])) return EXIT_FAILURE;
-    } else if (0 == ::std::strcmp(option, "--port") and index + 1 < count) {
-      char const* value  = arguments[++index];
-      unsigned long number = 0uL;
 
-      if ('\0' == *value) return INVALID_COMMAND_LINE;
+    else if (0 == ::std::strcmp(option, "--root") and index + 1 < count) {
+      if (not root.set(arguments[++index]))
+      return EXIT_FAILURE;
+    }
+
+    else if (0 == ::std::strcmp(option, "--port") and index + 1 < count) {
+      char const      *value  = arguments[++index];
+      ::uint_least16_t number = 0000u;
+
+      // ...
+      if ('\0' == *value)
+      return INVALID_COMMAND_LINE;
+
       for (; '\0' != *value; ++value) {
-        if ('0' > *value or '9' < *value) return INVALID_COMMAND_LINE;
-        number = number * 10uL + static_cast<unsigned long>(*value - '0');
-        if (PORT_MAXIMUM < number) return INVALID_COMMAND_LINE;
+        if (*value < '0' or *value > '9')
+        return INVALID_COMMAND_LINE;
+
+        number = (number * 10uL) + static_cast< ::uint_least16_t>(*value - '0');
+
+        if (PORT_MAXIMUM < number)
+        return INVALID_COMMAND_LINE;
       }
-      if (0uL == number) return INVALID_COMMAND_LINE;
-      port = static_cast< ::uint_least16_t>(number);
-    } else return INVALID_COMMAND_LINE;
+
+      if (0000u == number)
+      return INVALID_COMMAND_LINE;
+
+      port = number;
+    }
+
+    else if (0 == ::std::strcmp(option, "--lan"))
+      bindIPv4 = INADDR_ANY; // ->> All IPv4 interfaces; restrict access using the host firewall
+
+    else if (0 == ::std::strcmp(option, "--help") or 0 == ::std::strcmp(option, "-h")) {
+      if (count != 2)
+      return INVALID_COMMAND_LINE;
+
+      help = true;
+      break;
+    }
+
+    else if (0 == ::std::strcmp(option, "--bind") and index + 1 < count) {
+      char const     *address   = arguments[++index];
+      bool            hasDigit  = false;
+      ::uint_least8_t octets[4] = {0u, 0u, 0u, 0u};
+      unsigned char   part      = 0u; /* 0–3 */
+
+      // ...
+      for (; '\0' != *address; ++address) {
+        if (*address >= '0' and *address <= '9') {
+          hasDigit     = true;
+          octets[part] = (octets[part] * 10uL) + static_cast<::uint_least8_t>(*address - '0');
+
+          if (octets[part] > 255uL)
+          return INVALID_COMMAND_LINE;
+        }
+
+        else if ('.' == *address and hasDigit and part < 3u) {
+          hasDigit = false;
+          part++;
+        }
+
+        else
+        return INVALID_COMMAND_LINE;
+      }
+
+      if (not hasDigit or part != 3u)
+      return INVALID_COMMAND_LINE;
+
+      bindIPv4 = static_cast< ::uint_least32_t>((octets[0] << (8u * 3u)) | (octets[1] << (8u * 2u)) | (octets[2] << (8u * 1u)) | (octets[3] << (8u * 0u)));
+    }
+
+    else
+    return INVALID_COMMAND_LINE;
   }
 
   // ->> Received HTTP bytes are not converted through the process locale.
@@ -1329,20 +1388,20 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
     if (shutdown) {
       status  = request_shutdown();
       message = EXIT_SUCCESS == status ? "[.]: Localhost shutdown requested." "\r\n" : "[.]: Localhost is not running." "\r\n";
-    } else message = "[?]: localhost [--root \"DIRECTORY\"] [--port 1..65535] | --shutdown | --help" "\r\n";
+    } else message = "[?]: localhost [--bind IPv4 | --lan] [--port 1..65535] [--root \"DIRECTORY\"] | --shutdown | --help" "\r\n";
 
     #if defined _WIN32
       ::BOOL const   attached = ::AttachConsole(ATTACH_PARENT_PROCESS);
       ::HANDLE const stream   = ::GetStdHandle(STD_OUTPUT_HANDLE);
 
+      // ...
       if (INVALID_HANDLE_VALUE != stream and NULL != stream) {
         ::DWORD written = 0u;
         (void) ::WriteFile(stream, message, static_cast< ::DWORD>(::std::strlen(message)), &written, NULL);
       }
 
-      // ->> The Windows-subsystem executable temporarily borrows the calling shell’s console only to report command results
       if (FALSE != attached)
-      (void) ::FreeConsole();
+      (void) ::FreeConsole(); // ->> The Windows-subsystem executable temporarily borrows the calling shell’s console only to report command results
     #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
       (void) ::std::fputs(message, stdout);
     #endif
