@@ -691,21 +691,19 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
       else                                                                                                                                                                                invalid = state::MALFORMED;
     } goto done;
 
-    case STRATEGY_FORMAT_JOHAB: {
-      /* TODO */
-      // Johab/CP1361: ASCII, Hangul 84..D3 with 41..7E/81..FE trails,
-      // or Hanja and symbols D9..DE/E0..F9 with 31..7E/91..FE trails.
-      // Validate byte geometry, not which Hangul combinations are assigned.
-      if (text[0] < 0x80u) goto done;
-      width = length < 2 ? length : 2;
-      if (length < 2) { invalid = state::MALFORMED; goto done; }
-      if (text[0] >= 0x84u and text[0] <= 0xD3u) {
-        if (not ((text[1] >= 0x41u and text[1] <= 0x7Eu) or (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
-      } else if ((text[0] >= 0xD9u and text[0] <= 0xDEu) or (text[0] >= 0xE0u and text[0] <= 0xF9u)) {
-        if (not ((text[1] >= 0x31u and text[1] <= 0x7Eu) or (text[1] >= 0x91u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
-      } else invalid = state::MALFORMED;
-      goto done;
-    } break;
+    case STRATEGY_FORMAT_JOHAB: /* ->> ASCII, Hangul 0x84–0xD3 with 0x41–7E or 0x81–0xFE trails, or Hanja (and symbols) 0xD9–0xDE or 0xE0–0xF9 with 0x31–0x7E or 0x91–0xFE trails */ {
+      if (text[0] < 0x80u); /* TODO */
+      else {
+        if (length < 2u) { invalid = state::MALFORMED; width = length; goto done; }
+        else {
+          width = 2u;
+
+          if      ((text[0] >= 0x84u and text[0] <= 0xD3u))                                            { if (not ((text[1] >= 0x41u and text[1] <= 0x7Eu) or (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED; }
+          else if ((text[0] >= 0xD9u and text[0] <= 0xDEu) or (text[0] >= 0xE0u and text[0] <= 0xF9u)) { if (not ((text[1] >= 0x31u and text[1] <= 0x7Eu) or (text[1] >= 0x91u and text[1] <= 0xFEu))) invalid = state::MALFORMED; }
+          else                                                                                                                                                                                         invalid = state::MALFORMED;
+        }
+      }
+    } goto done;
 
     case STRATEGY_FORMAT_EUC_JP: {
       if (text[0] < 0x80u) goto done;
@@ -721,16 +719,14 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
       }
       if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
       width = 2;
-      goto done;
-    } break;
+    } goto done;
 
     case STRATEGY_FORMAT_EUC_KR: case STRATEGY_FORMAT_GB2312: {
       // EUC 94-character rows/columns use 0xA1..0xFE.
       if (text[0] < 0x80u) goto done;
       if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
       width = 2;
-      goto done;
-    } break;
+    } goto done;
 
     case STRATEGY_FORMAT_EUC_TW: {
       // EUC-TW: ASCII (1), CNS plane 1 (2), or SS2 8E A1..B0 with a CNS pair (4).
@@ -744,16 +740,14 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
       }
       width = length < 2 ? length : 2;
       if (length < 2 or text[0] < 0xA1u or text[0] > 0xFEu or text[1] < 0xA1u or text[1] > 0xFEu) invalid = state::MALFORMED;
-      goto done;
-    } break;
+    } goto done;
 
     case STRATEGY_FORMAT_SJIS: {
       if (text[0] <= 0x7Fu or (text[0] >= 0xA1u and text[0] <= 0xDFu)) goto done;
       if (not ((text[0] >= 0x81u and text[0] <= 0x9Fu) or (text[0] >= 0xE0u and text[0] <= 0xFCu)) or
           length < 2 or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0x80u and text[1] <= 0xFCu))) { invalid = state::MALFORMED; goto done; }
       width = 2;
-      goto done;
-    } break;
+    } goto done;
 
     case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: {
       width = length < 2 ? length : 2;
@@ -769,8 +763,7 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
         if (low < 0xDC00u or low > 0xDFFFu) { invalid = state::MALFORMED; goto done; }
         width = 4;
       }
-      goto done;
-    } break;
+    } goto done;
 
     case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: {
       width = length < 4 ? length : 4;
@@ -781,8 +774,7 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
         (static_cast< ::uint_least32_t>(text[0]) << 24) | (static_cast< ::uint_least32_t>(text[1]) << 16) |
           (static_cast< ::uint_least32_t>(text[2]) << 8) | static_cast< ::uint_least32_t>(text[3]);
       if (value > 0x10FFFFu or (value >= 0xD800u and value <= 0xDFFFu)) { invalid = state::MALFORMED; goto done; }
-      goto done;
-    } break;
+    } goto done;
 
     case STRATEGY_FORMAT_WINDOWS_949: {
       // Unified Hangul Code extends EUC-KR: lead 81..FE; ASCII-letter and
@@ -792,8 +784,7 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
       if (length < 2 or text[0] < 0x81u or text[0] > 0xFEu or
           not ((text[1] >= 0x41u and text[1] <= 0x5Au) or (text[1] >= 0x61u and text[1] <= 0x7Au) or
                (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
-      goto done;
-    } break;
+    } goto done;
 
     /* ->> Stateful strategies */
     case STRATEGY_ACCENT_PREFIX: {
