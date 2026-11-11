@@ -1,234 +1,357 @@
-#include <cerrno>   // --> EINTR, errno
-#include <climits>  // --> INT_MAX
-#include <cstddef>  // --> ::std::size_t
-#include <cstdio>   // --> ::std::printf(…)
-#include <cstdlib>  // --> EXIT_FAILURE, EXIT_SUCCESS
-#include <cstring>  // --> ::std::memcpy(…), ::std::strlen(…)
-#include <iso646.h> // --> and, not, or
+/* TODO */
+#include <cerrno>    // --> EINTR, errno.
+#include <climits>   // --> INT_MAX.
+#include <cstddef>   // --> ::std::size_t.
+#include <cstdio>    // --> ::std::printf(…).
+#include <cstdlib>   // --> EXIT_FAILURE, EXIT_SUCCESS.
+#include <cstring>   // --> ::std::memcpy(…), ::std::strlen(…).
+#include <iso646.h>  // --> and, not, or.
 #if defined _WIN32
-# include <cstdlib>    // --> __argc, __argv, __wargv
-# include <windows.h>  // --> ::GetCommandLineA/W(…), ::GetModuleFileNameA/W(…), ::LocalFree(…), ::MultiByteToWideChar(…), ::WideCharToMultiByte(…)
-#   include <shellapi.h> // --> ::CommandLineToArgvW(…)
-# if defined _MSC_VER
-#   pragma comment(lib, "kernel32.lib")
-#   pragma comment(lib, "shell32.lib")
-# endif
+  #include <shellapi.h> // --> ::CommandLineToArgvW(…).
+  #include <windows.h>  // --> GetCommandLine*, GetModuleFileName*, LocalFree, character conversion.
+  #if defined _MSC_VER
+    #pragma comment(lib, "kernel32.lib")
+    #pragma comment(lib, "shell32.lib")
+  #endif
 #elif defined __APPLE__
-# include <crt_externs.h> // --> ::_NSGetArgc(…), ::_NSGetArgv(…)
-# include <mach-o/dyld.h> // --> ::_NSGetExecutablePath(…)
+  #include <crt_externs.h> // --> ::_NSGetArgc(…), ::_NSGetArgv(…).
+  #include <mach-o/dyld.h> // --> ::_NSGetExecutablePath(…).
+  #include <wordexp.h>     // --> ::wordexp(…), ::wordfree(…), wordexp_t, WRDE_NOCMD, WRDE_UNDEF.
 #elif defined __FreeBSD__
-# include <sys/sysctl.h>    // --> CTL_KERN, KERN_PROC, KERN_PROC_ARGS, KERN_PROC_PATHNAME; ::sysctl(…)
-# include <sys/syslimits.h> // --> ARG_MAX
-# include <sys/types.h>     // --> …
+# include <sys/sysctl.h>    // --> CTL_KERN, KERN_PROC*, ::sysctl(…).
+# include <sys/syslimits.h> // --> ARG_MAX.
+# include <sys/types.h>     // --> FreeBSD system types.
+# include <wordexp.h>       // --> ::wordexp(…), ::wordfree(…), wordexp_t, WRDE_NOCMD, WRDE_UNDEF.
 #elif defined __ANDROID__ or defined __linux__ or defined __unix__
-# include <fcntl.h>  // --> O_CLOEXEC, O_RDONLY; ::open(…)
-# include <unistd.h> // --> ::close(…), ::read(…), ::readlink(…)
+  #include <fcntl.h>  // --> O_CLOEXEC, O_RDONLY, ::open(…).
+  #include <unistd.h> // --> ::close(…), ::read(…), ::readlink(…).
+  #if defined __linux__ and not defined __ANDROID__
+    #include <wordexp.h> // --> ::wordexp(…), ::wordfree(…), wordexp_t, WRDE_NOCMD, WRDE_UNDEF.
+  #endif
 #endif
 
-/* ... */
 #if defined _WIN32
-  static ::std::size_t const COMMAND_LINE_MAXIMUM = 32768u; // ->> CreateProcessW's command-line limit, including NUL.
+  static ::std::size_t const COMMAND_LINE_MAXIMUM = 32768u; // ->> CreateProcessW UTF-16 code units including NUL.
 #elif defined __FreeBSD__
-  static ::std::size_t const COMMAND_LINE_ARGUMENT_MAXIMUM = ARG_MAX; // --> 0 == ::sysctl(int[] {CTL_KERN, KERN_ARGMAX}, 2zu, &int maximum, &length = sizeof(int), (void*) NULL, 0u) ? length == sizeof(int) and maximum > 0 : false
+  static ::std::size_t const COMMAND_LINE_ARGUMENT_MAXIMUM = ARG_MAX; // ->> FreeBSD compile-time exec argument limit.
 #endif
 
-/* ... */
+enum {
+  COMMAND_ARGUMENT_COUNT   = 8u,    // ->> Maximum argument count of the custom literal-word parser only.
+  COMMAND_ARGUMENT_MAXIMUM = 4096u  // ->> Maximum bytes per custom-parsed word, including NUL.
+};
+
+struct word_list /* final */ {
+  char          arguments[COMMAND_ARGUMENT_COUNT][COMMAND_ARGUMENT_MAXIMUM];
+  char         *values[COMMAND_ARGUMENT_COUNT + 1u];
+  ::std::size_t count;
+};
+
+extern "C" {
+  // ->> Lexical POSIX-style quoting and escaping, bounded to eight arguments.
+  // ->> No evaluation or expansion: $, *, ~, parentheses, and shell operators
+  // ->> are ordinary text (unless quoted or escaped). Not a full wordexp() replacement.
+  // ->> Output is caller-owned; return -1 for malformed quotes/escapes or overflow.
+  static int shell_words(char const input[], struct word_list *const output) /* noexcept */ {
+    enum quote { UNQUOTED, SINGLE_QUOTED, DOUBLE_QUOTED } state = UNQUOTED;
+    ::std::size_t count  = 0u;
+    ::std::size_t length = 0u;
+    bool active = false;
+
+    if (NULL == input or NULL == output) return -1;
+    output -> count = 0u;
+    output -> values[0] = NULL;
+
+    while (true) {
+      unsigned char const character = static_cast<unsigned char>(*input);
+
+      if ('\0' == character) {
+        if (UNQUOTED != state) return -1;
+        if (active) {
+          if (COMMAND_ARGUMENT_COUNT <= count) return -1;
+          output -> arguments[count][length] = '\0';
+          output -> values[count] = output -> arguments[count];
+          ++count;
+        }
+        output -> values[count] = NULL;
+        output -> count = count;
+        return static_cast<int>(count);
+      }
+
+      if (UNQUOTED == state) {
+        if (' ' == character or '\t' == character) {
+          if (active) {
+            if (COMMAND_ARGUMENT_COUNT <= count) return -1;
+            output -> arguments[count][length] = '\0';
+            output -> values[count] = output -> arguments[count];
+            ++count;
+            length = 0u;
+            active = false;
+          }
+          ++input;
+          continue;
+        }
+        if ('\'' == character or '"' == character) {
+          state = '\'' == character ? SINGLE_QUOTED : DOUBLE_QUOTED;
+          active = true;
+          ++input;
+          continue;
+        }
+        if ('\\' == character) {
+          if ('\0' == input[1]) return -1;
+          if ('\n' == input[1]) { input += 2; continue; }
+          ++input;
+        }
+      } else if (SINGLE_QUOTED == state) {
+        if ('\'' == character) { state = UNQUOTED; ++input; continue; }
+      } else {
+        if ('"' == character) { state = UNQUOTED; ++input; continue; }
+        if ('\\' == character) {
+          if ('\0' == input[1]) return -1;
+          if ('\n' == input[1]) { input += 2; continue; }
+          if ('$' == input[1] or '`' == input[1] or '"' == input[1] or '\\' == input[1]) ++input;
+        }
+      }
+
+      if (COMMAND_ARGUMENT_COUNT <= count or COMMAND_ARGUMENT_MAXIMUM - 1u <= length) return -1;
+      output -> arguments[count][length++] = *input++;
+      active = true;
+    }
+  }
+}
+
 struct vector /* final */ {
   enum next /* : signed char */ {
-    NO_ARGUMENT    =  0,
+    ERROR_ARGUMENT = -1,
     NEXT_ARGUMENT  = +1,
-    ERROR_ARGUMENT = -1
+    NO_ARGUMENT    =  0
   };
 
   enum source /* : unsigned char */ {
-    C,                // ->> Apple:         C runtime’s argument vector `argv`
-    EMULATE_UCRT,     // ->> Windows:       Manual UCRT    command-line parsing
-    EMULATE_WINSHELL, // ->> Windows:       Manual Shell32 command-line parsing
-    FREEBSD,          // ->> FreeBSD:       `sysctl(KERN_PROC_ARGS)` NUL-separated snapshot
-    POSIX,            // ->> Linux/Android: `/proc/self/cmdline`     NUL-separated stream
-    UCRT,             // ->> Windows:       C runtime’s `__argv` or `__wargv`
-    WINSHELL          // ->> Windows:       `::CommandLineToArgvW(::GetCommandLineW())`
+    C,                // ->> Apple CRT argv.
+    EMULATE_POSIX,    // ->> Bounded, literal POSIX-style word tokenizer; no expansion.
+    EMULATE_UCRT,     // ->> Manual Windows UCRT parser (UTF-16).
+    EMULATE_WINSHELL, // ->> Manual Shell32 parser (UTF-16).
+    FREEBSD,          // ->> FreeBSD sysctl argument snapshot.
+    POSIX,            // ->> Linux/Android /proc/self/cmdline.
+    UCRT,             // ->> CRT __argv or __wargv.
+    WINSHELL,         // ->> Windows CommandLineToArgvW().
+    WORD_EXP          // ->> Native POSIX wordexp() (where available).
   };
 
-  /* ... */
-  enum vector::source method;
+  enum source method;
   ::std::size_t index;
-  #if defined _WIN32
-    struct /* final */ { char **narrow; wchar_t **wide; } value;
-    wchar_t const                                        *position;
-    wchar_t                                               fallback[COMMAND_LINE_MAXIMUM]; // ->> Caller-owned UTF-16LE conversion/ executable path fallback
-    int                                                   count;
-  #elif defined __APPLE__
-    char **value;
-    int    count;
-  #elif defined __FreeBSD__
-    char         *value;
-    ::std::size_t length;
-    ::std::size_t offset;
-  #elif defined __ANDROID__ or defined __linux__ or defined __unix__
-    int           descriptor;
-    unsigned char chunk[4096];
-    ::std::size_t chunk_length;
-    ::std::size_t chunk_offset;
-  #endif
+  union {
+    struct word_list manual;
+    #if defined _WIN32
+      struct {
+        union { char **narrow; wchar_t **wide; } value;
+        wchar_t const *text;
+        wchar_t buffer[COMMAND_LINE_MAXIMUM];
+        int count;
+      } windows;
+    #elif defined __APPLE__
+      struct { char **value; int count; } apple;
+    #elif defined __FreeBSD__
+      struct {
+        char value[COMMAND_LINE_ARGUMENT_MAXIMUM];
+        ::std::size_t length;
+        ::std::size_t offset;
+      } freebsd;
+    #elif defined __ANDROID__ or defined __linux__ or defined __unix__
+      struct {
+        int descriptor;
+        unsigned char chunk[4096];
+        ::std::size_t chunk_length;
+        ::std::size_t chunk_offset;
+      } proc;
+    #endif
+    #if defined __APPLE__ or defined __FreeBSD__ or (defined __linux__ and not defined __ANDROID__)
+      ::wordexp_t expansion;
+    #endif
+  } state;
 
-  /* ... */
-  bool begin(enum vector::source const method, char storage[], ::std::size_t const capacity, wchar_t const commandLine[] = NULL, char const commandLineANSI[] = NULL) /* noexcept */ {
+  // ->> Native process backends ignore supplied text; WORD_EXP and EMULATE_POSIX require it.
+  bool begin(enum source const method, char const commandLine[] = NULL, wchar_t const commandLineUnicode[] = NULL) /* noexcept */ {
     this -> method = method;
     this -> index  = 0u;
+    (void) commandLineUnicode;
 
-    #if defined _WIN32
-      (void) capacity;
-      (void) storage;
+    switch (method) {
+      case vector::EMULATE_POSIX:
+        return 0 <= ::shell_words(commandLine, &this -> state.manual);
 
-      this -> count        = 0u;
-      this -> position     = NULL;
-      this -> value.narrow = NULL;
-      this -> value.wide   = NULL;
-
-      switch (method) {
-        case vector::UCRT: /* ->> `main` initializes `__argv` and `wmain` initializes `__wargv` */ {
-          if (__argc < 0)
-          return false;
-
-          this -> count        = __argc;
-          this -> value.narrow = __argv;
-          this -> value.wide   = __wargv;
-        } return NULL != this -> value.narrow or NULL != this -> value.wide;
-
-        case vector::WINSHELL:
-        case vector::EMULATE_UCRT:
-        case vector::EMULATE_WINSHELL: {
-          this -> position = NULL == commandLineANSI and NULL == this -> position ? ::GetCommandLineW() : commandLine;
-
-          if (NULL == this -> position) {
-            char const * const narrow = NULL != commandLineANSI ? commandLineANSI : ::GetCommandLineA();
-            if (NULL == narrow) return false;
-            // ->> MultiByteToWideChar returns 0 on failure (including insufficient space).
-            if (0 == ::MultiByteToWideChar(CP_ACP, 0u, narrow, -1, this -> fallback,
-                                         static_cast<int>(COMMAND_LINE_MAXIMUM))) return false;
-            this -> position = this -> fallback;
+      #if defined __APPLE__ or defined __FreeBSD__ or (defined __linux__ and not defined __ANDROID__)
+        case vector::WORD_EXP: {
+          int result = 0;
+          if (NULL == commandLine) return false;
+          ::std::memset(&this -> state.expansion, 0, sizeof this -> state.expansion);
+          result = ::wordexp(commandLine, &this -> state.expansion, WRDE_NOCMD | WRDE_UNDEF);
+          if (0 != result) {
+            if (WRDE_NOSPACE == result) (void) ::wordfree(&this -> state.expansion);
+            return false;
           }
-          if (vector::WINSHELL == method) {
-            this -> value.wide = ::CommandLineToArgvW(this -> position, &this -> count);
-            return NULL != this -> value.wide;
-          }
-        } return true;
-
-        default:
-          return false;
-      }
-    #elif defined __APPLE__
-      (void) storage;
-      (void) capacity;
-      (void) commandLine;
-      (void) commandLineANSI;
-      switch (method) {
-        case vector::C:
-          this -> value = *::_NSGetArgv();
-          this -> count = *::_NSGetArgc();
-          return 0 <= this -> count and NULL != this -> value;
-        default: return false;
-      }
-    #elif defined __FreeBSD__
-      (void) commandLine;
-      (void) commandLineANSI;
-      switch (method) {
-        case vector::FREEBSD: {
-          int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_ARGS, -1 };
-          if (NULL == storage) return false;
-          this -> value = storage;
-          this -> length = capacity;
-          this -> offset = 0u;
-          return 0 == ::sysctl(mib, 4u, storage, &this -> length, NULL, 0u);
+          return true;
         }
-        default: return false;
-      }
-    #elif defined __ANDROID__ or defined __linux__ or defined __unix__
-      (void) storage;
-      (void) capacity;
-      (void) commandLine;
-      (void) commandLineANSI;
-      switch (method) {
+      #endif
+
+      #if defined _WIN32
+        case vector::EMULATE_UCRT:
+        case vector::EMULATE_WINSHELL:
+        case vector::WINSHELL: {
+          this -> state.windows.count = 0;
+          this -> state.windows.text  = NULL;
+          this -> state.windows.value.wide = NULL;
+
+          if (NULL != commandLineUnicode) this -> state.windows.text = commandLineUnicode;
+          else if (NULL != commandLine) {
+            if (0 == ::MultiByteToWideChar(CP_ACP, 0u, commandLine, -1,
+                                          this -> state.windows.buffer, static_cast<int>(COMMAND_LINE_MAXIMUM))) return false;
+            this -> state.windows.text = this -> state.windows.buffer;
+          } else this -> state.windows.text = ::GetCommandLineW();
+
+          if (NULL == this -> state.windows.text) {
+            char const *const narrow = ::GetCommandLineA();
+            if (NULL == narrow or 0 == ::MultiByteToWideChar(CP_ACP, 0u, narrow, -1,
+                                                            this -> state.windows.buffer, static_cast<int>(COMMAND_LINE_MAXIMUM))) return false;
+            this -> state.windows.text = this -> state.windows.buffer;
+          }
+
+          if (vector::WINSHELL == method) {
+            this -> state.windows.value.wide = ::CommandLineToArgvW(this -> state.windows.text, &this -> state.windows.count);
+            return NULL != this -> state.windows.value.wide;
+          }
+          return true;
+        }
+        case vector::UCRT:
+          if (0 > ::__argc) return false;
+          this -> state.windows.count = ::__argc;
+          if (NULL != ::__wargv) this -> state.windows.value.wide = ::__wargv;
+          else if (NULL != ::__argv) this -> state.windows.value.narrow = ::__argv;
+          else return false;
+          return true;
+      #elif defined __APPLE__
+        case vector::C:
+          this -> state.apple.count = *::_NSGetArgc();
+          this -> state.apple.value = *::_NSGetArgv();
+          return 0 <= this -> state.apple.count and NULL != this -> state.apple.value;
+      #elif defined __FreeBSD__
+        case vector::FREEBSD: {
+          int const managementInformationBase[] = { CTL_KERN, KERN_PROC, KERN_PROC_ARGS, -1 };
+          this -> state.freebsd.length = sizeof this -> state.freebsd.value;
+          this -> state.freebsd.offset = 0u;
+          return 0 == ::sysctl(managementInformationBase, 4u, this -> state.freebsd.value,
+                               &this -> state.freebsd.length, NULL, 0u);
+        }
+      #elif defined __ANDROID__ or defined __linux__ or defined __unix__
         case vector::POSIX:
-          this -> chunk_length = 0u;
-          this -> chunk_offset = 0u;
+          this -> state.proc.chunk_length = 0u;
+          this -> state.proc.chunk_offset = 0u;
           #if defined O_CLOEXEC
-            this -> descriptor = ::open("/proc/self/cmdline", O_RDONLY | O_CLOEXEC);
+            this -> state.proc.descriptor = ::open("/proc/self/cmdline", O_RDONLY | O_CLOEXEC);
           #else
-            this -> descriptor = ::open("/proc/self/cmdline", O_RDONLY);
+            this -> state.proc.descriptor = ::open("/proc/self/cmdline", O_RDONLY);
           #endif
-          return 0 <= this -> descriptor;
-        default: return false;
-      }
-    #endif
+          return 0 <= this -> state.proc.descriptor;
+      #endif
+      default: return false;
+    }
   }
 
   void end(void) /* noexcept */ {
     switch (this -> method) {
-  #if defined _WIN32
-      case vector::WINSHELL:
-        if (NULL != this -> value.wide) (void) ::LocalFree(this -> value.wide);
-        this -> value.wide = NULL;
-        break;
-  #elif defined __ANDROID__ or defined __linux__ or defined __unix__
-      case vector::POSIX:
-        if (0 <= this -> descriptor) (void) ::close(this -> descriptor);
-        this -> descriptor = -1;
-        break;
-  #endif
-      default: break;
+      #if defined _WIN32
+        case vector::WINSHELL:
+          if (NULL != this -> state.windows.value.wide) (void) ::LocalFree(this -> state.windows.value.wide);
+          this -> state.windows.value.wide = NULL;
+          break;
+      #endif
+      #if defined __APPLE__ or defined __FreeBSD__ or (defined __linux__ and not defined __ANDROID__)
+        case vector::WORD_EXP:
+          (void) ::wordfree(&this -> state.expansion);
+          break;
+      #endif
+      #if (defined __ANDROID__ or defined __linux__ or defined __unix__) and not defined __APPLE__ and not defined __FreeBSD__ and not defined _WIN32
+        case vector::POSIX:
+          if (0 <= this -> state.proc.descriptor) (void) ::close(this -> state.proc.descriptor);
+          this -> state.proc.descriptor = -1;
+          break;
+      #endif
+        default: break;
     }
   }
 
-  // ->> vector::NEXT_ARGUMENT for an argument, vector::NO_ARGUMENT on exhaustion, vector::ERROR_ARGUMENT on failure.
-  // ->> output == NULL skips data without copying (used by count()).
-  // ->> Wide Windows sources yield UTF-8; __argv yields the CRT's narrow encoding.
-  enum vector::next next(char output[], ::std::size_t capacity) /* noexcept */ {
+  // ->> The output buffer is UTF-8 for wide Windows input, otherwise source bytes.
+  // ->> NULL output counts/skips an argument without copying.
+  enum next next(char output[], ::std::size_t capacity) /* noexcept */ {
     ::std::size_t length = 0u;
 
     switch (this -> method) {
-  #if defined _WIN32
-      case vector::UCRT:
-      case vector::WINSHELL: {
-        if (static_cast< ::std::size_t >(this -> count) <= this -> index) return vector::NO_ARGUMENT;
-        if (NULL != this -> value.wide) {
-          if (NULL == this -> value.wide[this -> index]) return vector::ERROR_ARGUMENT;
-          if (NULL != output) {
-            if (0u == capacity or static_cast< ::std::size_t >(INT_MAX) < capacity) return vector::ERROR_ARGUMENT;
-            if (0 == ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
-                                          this -> value.wide[this -> index], -1,
-                                          output, static_cast<int>(capacity), NULL, NULL)) return vector::ERROR_ARGUMENT;
-          }
-        } else {
-          if (NULL == this -> value.narrow or NULL == this -> value.narrow[this -> index]) return vector::ERROR_ARGUMENT;
-          length = ::std::strlen(this -> value.narrow[this -> index]);
-          if (NULL != output) {
-            if (capacity <= length) return vector::ERROR_ARGUMENT;
-            ::std::memcpy(output, this -> value.narrow[this -> index], length + 1u);
-          }
+      case vector::EMULATE_POSIX: {
+        if (this -> state.manual.count <= this -> index) return vector::NO_ARGUMENT;
+        char const *const argument = this -> state.manual.values[this -> index];
+        length = ::std::strlen(argument);
+        if (NULL != output) {
+          if (capacity <= length) return vector::ERROR_ARGUMENT;
+          ::std::memcpy(output, argument, length + 1u);
         }
         ++this -> index;
         return vector::NEXT_ARGUMENT;
       }
-
+      #if defined __APPLE__ or defined __FreeBSD__ or (defined __linux__ and not defined __ANDROID__)
+        case vector::WORD_EXP: {
+          if (this -> state.expansion.we_wordc <= this -> index) return vector::NO_ARGUMENT;
+          char const *const argument = this -> state.expansion.we_wordv[this -> index];
+          if (NULL == argument) return vector::ERROR_ARGUMENT;
+          length = ::std::strlen(argument);
+          if (NULL != output) {
+            if (capacity <= length) return vector::ERROR_ARGUMENT;
+            ::std::memcpy(output, argument, length + 1u);
+          }
+          ++this -> index;
+          return vector::NEXT_ARGUMENT;
+        }
+      #endif
+      #if defined _WIN32
+        case vector::UCRT:
+        case vector::WINSHELL: {
+          if (static_cast< ::std::size_t >(this -> state.windows.count) <= this -> index) return vector::NO_ARGUMENT;
+          if (vector::WINSHELL == this -> method or NULL != ::__wargv) {
+            if (NULL == this -> state.windows.value.wide[this -> index]) return vector::ERROR_ARGUMENT;
+            if (NULL != output) {
+              if (0u == capacity or static_cast< ::std::size_t >(INT_MAX) < capacity) return vector::ERROR_ARGUMENT;
+              if (0 == ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+                                            this -> state.windows.value.wide[this -> index], -1,
+                                            output, static_cast<int>(capacity), NULL, NULL)) return vector::ERROR_ARGUMENT;
+            }
+          } else {
+            if (NULL == this -> state.windows.value.narrow[this -> index]) return vector::ERROR_ARGUMENT;
+            length = ::std::strlen(this -> state.windows.value.narrow[this -> index]);
+            if (NULL != output) {
+              if (capacity <= length) return vector::ERROR_ARGUMENT;
+              ::std::memcpy(output, this -> state.windows.value.narrow[this -> index], length + 1u);
+            }
+          }
+          ++this -> index;
+          return vector::NEXT_ARGUMENT;
+        }
       case vector::EMULATE_UCRT:
       case vector::EMULATE_WINSHELL: {
         wchar_t buffer[COMMAND_LINE_MAXIMUM];
-        wchar_t const *position = this -> position;
+        wchar_t const *text = this -> state.windows.text;
         bool in_quotes = false;
         unsigned quotes = 0u;
 
-        if (NULL == position) return vector::ERROR_ARGUMENT;
-        if (0u == this -> index and L'\0' == *position) {
+        if (NULL == text) return vector::ERROR_ARGUMENT;
+        if (0u == this -> index and L'\0' == *text) {
           if (vector::EMULATE_WINSHELL == this -> method) {
             ::DWORD const obtained = ::GetModuleFileNameW(NULL, buffer,
                                                            static_cast< ::DWORD >(COMMAND_LINE_MAXIMUM));
             if (0u == obtained or COMMAND_LINE_MAXIMUM <= obtained) {
-              char fallback[COMMAND_LINE_MAXIMUM];
-              ::DWORD const bytes = ::GetModuleFileNameA(NULL, fallback, sizeof fallback);
-              if (0u == bytes or sizeof fallback <= bytes) return vector::ERROR_ARGUMENT;
-              if (0 == ::MultiByteToWideChar(CP_ACP, 0u, fallback, -1, buffer,
+              char narrow[COMMAND_LINE_MAXIMUM];
+              ::DWORD const bytes = ::GetModuleFileNameA(NULL, narrow, sizeof narrow);
+              if (0u == bytes or sizeof narrow <= bytes) return vector::ERROR_ARGUMENT;
+              if (0 == ::MultiByteToWideChar(CP_ACP, 0u, narrow, -1, buffer,
                                             static_cast<int>(COMMAND_LINE_MAXIMUM))) return vector::ERROR_ARGUMENT;
             }
             if (NULL != output) {
@@ -240,47 +363,47 @@ struct vector /* final */ {
             return vector::NEXT_ARGUMENT;
           }
           // ->> vector::UCRT parses the returned executable path as a replacement command line.
-          ::DWORD const obtained = ::GetModuleFileNameW(NULL, this -> fallback,
+          ::DWORD const obtained = ::GetModuleFileNameW(NULL, this -> state.windows.buffer,
                                                          static_cast< ::DWORD >(COMMAND_LINE_MAXIMUM));
           if (0u == obtained or COMMAND_LINE_MAXIMUM <= obtained) {
-            char fallback[COMMAND_LINE_MAXIMUM];
-            ::DWORD const bytes = ::GetModuleFileNameA(NULL, fallback, sizeof fallback);
-            if (0u == bytes or sizeof fallback <= bytes) return vector::ERROR_ARGUMENT;
-            if (0 == ::MultiByteToWideChar(CP_ACP, 0u, fallback, -1, this -> fallback,
+            char narrow[COMMAND_LINE_MAXIMUM];
+            ::DWORD const bytes = ::GetModuleFileNameA(NULL, narrow, sizeof narrow);
+            if (0u == bytes or sizeof narrow <= bytes) return vector::ERROR_ARGUMENT;
+            if (0 == ::MultiByteToWideChar(CP_ACP, 0u, narrow, -1, this -> state.windows.buffer,
                                           static_cast<int>(COMMAND_LINE_MAXIMUM))) return vector::ERROR_ARGUMENT;
           }
-          this -> position = this -> fallback;
-          position = this -> position;
+          this -> state.windows.text = this -> state.windows.buffer;
+          text = this -> state.windows.text;
         }
 
         if (0u != this -> index) {
-          while (L' ' == *position or L'\t' == *position) ++position;
-          if (L'\0' == *position) return vector::NO_ARGUMENT;
+          while (L' ' == *text or L'\t' == *text) ++text;
+          if (L'\0' == *text) return vector::NO_ARGUMENT;
         }
 
         if (vector::EMULATE_WINSHELL == this -> method) {
           if (0u == this -> index) {
             // ->> Shell32: argv[0] ends at the next quote or whitespace.
-            if (L'"' == *position) {
-              ++position;
-              while (L'\0' != *position and L'"' != *position) {
+            if (L'"' == *text) {
+              ++text;
+              while (L'\0' != *text and L'"' != *text) {
                 if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
-                buffer[length++] = *position++;
+                buffer[length++] = *text++;
               }
-              if (L'"' == *position) ++position;
+              if (L'"' == *text) ++text;
             } else {
-              while (L'\0' != *position and L' ' != *position and L'\t' != *position) {
+              while (L'\0' != *text and L' ' != *text and L'\t' != *text) {
                 if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
-                buffer[length++] = *position++;
+                buffer[length++] = *text++;
               }
             }
           } else {
-            while (L'\0' != *position) {
-              if (0u == quotes and (L' ' == *position or L'\t' == *position)) break;
-              if (L'\\' == *position) {
+            while (L'\0' != *text) {
+              if (0u == quotes and (L' ' == *text or L'\t' == *text)) break;
+              if (L'\\' == *text) {
                 unsigned slashes = 0u;
-                while (L'\\' == *position) { ++slashes; ++position; }
-                if (L'"' == *position) {
+                while (L'\\' == *text) { ++slashes; ++text; }
+                if (L'"' == *text) {
                   for (unsigned index = 0u; index < slashes / 2u; ++index) {
                     if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
                     buffer[length++] = L'\\';
@@ -290,7 +413,7 @@ struct vector /* final */ {
                     if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
                     buffer[length++] = L'"';
                   }
-                  ++position;
+                  ++text;
                 } else {
                   for (unsigned index = 0u; index < slashes; ++index) {
                     if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
@@ -298,46 +421,46 @@ struct vector /* final */ {
                   }
                   continue;
                 }
-              } else if (L'"' == *position) {
+              } else if (L'"' == *text) {
                 ++quotes;
-                ++position;
+                ++text;
               } else {
                 if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
-                buffer[length++] = *position++;
+                buffer[length++] = *text++;
                 continue;
               }
-              while (L'"' == *position) {
+              while (L'"' == *text) {
                 if (3u == ++quotes) {
                   if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
                   buffer[length++] = L'"';
                   quotes = 0u;
                 }
-                ++position;
+                ++text;
               }
               if (2u == quotes) quotes = 0u;
             }
           }
         } else {
-          // ->> The vector::UCRT's wide parser; no DBCS lead-byte treatment is needed.
+          // ->> The UCRT-style wide parser; no DBCS lead-byte treatment is needed.
           if (0u == this -> index) {
-            while (L'\0' != *position) {
-              if (L'"' == *position) {
+            while (L'\0' != *text) {
+              if (L'"' == *text) {
                 in_quotes = not in_quotes;
-                ++position;
+                ++text;
                 continue;
               }
-              if (not in_quotes and (L' ' == *position or L'\t' == *position)) break;
+              if (not in_quotes and (L' ' == *text or L'\t' == *text)) break;
               if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
-              buffer[length++] = *position++;
+              buffer[length++] = *text++;
             }
           } else {
-            while (L'\0' != *position) {
+            while (L'\0' != *text) {
               unsigned slashes = 0u;
               bool copy_quote = true;
-              while (L'\\' == *position) { ++slashes; ++position; }
-              if (L'"' == *position) {
+              while (L'\\' == *text) { ++slashes; ++text; }
+              if (L'"' == *text) {
                 if (0u == (slashes % 2u)) {
-                  if (in_quotes and L'"' == position[1]) ++position;
+                  if (in_quotes and L'"' == text[1]) ++text;
                   else { in_quotes = not in_quotes; copy_quote = false; }
                 }
                 slashes /= 2u;
@@ -346,11 +469,11 @@ struct vector /* final */ {
                 if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
                 buffer[length++] = L'\\';
               }
-              if (L'\0' == *position or (not in_quotes and (L' ' == *position or L'\t' == *position))) break;
+              if (L'\0' == *text or (not in_quotes and (L' ' == *text or L'\t' == *text))) break;
               if (copy_quote) {
                 if (COMMAND_LINE_MAXIMUM - 1u <= length) return vector::ERROR_ARGUMENT;
-                buffer[length++] = *position++;
-              } else ++position;
+                buffer[length++] = *text++;
+              } else ++text;
             }
           }
         }
@@ -361,84 +484,79 @@ struct vector /* final */ {
           if (0 == ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, buffer, -1,
                                         output, static_cast<int>(capacity), NULL, NULL)) return vector::ERROR_ARGUMENT;
         }
-        this -> position = position;
+        this -> state.windows.text = text;
         ++this -> index;
         return vector::NEXT_ARGUMENT;
       }
-  #endif
-  #if defined __APPLE__
-      case vector::C: {
-        if (static_cast< ::std::size_t >(this -> count) <= this -> index) return vector::NO_ARGUMENT;
-        if (NULL == this -> value[this -> index]) return vector::ERROR_ARGUMENT;
-        length = ::std::strlen(this -> value[this -> index]);
-        if (NULL != output) {
-          if (capacity <= length) return vector::ERROR_ARGUMENT;
-          ::std::memcpy(output, this -> value[this -> index], length + 1u);
-        }
-        ++this -> index;
-        return vector::NEXT_ARGUMENT;
-      }
-  #endif
-  #if defined __FreeBSD__
-      case vector::FREEBSD: {
-        ::std::size_t const start = this -> offset;
-        if (this -> length == start) return vector::NO_ARGUMENT;
-        while (this -> offset < this -> length and '\0' != this -> value[this -> offset])
-          ++this -> offset;
-        if (this -> length == this -> offset) return vector::ERROR_ARGUMENT;
-        length = this -> offset - start;
-        if (NULL != output) {
-          if (capacity <= length) {
-            this -> offset = start;
-            return vector::ERROR_ARGUMENT;
+      #endif
+      #if defined __APPLE__
+        case vector::C: {
+          if (static_cast< ::std::size_t >(this -> state.apple.count) <= this -> index) return vector::NO_ARGUMENT;
+          if (NULL == this -> state.apple.value[this -> index]) return vector::ERROR_ARGUMENT;
+          length = ::std::strlen(this -> state.apple.value[this -> index]);
+          if (NULL != output) {
+            if (capacity <= length) return vector::ERROR_ARGUMENT;
+            ::std::memcpy(output, this -> state.apple.value[this -> index], length + 1u);
           }
-          ::std::memcpy(output, this -> value + start, length + 1u);
+          ++this -> index;
+          return vector::NEXT_ARGUMENT;
         }
-        ++this -> offset;
-        ++this -> index;
-        return vector::NEXT_ARGUMENT;
-      }
-  #endif
-  #if (defined __ANDROID__ or defined __linux__ or defined __unix__) and not defined _WIN32 and not defined __APPLE__ and not defined __FreeBSD__
-      case vector::POSIX: {
-        while (true) {
-          if (this -> chunk_length == this -> chunk_offset) {
-            ::ssize_t received = 0;
-            do {
-              received = ::read(this -> descriptor, this -> chunk, sizeof this -> chunk);
-            } while (0 > received and EINTR == errno);
-            if (0 > received) return vector::ERROR_ARGUMENT;
-            if (0 == received) return 0u == length ? vector::NO_ARGUMENT : vector::ERROR_ARGUMENT;
-            this -> chunk_length = static_cast< ::std::size_t >(received);
-            this -> chunk_offset = 0u;
+      #endif
+      #if defined __FreeBSD__
+        case vector::FREEBSD: {
+          ::std::size_t const start = this -> state.freebsd.offset;
+          if (this -> state.freebsd.length == start) return vector::NO_ARGUMENT;
+          while (this -> state.freebsd.offset < this -> state.freebsd.length and '\0' != this -> state.freebsd.value[this -> state.freebsd.offset])
+            ++this -> state.freebsd.offset;
+          if (this -> state.freebsd.length == this -> state.freebsd.offset) return vector::ERROR_ARGUMENT;
+          length = this -> state.freebsd.offset - start;
+          if (NULL != output) {
+            if (capacity <= length) { this -> state.freebsd.offset = start; return vector::ERROR_ARGUMENT; }
+            ::std::memcpy(output, this -> state.freebsd.value + start, length + 1u);
           }
-          unsigned char const character = this -> chunk[this -> chunk_offset++];
-          if (0u == character) {
-            if (NULL != output) {
-              if (capacity <= length) return vector::ERROR_ARGUMENT;
-              output[length] = '\0';
+          ++this -> state.freebsd.offset;
+          ++this -> index;
+          return vector::NEXT_ARGUMENT;
+        }
+      #endif
+      #if (defined __ANDROID__ or defined __linux__ or defined __unix__) and not defined _WIN32 and not defined __APPLE__ and not defined __FreeBSD__
+        case vector::POSIX: {
+          while (true) {
+            if (this -> state.proc.chunk_length == this -> state.proc.chunk_offset) {
+              ::ssize_t received = 0;
+              do {
+                received = ::read(this -> state.proc.descriptor, this -> state.proc.chunk, sizeof this -> state.proc.chunk);
+              } while (0 > received and EINTR == errno);
+              if (0 > received) return vector::ERROR_ARGUMENT;
+              if (0 == received) return 0u == length ? vector::NO_ARGUMENT : vector::ERROR_ARGUMENT;
+              this -> state.proc.chunk_length = static_cast< ::std::size_t >(received);
+              this -> state.proc.chunk_offset = 0u;
             }
-            ++this -> index;
-            return vector::NEXT_ARGUMENT;
+            unsigned char const character = this -> state.proc.chunk[this -> state.proc.chunk_offset++];
+            if (0u == character) {
+              if (NULL != output) {
+                if (capacity <= length) return vector::ERROR_ARGUMENT;
+                output[length] = '\0';
+              }
+              ++this -> index;
+              return vector::NEXT_ARGUMENT;
+            }
+            if (NULL != output and 0u < capacity and length < capacity - 1u) output[length] = static_cast<char>(character);
+            ++length;
           }
-          if (NULL != output and 0u < capacity and length < capacity - 1u)
-            output[length] = static_cast<char>(character);
-          ++length;
         }
-      }
-  #endif
+      #endif
       default: return vector::ERROR_ARGUMENT;
     }
   }
 };
 
 extern "C" {
-  static int count(enum vector::source method, char storage[], ::std::size_t storage_capacity,
-                   wchar_t const commandLine[] = NULL, char const commandLineANSI[] = NULL) /* noexcept */ {
+  static int count(enum vector::source method, char const commandLine[] = NULL, wchar_t const commandLineUnicode[] = NULL) /* noexcept */ {
     struct vector arguments;
     int result = 0;
     enum vector::next status = vector::NO_ARGUMENT;
-    if (not arguments.begin(method, storage, storage_capacity, commandLine, commandLineANSI)) return -1;
+    if (false == arguments.begin(method, commandLine, commandLineUnicode)) return -1;
     while (vector::NEXT_ARGUMENT == (status = arguments.next(NULL, 0u))) {
       if (INT_MAX == result) { status = vector::ERROR_ARGUMENT; break; }
       ++result;
@@ -447,79 +565,64 @@ extern "C" {
     return vector::NO_ARGUMENT == status ? result : -1;
   }
 
-  // ->> Retrieves the running executable's real module pathname, not argv[0].
+  // ->> Current executable path rather than argv[0].
   static bool executable(char output[], ::std::size_t capacity) /* noexcept */ {
     if (NULL == output or 0u == capacity) return false;
-  #if defined _WIN32
-    wchar_t path[COMMAND_LINE_MAXIMUM];
-    ::DWORD const obtained = ::GetModuleFileNameW(NULL, path, static_cast< ::DWORD >(COMMAND_LINE_MAXIMUM));
-    if (0u < obtained and COMMAND_LINE_MAXIMUM > obtained) {
-      if (static_cast< ::std::size_t >(INT_MAX) < capacity) return false;
-      return 0 != ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, path, -1,
-                                       output, static_cast<int>(capacity), NULL, NULL);
-    }
-    // ->> Legacy ANSI fallback. Result is in the active Windows ANSI code page, not UTF-8.
-    if (static_cast< ::std::size_t >(static_cast< ::DWORD >(-1)) < capacity) return false;
-    ::DWORD const bytes = ::GetModuleFileNameA(NULL, output, static_cast< ::DWORD >(capacity));
-    return 0u < bytes and bytes < capacity;
-  #elif defined __APPLE__
-    if (static_cast< ::std::size_t >(static_cast<unsigned>(-1)) < capacity) return false;
-    unsigned length = static_cast<unsigned>(capacity);
-    return 0 == ::_NSGetExecutablePath(output, &length);
-  #elif defined __FreeBSD__
-    int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
-    ::std::size_t length = capacity;
-    return 0 == ::sysctl(mib, 4u, output, &length, NULL, 0u) and
-           0u < length and length <= capacity and '\0' == output[length - 1u];
-  #elif defined __ANDROID__ or defined __linux__ or defined __unix__
-    ::ssize_t const length = ::readlink("/proc/self/exe", output, capacity);
-    if (0 >= length or capacity <= static_cast< ::std::size_t >(length)) return false;
-    output[length] = '\0';
-    return true;
-  #endif
+    #if defined _WIN32
+      wchar_t path[COMMAND_LINE_MAXIMUM];
+      ::DWORD const obtained = ::GetModuleFileNameW(NULL, path, static_cast< ::DWORD >(COMMAND_LINE_MAXIMUM));
+      if (0u < obtained and COMMAND_LINE_MAXIMUM > obtained) {
+        if (static_cast< ::std::size_t >(INT_MAX) < capacity) return false;
+        return 0 != ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, path, -1,
+                                         output, static_cast<int>(capacity), NULL, NULL);
+      }
+      // ->> ANSI fallback returns the active code page, not UTF-8.
+      if (static_cast< ::std::size_t >(static_cast< ::DWORD >(-1)) < capacity) return false;
+      ::DWORD const bytes = ::GetModuleFileNameA(NULL, output, static_cast< ::DWORD >(capacity));
+      return 0u < bytes and bytes < capacity;
+    #elif defined __APPLE__
+      if (static_cast< ::std::size_t >(static_cast<unsigned>(-1)) < capacity) return false;
+      unsigned length = static_cast<unsigned>(capacity);
+      return 0 == ::_NSGetExecutablePath(output, &length);
+    #elif defined __FreeBSD__
+      int managementInformationBase[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+      ::std::size_t length = capacity;
+      return 0 == ::sysctl(managementInformationBase, 4u, output, &length, NULL, 0u) and
+             0u < length and length <= capacity and '\0' == output[length - 1u];
+    #elif defined __ANDROID__ or defined __linux__ or defined __unix__
+      ::ssize_t const length = ::readlink("/proc/self/exe", output, capacity);
+      if (0 >= length or capacity <= static_cast< ::std::size_t >(length)) return false;
+      output[length] = '\0';
+      return true;
+    #endif
   }
 }
 
-/* Main */
+#if not defined PROCESS_ARGUMENTS_NO_MAIN
 int main(void) {
   #if defined _WIN32
-    enum vector::source const method      = vector::EMULATE_UCRT; // ->> UTF-16LE format by default
-    char               *const commandLine = NULL;
-    ::std::size_t       const capacity    = 0u;
+    enum vector::source const method = vector::EMULATE_UCRT;
   #elif defined __APPLE__
-    enum vector::source const method      = vector::C;
-    char               *const commandLine = NULL;
-    ::std::size_t       const capacity    = 0u;
+    enum vector::source const method = vector::C;
   #elif defined __FreeBSD__
-    enum vector::source const method                                     = vector::FREEBSD;
-    static char               commandLine[COMMAND_LINE_ARGUMENT_MAXIMUM] = "";
-    ::std::size_t const       capacity                                   = sizeof commandLine;
+    enum vector::source const method = vector::FREEBSD;
   #elif defined __ANDROID__ or defined __linux__ or defined __unix__
-    enum vector::source const method      = vector::POSIX;
-    char               *const commandLine = NULL;
-    ::std::size_t       const capacity    = 0u;
+    enum vector::source const method = vector::POSIX;
   #endif
   enum vector::next status           = vector::ERROR_ARGUMENT;
   char              executable[4096] = ".";
-  int const         count            = ::count(method, commandLine, capacity);
+  int const         total            = ::count(method);
   struct vector     arguments        = {};
 
-  // ...
-  if (count < 0)                                       return EXIT_FAILURE;
-  if (not ::executable(executable, sizeof executable)) return EXIT_FAILURE;
-
-  (void) ::std::printf("executable" " = " "\"%s\"" "\r\n", executable);
-  (void) ::std::printf("argc"       " = " "%i"     "\r\n", count);
-
-  if (arguments.begin(method, commandLine, capacity)) {
+  if (0 > total or false == ::executable(executable, sizeof executable)) return EXIT_FAILURE;
+  (void) ::std::printf("executable = \"%s\"\r\n", executable);
+  (void) ::std::printf("argc = %d\r\n", total);
+  if (arguments.begin(method)) {
     for (char argument[4096] = ""; vector::NEXT_ARGUMENT == (status = arguments.next(argument, sizeof argument)); ) {
-      (void) ::std::printf("argv[%lu]" " = " "\"", static_cast<unsigned long>(arguments.index - 1u));
-      (void) ::std::printf("%.4096s", argument);
-      (void) ::std::printf("\"" "\r\n");
+      (void) ::std::printf("argv[%lu] = \"%s\"\r\n", static_cast<unsigned long>(arguments.index - 1u), argument);
     }
-
     arguments.end();
   }
-
   return vector::NO_ARGUMENT == status ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+#endif
