@@ -79,7 +79,7 @@ extern "C" __declspec(dllimport) ::FARPROC             GetProcAddress      (::HM
 extern "C" __declspec(dllimport) ::UINT                GetSystemDirectoryW (::LPWSTR, ::UINT);               // --> ::GetSystemDirectoryA(…)
 extern "C" __declspec(dllimport) ::UINT                GetWindowsDirectoryW(::LPWSTR, ::UINT);               // --> ::GetWindowsDirectoryA(…)
 extern "C"                       void volatile* WINAPI SecureZeroMemory2   (void volatile*, ::SIZE_T);
-#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+#elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
 # include <dirent.h>    // --> ::DIR; dirent; ::closedir(…), ::opendir(…), ::readdir(…)
 # include <dlfcn.h>     // --> RTLD_DEFAULT, RTLD_LAZY, RTLD_LOCAL; ::dlerror(…), ::dlopen(…), ::dlsym(…)
 # include <errno.h>     // --> EINTR, errno
@@ -137,7 +137,7 @@ static struct program /* final */ {
     struct /* final */ {
       #if defined _WIN32
         ::INIT_ONCE guard;
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         ::pthread_mutex_t guard;
       #elif (defined __STDC_HOSTED__ and __STDC_HOSTED__ == 1) and (__cplusplus >= 201103L or defined _MSVC_LANG) // --> 201402L+
         ::std::once_flag guard;
@@ -163,7 +163,7 @@ static struct program /* final */ {
       ::BOOL   (WINAPI *SetConsoleCtrlHandler)(::PHANDLER_ROUTINE, ::BOOL);
       ::BOOL   (WINAPI *SetEvent)             (::HANDLE);
       ::DWORD  (WINAPI *WaitForSingleObject)  (::HANDLE, ::DWORD);
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       int (*pthread_mutex_destroy)(::pthread_mutex_t*);
       int (*pthread_mutex_init)   (::pthread_mutex_t*, ::pthread_mutexattr_t const*);
       int (*pthread_mutex_lock)   (::pthread_mutex_t*);
@@ -180,7 +180,7 @@ static struct program /* final */ {
       #if defined _WIN32
         this -> dispose();
         (void) this -> extensions.SetConsoleCtrlHandler(&this -> onexit, FALSE);
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         this -> dispose();
       #endif
     }
@@ -238,7 +238,7 @@ static struct program /* final */ {
             (void) this -> extensions.SetEvent(this -> termination.completed);
           #else
             this -> termination.requested = static_cast< ::std::sig_atomic_t>(true);
-            #if defined __ANDROID__ or defined __APPLE__ or defined __unix__ // --> ::dispatch_once_f(&static ::dispatch_once_t {0}, this, f), 0 == ::pthread_once(::pthread_once_t* = PTHREAD_ONCE_INIT, void (*)())
+            #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__ // --> ::dispatch_once_f(&static ::dispatch_once_t {0}, this, f), 0 == ::pthread_once(::pthread_once_t* = PTHREAD_ONCE_INIT, void (*)())
               if (reinterpret_cast<int (*)(::pthread_mutex_t*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_lock and reinterpret_cast<int (*)(::pthread_mutex_t*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_unlock and (
                 reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_init
                 #if defined __FreeBSD__ or defined __OpenBSD__
@@ -316,7 +316,7 @@ static struct program /* final */ {
         }
 
         // TODO: InterlockedExchange + InterlockedCompareExchange, WaitOnAddress + WakeByAddressAll
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         this -> extensions.pthread_mutex_destroy = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (&program::UNRESOLVED) == this -> extensions.pthread_mutex_destroy ? reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_destroy", &program::UNRESOLVED)) : this -> extensions.pthread_mutex_destroy; // --> <pthread.h>
         this -> extensions.sigaction             = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(&program::UNRESOLVED) == this -> extensions.sigaction             ? reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(resolve(libraries, /* --> library::libc */    00u, "sigaction",             &program::UNRESOLVED)) : this -> extensions.sigaction;             // --> <signal.h>
         this -> extensions.sigemptyset           = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(::sigset_t*)>                                                                      (&program::UNRESOLVED) == this -> extensions.sigemptyset           ? reinterpret_cast<int (*)(::sigset_t*)>                                                                      (resolve(libraries, /* --> library::libc */    00u, "sigemptyset",           &program::UNRESOLVED)) : this -> extensions.sigemptyset;           // --> <signal.h>
@@ -402,7 +402,7 @@ static struct program /* final */ {
     #else
       static void onexit(int const reason) {
         switch (reason) {
-          #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+          #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
             case SIGHUP: case SIGQUIT:
           #endif
           case SIGINT: case SIGTERM:
@@ -448,7 +448,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       enum library::id const id : 4;
       ::WCHAR          const name[12u + /* --> NUL */ 1u]; // ->> Case-insensitive --> ::LPCWSTR
       union { struct descriptor module; struct descriptor const value; };
-    #else // --> defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #else // --> defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       struct descriptor /* final */ { union { void *address, *const handle; }; int (*unloader)(void*); };
       enum    /* : ::std::size_t:1 */ { COUNT = 1u };
       enum id /* : unsigned char:1 */ { _, libc = _, libdl = _, libpthread = _, libsystem_pthread = _, libthr = libpthread, pthread = libpthread };
@@ -562,7 +562,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
               }
             }
         }
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         #if defined RTLD_DEFAULT // --> defined _GNU_SOURCE
           libraries -> value.address  = RTLD_DEFAULT;
           libraries -> value.unloader = library::UNRESOLVED;
@@ -585,7 +585,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
             ::FARPROC const procedure = ::GetProcAddress(library -> module.handle, name);
             if (NULL != procedure) return reinterpret_cast<void (*)(...) /* noexcept */>(procedure);
           }
-        #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
           void UNRESOLVED(void);
 
           if (NULL != library -> value.address) {
@@ -607,7 +607,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       {library::shell32,                     L"shell32"  L".dll", {{{NULL}, NULL}}},
       {library::ucrtbase,                    L"ucrtbase" L".dll", {{{NULL}, NULL}}},
       {static_cast<enum library::id>(0x00u), L"",                 {{{NULL}, NULL}}}
-    #else // --> defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #else // --> defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       {static_cast<enum library::id>(0x00u), L"", {{{NULL}, NULL}}}
     #endif
   };
@@ -647,7 +647,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       };
 
       wchar_t const *quotes;
-      #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         ::locale_t value, prior; // ->> Mutually-exclusive ownership
       #endif
     } locale;
@@ -658,7 +658,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
         int    (__cdecl *_setmbcp)          (int);
         int    (__cdecl *_setmode)          (int, int);
         ::BOOL (WINAPI  *SetConsoleOutputCP)(::UINT);
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         void       (*freelocale)(::locale_t);
         ::locale_t (*newlocale) (int, char const[], ::locale_t)
         ::locale_t (*uselocale) (::locale_t);
@@ -667,7 +667,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
 
     /* ... */
     ~console() /* noexcept */ {
-      #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       if (reinterpret_cast<void (*)(::locale_t)>(&console::UNRESOLVED) != this -> extensions.freelocale and reinterpret_cast< ::locale_t (*)(::locale_t)>(&console::UNRESOLVED) != this -> extensions.uselocale) {
         if (static_cast< ::locale_t>(0) != this -> locale.prior and this -> locale.prior != this -> locale.value ? static_cast< ::locale_t>(0) != this -> extensions.uselocale(this -> locale.prior) : false) {
           if (static_cast< ::locale_t>(0) != this -> locale.value and LC_GLOBAL_LOCALE != this -> locale.value)
@@ -819,7 +819,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
         this -> extensions._setmbcp           = reinterpret_cast<int     (__cdecl*)(int)>         (resolve(libraries, library::ucrtbase,   "_setmbcp",           &console::UNRESOLVED)); // --> <mbctype.h>
         this -> extensions._setmode           = reinterpret_cast<int     (__cdecl*)(int, int)>    (resolve(libraries, library::ucrtbase,   "_setmode",           &console::UNRESOLVED)); // --> <io.h>
         this -> extensions.SetConsoleOutputCP = reinterpret_cast< ::BOOL (WINAPI*) (::UINT)>      (resolve(libraries, library::kernelbase, "SetConsoleOutputCP", &console::UNRESOLVED)); // --> <windows.h>
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         this -> extensions.freelocale = reinterpret_cast<void        (*)(::locale_t)>                   (resolve(libraries, library::libc, "freelocale", &console::UNRESOLVED)); // --> <locale.h>
         this -> extensions.newlocale  = reinterpret_cast< ::locale_t (*)(int, char const[], ::locale_t)>(resolve(libraries, library::libc, "newlocale",  &console::UNRESOLVED)); // --> <locale.h>
         this -> extensions.uselocale  = reinterpret_cast< ::locale_t (*)(::locale_t)>                   (resolve(libraries, library::libc, "uselocale",  &console::UNRESOLVED)); // --> <locale.h>
@@ -985,7 +985,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       #if defined _WIN32
         ::NTSTATUS (WINAPI *BCryptGenRandom)(::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG);
         ::BOOLEAN  (WINAPI *RtlGenRandom)   (::PVOID, ::ULONG);
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         void      (*bzero)         (void*, ::std::size_t);
         void      (*explicit_bzero)(void*, ::std::size_t);
         int       (*getentropy)    (void*, ::std::size_t);
@@ -1004,7 +1004,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       #if defined _WIN32
         this -> extensions.BCryptGenRandom = reinterpret_cast< ::NTSTATUS (WINAPI*) (::BCRYPT_ALG_HANDLE, ::PUCHAR, ::ULONG, ::ULONG)>(resolve(libraries, library::bcrypt,   "BCryptGenRandom",   &memory::UNRESOLVED)); // --> <bcrypt.h>
         this -> extensions.RtlGenRandom    = reinterpret_cast< ::BOOLEAN  (WINAPI*) (::PVOID, ::ULONG)>                               (resolve(libraries, library::advapi32, "SystemFunction036", &memory::UNRESOLVED)); // --> <ntsecapi.h>
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         this -> extensions.bzero          = reinterpret_cast<void       (*)(void*, ::std::size_t)>          (resolve(libraries, library::libc, "bzero",          &memory::UNRESOLVED)); // --> <strings.h>
         this -> extensions.explicit_bzero = reinterpret_cast<void       (*)(void*, ::std::size_t)>          (resolve(libraries, library::libc, "explicit_bzero", &memory::UNRESOLVED)); // --> <string.h>
         this -> extensions.getentropy     = reinterpret_cast<int        (*)(void*, ::std::size_t)>          (resolve(libraries, library::libc, "getentropy",     &memory::UNRESOLVED)); // --> <sys/random.h>
@@ -1027,7 +1027,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
           count = ULONG_MAX < size ? ULONG_MAX : size; // --> min(…)
           if (FALSE == this -> extensions.RtlGenRandom(bytes, count)) break;
         }
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         if (reinterpret_cast<int (*)(void*, ::std::size_t)>(&memory::UNRESOLVED) != this -> extensions.getentropy)
         for (::std::size_t count; size; (bytes += count), (size -= count)) {
           count = size < 256u ? size : 256u; // --> min(…)
@@ -1103,7 +1103,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
         #elif defined ZeroMemory
           ZeroMemory(static_cast<void*>(bytes), size); // --> RtlZeroMemory(…)
         #endif
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         if (reinterpret_cast<void (*)(void*, ::std::size_t)>(&memory::UNRESOLVED) != this -> extensions.explicit_bzero)
         return this -> extensions.explicit_bzero(bytes, size);
 
@@ -1281,7 +1281,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
     #endif
     "" // ->> User-preferred (ideally Unicode)
   }, *const *locale = locales; locale != &locales[sizeof locales / sizeof(char const*)]; ++locale) {
-    #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       if (reinterpret_cast< ::locale_t (*)(int, char const[], ::locale_t)>(&console::UNRESOLVED) != console.extensions.newlocale and reinterpret_cast< ::locale_t (*)(::locale_t)>(&console::UNRESOLVED) != console.extensions.uselocale) {
         console.locale.value = console.extensions.newlocale(LC_CTYPE_MASK, *locale, static_cast< ::locale_t>(0));
 
@@ -1317,7 +1317,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       } break;
       default: break; /* UTF-8 - don’t forget the others */
     }
-  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
     static_cast< ::locale_t>(0) != console.locale.prior ? console.locale.value == console.extensions.uselocale(0) or ::nl_langinfo(CODESET) : ::std::setlocale(LC_CTYPE, static_cast<char const*>(NULL))
     // char const *const codeset = ;
     //   // test for UTF-7
@@ -1393,7 +1393,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
         argument.wide = length > 0 ? reinterpret_cast<wchar_t*>(memory.reserve(length + sizeof(wchar_t), memory::policy::RAW_MEMORY)) : NULL;
         argument.wide = NULL != argument.wide and MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, argument.multibyte, -1, static_cast< ::LPWSTR>(argument.wide), length) > 0 ? argument.wide : NULL;
       }
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       //   ::iconv_t const converter = ::iconv_open("WCHAR_T", "UTF-8");
       //
       //   if (static_cast< ::iconv_t>(-1) == converter)
@@ -2774,7 +2774,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       // ... ->> Ideally successfully evaluates not to `FALSE` (for both function calls)
       if (filesystemRedirectionDisabled)                           (void) ::Wow64RevertWow64FsRedirection(filesystemRedirection);
       if (INVALID_HANDLE_VALUE != renumerationDirectoryFindHandle) (void) ::FindClose(renumerationDirectoryFindHandle);
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       struct renum /* final */ {
         inline static int sort(void const* const filePathA, void const* const filePathB) /* noexcept */ {
           int const comparison = std::wcscoll(*static_cast<wchar_t* const*>(filePathA), *static_cast<wchar_t* const*>(filePathB));

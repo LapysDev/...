@@ -1,9 +1,9 @@
-#include <cassert>
-#include <climits>
-#include <cstddef>
-#include <cstring>
-#include <iso646.h>
-#include <stdint.h>
+#include <cassert>  // ->> assert(…) in the bundled test main() only
+#include <climits>  // ->> CHAR_BIT: the width of a native unsigned char
+#include <cstddef> // ->> ::std::size_t and NULL
+#include <cstring> // ->> ::std::memcmp(…), ::std::memcpy(…), and ::std::memset(…)
+#include <iso646.h> // ->> Alternative operator tokens such as and, not, and or (C compatibility)
+#include <stdint.h> // ->> ::uint_least16_t and ::uint_least32_t
 
 /* ... */
 enum policy {
@@ -319,7 +319,7 @@ struct format /* final */ {
   };
 
   /* ... */
-  static enum policy strategy(enum format::encoding format) /* noexcept */ {
+  static enum policy strategy(enum format::encoding const format) /* noexcept */ {
     switch (format) {
       case format::ASMO_449:
       case format::BS_4730:           case format::BS_VIEWDATA:
@@ -388,10 +388,10 @@ struct format /* final */ {
         case format::UTF_7:            return STRATEGY_FORMAT_UTF_7;
         case format::UTF_7_IMAP:       return STRATEGY_FORMAT_UTF_7_IMAP;
       #endif
-
-      default:
-        return STRATEGY_BYTE;
+      default:;
     }
+
+    return STRATEGY_BYTE;
   }
 };
 
@@ -403,10 +403,10 @@ struct state /* final */ {
 
   struct utf7_state /* final */ {
     ::std::size_t    offset;
-    ::uint_least32_t bits     : 21; // ->> Unconsumed Base64 bits
-    unsigned char    bitCount : 5;
     ::std::size_t    byteCount;      // ->> Total encoded bytes
     ::std::size_t    remainingCount; // ->> Unicode scalars left
+    ::uint_least32_t bits     : 21;  // ->> Unconsumed Base64 bits
+    unsigned char    bitCount : 5;
   };
 
   union utf16_state {
@@ -416,7 +416,7 @@ struct state /* final */ {
 
   /* ... */
   enum /* : unsigned char:5 */ { ISO_2022_G1_DESIGNATED = 0x01u, ISO_2022_G2_DESIGNATED = 0x02u, ISO_2022_G3_DESIGNATED = 0x04u, ISO_2022_SHIFTED = 0x08u, SCSU_UNICODE = 0x10u };
-  static ::std::size_t const COUNT_LIMIT, MALFORMED, NO_SPACE, OVERLONG, UNSUPPORTED, NO_CHARACTER;
+  static ::std::size_t const COMMANDED, INSUFFICIENT, MALFORMED, OVERENCODED, UNSUPPORTED;
 
   ::std::size_t characterCount; // ->> Characters produced (zero for shift commands; usually several for UTF-7 runs)
   enum policy   endianness : 3; //
@@ -463,30 +463,29 @@ struct state /* final */ {
     }
   }
 };
-  ::std::size_t const state::COUNT_LIMIT  = static_cast< ::std::size_t>(-1),
-                      state::MALFORMED    = static_cast< ::std::size_t>(-2),
-                      state::NO_CHARACTER = static_cast< ::std::size_t>(-3),
-                      state::NO_SPACE     = static_cast< ::std::size_t>(-4),
-                      state::OVERLONG     = static_cast< ::std::size_t>(-5),
-                      state::UNSUPPORTED  = static_cast< ::std::size_t>(-6);
+  ::std::size_t const state::COMMANDED    = static_cast< ::std::size_t>(-1),
+                      state::INSUFFICIENT = static_cast< ::std::size_t>(-2), // ->> OOM (Out-of-Memory)
+                      state::MALFORMED    = static_cast< ::std::size_t>(-3),
+                      state::OVERENCODED  = static_cast< ::std::size_t>(-4), // ->> Overlong
+                      state::UNSUPPORTED  = static_cast< ::std::size_t>(-5);
 
-/* ... ->> Characters are accordingly either Unicode scalars or legacy code units */
+/* ... ->> Characters are either Unicode scalars or legacy code units */
 extern "C" {
-  ::std::size_t bom(enum format::encoding, unsigned char[], ::std::size_t, enum policy) /* noexcept */,
-                nul(enum format::encoding, unsigned char[], ::std::size_t)              /* noexcept */;
+  static ::std::size_t bom(enum format::encoding, unsigned char[], ::std::size_t, enum policy) /* noexcept */,
+                       nul(enum format::encoding, unsigned char[], ::std::size_t)              /* noexcept */;
 
-  ::std::size_t length (unsigned char const[], enum format::encoding, enum policy, struct state*) /* noexcept */,
-                next   (unsigned char const[], enum format::encoding,              struct state*) /* noexcept */,
-                unicode(unsigned char const[], enum format::encoding,              struct state*) /* noexcept */;
+  static ::std::size_t length (unsigned char const[], enum format::encoding, enum policy, struct state*) /* noexcept */,
+                       next   (unsigned char const[], enum format::encoding,              struct state*) /* noexcept */,
+                       unicode(unsigned char const[], enum format::encoding,              struct state*) /* noexcept */;
 }
 
 extern "C" ::std::size_t nul(enum format::encoding const encoding, unsigned char nul[], ::std::size_t const capacity = 0u) /* noexcept */ {
   switch (format::strategy(encoding)) {
     case STRATEGY_DOUBLE_94:                                                                                               return state::UNSUPPORTED;
-    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: return not capacity or capacity >= 2u           ? (void) (NULL != nul ? ::std::memset(nul, 0x00u, 2u)           : NULL), 2u           : state::NO_SPACE;
-    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: return not capacity or capacity >= 4u           ? (void) (NULL != nul ? ::std::memset(nul, 0x00u, 4u)           : NULL), 4u           : state::NO_SPACE;
-    case STRATEGY_FORMAT_UTF_7:      { unsigned char const shift[] = {'+', 'A', 'A', 'A', '-'};                            return not capacity or capacity >= sizeof shift ? (void) (NULL != nul ? ::std::memcpy(nul, shift, sizeof shift) : NULL), sizeof shift : state::NO_SPACE; } break;
-    case STRATEGY_FORMAT_UTF_7_IMAP: { unsigned char const shift[] = {'&', 'A', 'A', 'A', '-'};                            return not capacity or capacity >= sizeof shift ? (void) (NULL != nul ? ::std::memcpy(nul, shift, sizeof shift) : NULL), sizeof shift : state::NO_SPACE; } break;
+    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: return not capacity or capacity >= 2u           ? (void) (NULL != nul ? ::std::memset(nul, 0x00u, 2u)           : NULL), 2u           : state::INSUFFICIENT;
+    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: return not capacity or capacity >= 4u           ? (void) (NULL != nul ? ::std::memset(nul, 0x00u, 4u)           : NULL), 4u           : state::INSUFFICIENT;
+    case STRATEGY_FORMAT_UTF_7:      { unsigned char const shift[] = {'+', 'A', 'A', 'A', '-'};                            return not capacity or capacity >= sizeof shift ? (void) (NULL != nul ? ::std::memcpy(nul, shift, sizeof shift) : NULL), sizeof shift : state::INSUFFICIENT; } break;
+    case STRATEGY_FORMAT_UTF_7_IMAP: { unsigned char const shift[] = {'&', 'A', 'A', 'A', '-'};                            return not capacity or capacity >= sizeof shift ? (void) (NULL != nul ? ::std::memcpy(nul, shift, sizeof shift) : NULL), sizeof shift : state::INSUFFICIENT; } break;
     default: if (NULL != nul) *nul = 0x00u;                                                                                return 1u;
   }
 }
@@ -540,7 +539,7 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
 
       // ...
       if (length >= state::UNSUPPORTED - width)
-      return state::COUNT_LIMIT;
+      return state::INSUFFICIENT;
 
       length += width;
     } break;
@@ -550,13 +549,13 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
 
       // ...
       switch (strategy) {
-        case STRATEGY_FORMAT_UTF_7:      { unsigned char const shift[] = {'+', 'A', 'A', 'A', '-'}; terminated = 0x00u == text[length] or 0 == ::std::memcmp(shift, &text[length], sizeof shift); } break;
-        case STRATEGY_FORMAT_UTF_7_IMAP: { unsigned char const shift[] = {'&', 'A', 'A', 'A', '-'}; terminated = 0x00u == text[length] or 0 == ::std::memcmp(shift, &text[length], sizeof shift); } break;
-        default:  for (::std::size_t index = width; index--; ) if (0x00u != text[index + length]) { terminated = false; break; }
+        case STRATEGY_FORMAT_UTF_7:      terminated = 0x00u == text[length] or (text[length] == '+' and text[length + 1u] == 'A' and text[length + 2u] == 'A' and text[length + 3u] == 'A' and text[length + 4u] == '-'); break;
+        case STRATEGY_FORMAT_UTF_7_IMAP: terminated = 0x00u == text[length] or (text[length] == '&' and text[length + 1u] == 'A' and text[length + 2u] == 'A' and text[length + 3u] == 'A' and text[length + 4u] == '-'); break;
+        default: for (::std::size_t index = width; index--; ) if (0x00u != text[index + length]) { terminated = false; break; }
       }
 
       if (terminated)                           break;
-      if (length >= state::UNSUPPORTED - width) return state::COUNT_LIMIT;
+      if (length >= state::UNSUPPORTED - width) return state::INSUFFICIENT;
 
       length += width;
     } break;
@@ -568,9 +567,9 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
 
   #if CHAR_BIT != 8
     if (
-      STRATEGY_FORMAT_BOCU_1        == strategy or STRATEGY_FORMAT_HZ_GB_2312      == strategy or
+      STRATEGY_FORMAT_BOCU_1        == strategy or STRATEGY_FORMAT_HZ_GB_2312      == strategy                                                                                                                                    or
       STRATEGY_FORMAT_ISO_2022_CN   == strategy or STRATEGY_FORMAT_ISO_2022_CN_EXT == strategy or STRATEGY_FORMAT_ISO_2022_JP == strategy or STRATEGY_FORMAT_ISO_2022_JP_2 == strategy or STRATEGY_FORMAT_ISO_2022_KR == strategy or
-      STRATEGY_FORMAT_KOI7_SWITCHED == strategy or STRATEGY_FORMAT_SCSU            == strategy or
+      STRATEGY_FORMAT_KOI7_SWITCHED == strategy or STRATEGY_FORMAT_SCSU            == strategy                                                                                                                                    or
       STRATEGY_FORMAT_UTF_7         == strategy or STRATEGY_FORMAT_UTF_7_IMAP      == strategy
     ) return state::UNSUPPORTED; // ->> Native code units carry one wire octet each
   #endif
@@ -585,7 +584,7 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
   if (0u == state.offset and (STRATEGY_FORMAT_UTF_7 == strategy or STRATEGY_FORMAT_UTF_8 == strategy or STRATEGY_FORMAT_UTF_16 == strategy or STRATEGY_FORMAT_UTF_32 == strategy)) {
     struct /* final */ {
       struct /* final */ { unsigned char *big, *little, *mixed; } endian;
-      unsigned char                                               all[2][/* --> max(…) */ format::maximum<format::UTF_7>::value | format::maximum<format::UTF_8>::value | format::maximum<format::UTF_16>::value | format::maximum<format::UTF_32>::value];
+      unsigned char                                               all[2][5u]; // ->> UTF-7 BOM is five octets (maximum signature length)
       unsigned char                                               count : 2;
       unsigned char const                                         width : 3;
     } sequences = {{NULL, NULL, NULL}, {}, 0u, static_cast<unsigned char>(bom(encoding, NULL, 0u, endianness))};
@@ -644,146 +643,120 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
 
   switch (strategy) {
     /* ->> Stateless strategies */
-    case STRATEGY_BYTE:        /* Do nothing… */                                                                goto done;
-    case STRATEGY_BYTE_SEPTET: invalid = text[0] <= 0x7Fu ? static_cast< ::std::size_t>(-0) : state::MALFORMED; goto done;
+    case STRATEGY_BYTE:                               /* Do nothing… */                                    goto done;
+    case STRATEGY_BYTE_SEPTET: if (text[0] < 0x80u) { /* Do nothing… */ } else invalid = state::MALFORMED; goto done;
 
     case STRATEGY_DOUBLE_94: /* ->> ISO 2022 94-character graphic sets use byte positions 0x21–0x7E, so only validate lookahead bytes after determining they belong to this character */ {
-      width   = length <  2u ? length : 2u;
-      invalid = length >= 2u and (text[0] >= 0x21u and text[0] <= 0x7Eu) and (text[1] >= 0x21u and text[1] <= 0x7Eu) ? static_cast< ::std::size_t>(-0) : state::MALFORMED;
+      if (length < 2u or (text[0] < 0x21u or text[0] > 0x7Eu) or (text[1] < 0x21u or text[1] > 0x7Eu)) invalid = state::MALFORMED;
+      else                                                                                             width   = 2u;
     } goto done;
 
     case STRATEGY_FORMAT_BIG5: {
-      if      (text[0] < 0x80u)                                                                                                                               { /* Do nothing… */ }
-      else if (length < 2u or text[0] < 0x81u or text[0] > 0xFEu or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0xA1u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
-      else                                                                                                                                                    width   = 2u;
+      if      (text[0] < 0x80u)                                                                                                                         { /* Do nothing… */ }
+      else if (length  < 2u or (text[0] < 0x81u or text[0] > 0xFEu) or ((text[1] < 0x40u or text[1] > 0x7Eu) and (text[1] < 0xA1u or text[1] > 0xFEu))) invalid = state::MALFORMED;
+      else                                                                                                                                              width   = 2u;
     } goto done;
 
     case STRATEGY_FORMAT_CESU_8: case STRATEGY_FORMAT_UTF_8: {
       if      (text[0] < 0x80u)                    { /* Do nothing… */ }
-      else if (text[0] < 0xC2u or text[0] > 0xF4u) invalid = text[0] == 0xC0u or text[0] == 0xC1u ? state::OVERLONG : state::MALFORMED;
+      else if (text[0] < 0xC2u or text[0] > 0xF4u) invalid = text[0] == 0xC0u or text[0] == 0xC1u ? state::OVERENCODED : state::MALFORMED;
       else {
         if      (text[0] <= 0xDFu)                  width = 2u;
         else if (text[0] <= 0xEFu)                  width = 3u;
         else if (STRATEGY_FORMAT_UTF_8 == strategy) width = 4u;
         else                                      { invalid = state::MALFORMED; goto done; }
 
-        if      (length < width)                                                                                                                               { invalid = state::MALFORMED; width = length; }
-        else if ((width >= 2u and (text[1] > 0xFFu))          or (width >= 3u and (text[2] > 0xFFu))          or (width == 4u and (text[3] > 0xFFu)))            invalid = state::MALFORMED;
-        else if ((width >= 2u and (text[1] & 0xC0u) != 0x80u) or (width >= 3u and (text[2] & 0xC0u) != 0x80u) or (width == 4u and (text[3] & 0xC0u) != 0x80u)) { invalid = state::MALFORMED; width = 1u; }
-        else if ((text[0] == 0xE0u and text[1] <  0xA0u) or (text[0] == 0xF0u and text[1] < 0x90u))                                                              invalid = state::OVERLONG;
-        else if ((text[0] == 0xF4u and text[1] >  0x8Fu))                                                                                                        invalid = state::MALFORMED;
-        else if ((text[0] == 0xEDu and text[1] >= 0xA0u)) {
-          if      (STRATEGY_FORMAT_UTF_8 == strategy)                                                                           invalid = state::MALFORMED;
-          else if (text[1] >= 0xB0u)                                                                                            invalid = state::MALFORMED;                   // ->> Isolated low surrogate
-          else if (length < 6u)                                                                                               { invalid = state::MALFORMED; width = length; } // ->> CESU-8’s surrogate pair encodes one supplementary character in 6 bytes
-          else if (text[3] != 0xEDu or (text[4] < 0xB0u or text[4] > 0xBFu) or (text[5] > 0xFFu or (text[5] & 0xC0u) != 0x80u)) invalid = state::MALFORMED;
-          else                                                                                                                  width   = 6u;
-        }
+        if      ((width >  length))                                                                                                                                     { invalid = state::MALFORMED;   width = length; }
+        else if ((width >= 2u and (text[1] > 0xFFu))          or (width >= 3u and (text[2] > 0xFFu))          or (width == 4u and (text[3] > 0xFFu)))                   { invalid = state::MALFORMED;   width = width; }
+        else if ((width >= 2u and (text[1] & 0xC0u) != 0x80u) or (width >= 3u and (text[2] & 0xC0u) != 0x80u) or (width == 4u and (text[3] & 0xC0u) != 0x80u))          { invalid = state::MALFORMED;   width = 1u; }
+        else if ((text[0] == 0xE0u and text[1] <  0xA0u) or (text[0] == 0xF0u and text[1] < 0x90u))                                                                     { invalid = state::OVERENCODED; width = width; }
+        else if ((text[0] == 0xF4u and text[1] >  0x8Fu))                                                                                                               { invalid = state::MALFORMED;   width = 4u; }
+        else if ((text[0] == 0xEDu and text[1] >= 0xA0u) and STRATEGY_FORMAT_UTF_8 == strategy)                                                                         { invalid = state::MALFORMED;   width = 3u; }
+        else if ((text[0] == 0xEDu and text[1] >= 0xB0u))                                                                                                               { invalid = state::MALFORMED;   width = 3u; }     // ->> Isolated low surrogate
+        else if ((text[0] == 0xEDu and text[1] >= 0xA0u) and length < 6u)                                                                                               { invalid = state::MALFORMED;   width = length; } // ->> CESU-8’s surrogate pair encodes one supplementary character in 6 bytes
+        else if ((text[0] == 0xEDu and text[1] >= 0xA0u) and (text[3] != 0xEDu or text[4] < 0xB0u or text[4] > 0xBFu or text[5] > 0xFFu or (text[5] & 0xC0u) != 0x80u)) { invalid = state::MALFORMED;   width = width; }
+        else if ((text[0] == 0xEDu and text[1] >= 0xA0u))                                                                                                               { invalid = invalid;            width = 6u; }
       }
     } goto done;
 
     case STRATEGY_FORMAT_GB18030: case STRATEGY_FORMAT_GBK: {
-      if      ((text[0] <  0x80u))                                                                                                                                                        { /* Do nothing… */ }
-      else if ((text[0] <  0x81u or  text[0] >  0xFEu) or  length < 2u)                                                                                                                   invalid = state::MALFORMED;
-      else if ((text[1] >= 0x40u and text[1] <= 0xFEu) and text[1] != 0x7Fu)                                                                                                              width   = 2u;
-      else if ((text[1] >= 0x30u and text[1] <= 0x39u) and length < 4u                                                                         and STRATEGY_FORMAT_GB18030 == strategy) { width   = length; invalid = state::MALFORMED; }
-      else if ((text[1] >= 0x30u and text[1] <= 0x39u) and (text[2] >= 0x81u and text[2] <= 0xFEu) and (text[3] >= 0x30u and text[3] <= 0x39u) and STRATEGY_FORMAT_GB18030 == strategy)   width   = 4u;
-      else                                                                                                                                                                                invalid = state::MALFORMED;
+      if      (text[0] <  0x80u)                                                                                                                                                                             { /* Do nothing… */ }
+      else if (length  <  2u    or  (text[0] <  0x81u or  text[0] >  0xFEu))                                                                                                                                 { invalid = state::MALFORMED; width = 1u; }
+      else if (text[1] != 0x7Fu and (text[1] >= 0x40u and text[1] <= 0xFEu))                                                                                                                                 { invalid = invalid;          width = 2u; }
+      else if (length  <  4u    and (text[1] >= 0x30u and text[1] <= 0x39u)                                                                                         and STRATEGY_FORMAT_GB18030 == strategy) { invalid = state::MALFORMED; width = length; }
+      else if (length  >= 4u    and (text[1] >= 0x30u and text[1] <= 0x39u) and (text[2] >= 0x81u and text[2] <= 0xFEu) and (text[3] >= 0x30u and text[3] <= 0x39u) and STRATEGY_FORMAT_GB18030 == strategy) { invalid = invalid;          width = 4u; }
+      else                                                                                                                                                                                                   { invalid = state::MALFORMED; width = width; }
     } goto done;
 
     case STRATEGY_FORMAT_JOHAB: /* ->> ASCII, Hangul 0x84–0xD3 with 0x41–7E or 0x81–0xFE trails, or Hanja (and symbols) 0xD9–0xDE or 0xE0–0xF9 with 0x31–0x7E or 0x91–0xFE trails */ {
-      if (text[0] < 0x80u); /* TODO */
-      else {
-        if (length < 2u) { invalid = state::MALFORMED; width = length; goto done; }
-        else {
-          width = 2u;
-
-          if      ((text[0] >= 0x84u and text[0] <= 0xD3u))                                            { if (not ((text[1] >= 0x41u and text[1] <= 0x7Eu) or (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED; }
-          else if ((text[0] >= 0xD9u and text[0] <= 0xDEu) or (text[0] >= 0xE0u and text[0] <= 0xF9u)) { if (not ((text[1] >= 0x31u and text[1] <= 0x7Eu) or (text[1] >= 0x91u and text[1] <= 0xFEu))) invalid = state::MALFORMED; }
-          else                                                                                                                                                                                         invalid = state::MALFORMED;
-        }
-      }
+      if      ((text[0] <  0x80u))                                                                 { /* Do nothing… */ }
+      else if ((length  <  2u))                                                                    { invalid = state::MALFORMED;                                                                                                width = length; }
+      else if ((text[0] >= 0x84u and text[0] <= 0xD3u))                                            { invalid = (text[1] >= 0x41u and text[1] <= 0x7Eu) or (text[1] >= 0x81u and text[1] <= 0xFEu) ? invalid : state::MALFORMED; width = 2u; }
+      else if ((text[0] >= 0xD9u and text[0] <= 0xDEu) or (text[0] >= 0xE0u and text[0] <= 0xF9u)) { invalid = (text[1] >= 0x31u and text[1] <= 0x7Eu) or (text[1] >= 0x91u and text[1] <= 0xFEu) ? invalid : state::MALFORMED; width = 2u; }
+      else                                                                                         { invalid = state::MALFORMED;                                                                                                width = 2u; }
     } goto done;
 
     case STRATEGY_FORMAT_EUC_JP: {
-      if (text[0] < 0x80u) goto done;
-      if (text[0] == 0x8Eu) {
-        if (length < 2 or text[1] < 0xA1u or text[1] > 0xDFu) { invalid = state::MALFORMED; goto done; }
-        width = 2;
-        goto done;
-      }
-      if (text[0] == 0x8Fu) {
-        if (length < 3 or not (text[1] >= 0xA1u and text[1] <= 0xFEu) or not (text[2] >= 0xA1u and text[2] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
-        width = 3;
-        goto done;
-      }
-      if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
-      width = 2;
+      if      (text[0] <  0x80u)                                                                                                   { /* Do nothing… */ }
+      else if (text[0] == 0x8Eu and (length < 2u or (text[1] < 0xA1u or text[1] > 0xDFu)))                                         { invalid = state::MALFORMED; width = width; }
+      else if (text[0] == 0x8Eu)                                                                                                   { invalid = invalid;          width = 2u; }
+      else if (text[0] == 0x8Fu and (length < 3u or (text[1] < 0xA1u or text[1] > 0xFEu) or (text[2] < 0xA1u or text[2] > 0xFEu))) { invalid = state::MALFORMED; width = width; }
+      else if (text[0] == 0x8Fu)                                                                                                   { invalid = invalid;          width = 3u; }
+      else if (length < 2u or (text[0] < 0xA1u or text[0] > 0xFEu) or (text[1] < 0xA1u or text[1] > 0xFEu))                        { invalid = state::MALFORMED; width = width; }
+      else                                                                                                                         { invalid = invalid;          width = 2u; }
     } goto done;
 
-    case STRATEGY_FORMAT_EUC_KR: case STRATEGY_FORMAT_GB2312: {
-      // EUC 94-character rows/columns use 0xA1..0xFE.
-      if (text[0] < 0x80u) goto done;
-      if (length < 2 or not (text[0] >= 0xA1u and text[0] <= 0xFEu) or not (text[1] >= 0xA1u and text[1] <= 0xFEu)) { invalid = state::MALFORMED; goto done; }
-      width = 2;
+    case STRATEGY_FORMAT_EUC_KR: case STRATEGY_FORMAT_GB2312: /* ->> EUC 94-character columns/ rows use 0xA1–0xFE */ {
+      if      (text[0] < 0x80u)                                                                              { /* Do nothing… */ }
+      else if (length  < 2u or (text[0] < 0xA1u or text[0] > 0xFEu) or (text[1] < 0xA1u or text[1] > 0xFEu)) invalid = state::MALFORMED;
+      else                                                                                                   width   = 2u;
     } goto done;
 
-    case STRATEGY_FORMAT_EUC_TW: {
-      // EUC-TW: ASCII (1), CNS plane 1 (2), or SS2 8E A1..B0 with a CNS pair (4).
-      // A1..B0 covers planes 1..16; this validates syntax, not assigned repertoire.
-      if (text[0] < 0x80u) goto done;
-      if (text[0] == 0x8Eu) {
-        width = length < 4 ? length : 4;
-        if (length < 4 or text[1] < 0xA1u or text[1] > 0xB0u or
-            text[2] < 0xA1u or text[2] > 0xFEu or text[3] < 0xA1u or text[3] > 0xFEu) invalid = state::MALFORMED;
-        goto done;
-      }
-      width = length < 2 ? length : 2;
-      if (length < 2 or text[0] < 0xA1u or text[0] > 0xFEu or text[1] < 0xA1u or text[1] > 0xFEu) invalid = state::MALFORMED;
+    case STRATEGY_FORMAT_EUC_TW: /* ->> ASCII is one byte, CNS plane 1 is two bytes, and SS2 8E with 0xA1–0xB0 (and a CNS pair) are four bytes which covers CNS planes 1–16 */ {
+      if      (text[0] <  0x80u) { /* Do nothing… */ }
+      else if (text[0] == 0x8Eu) { invalid = length >= 4u and (text[1] >= 0xA1u and text[1] <= 0xB0u) and (text[2] >= 0xA1u and text[2] <= 0xFEu) and (text[3] >= 0xA1u and text[3] <= 0xFEu) ? invalid : state::MALFORMED; width = length < 4u ? length : 4u; }
+      else                       { invalid = length >= 2u and (text[0] >= 0xA1u and text[0] <= 0xFEu) and (text[1] >= 0xA1u and text[1] <= 0xFEu)                                             ? invalid : state::MALFORMED; width = length < 2u ? length : 2u; }
     } goto done;
 
     case STRATEGY_FORMAT_SJIS: {
-      if (text[0] <= 0x7Fu or (text[0] >= 0xA1u and text[0] <= 0xDFu)) goto done;
-      if (not ((text[0] >= 0x81u and text[0] <= 0x9Fu) or (text[0] >= 0xE0u and text[0] <= 0xFCu)) or
-          length < 2 or not ((text[1] >= 0x40u and text[1] <= 0x7Eu) or (text[1] >= 0x80u and text[1] <= 0xFCu))) { invalid = state::MALFORMED; goto done; }
-      width = 2;
+      if      (text[0] <= 0x7Fu or ((text[0] >= 0xA1u and text[0] <= 0xDFu)))                                                                                                                             { /* Do nothing… */ }
+      else if (length  <  2u    or ((text[0] <  0x81u or  text[0] >  0x9Fu) and (text[0] < 0xE0u or text[0] > 0xFCu)) or ((text[1] < 0x40u or text[1] > 0x7Eu) and (text[1] < 0x80u or text[1] > 0xFCu))) invalid = state::MALFORMED;
+      else                                                                                                                                                                                                width   = 2u;
     } goto done;
 
-    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: {
-      width = length < 2 ? length : 2;
-      if (length < 2 or text[1] > 0xFFu) { invalid = state::MALFORMED; goto done; }
+    case STRATEGY_FORMAT_UCS_2: case STRATEGY_FORMAT_UTF_16: case STRATEGY_FORMAT_UTF_16BE: case STRATEGY_FORMAT_UTF_16LE: /* ->> A valid BMP code unit always consumes two octets */ {
+      if      (length < 2u or text[1] > 0xFFu) { invalid = state::MALFORMED; width = length < 2u ? length : 2u; }
+      else if (
+        ::uint_least16_t const unit = ENDIAN_BIG != endianness
+        ? (text[0] << (8u * 0u)) | (text[1] << (8u * 1u))
+        : (text[0] << (8u * 1u)) | (text[1] << (8u * 0u))
+      ) {
+        if      (STRATEGY_FORMAT_UCS_2 == strategy)                                              { invalid = unit < 0xD800u or unit > 0xDFFFu ? invalid : state::MALFORMED; width = length < 2u ? length : 2u; }
+        else if ((unit >= 0xDC00u and unit <= 0xDFFFu))                                          { invalid = state::MALFORMED;                                              width = length < 2u ? length : 2u; }
+        else if ((unit >= 0xD800u and unit <= 0xDBFFu) and length   < 4u)                        { invalid = state::MALFORMED;                                              width = length; }
+        else if ((unit >= 0xD800u and unit <= 0xDBFFu) and (text[2] > 0xFFu or text[3] > 0xFFu)) { invalid = state::MALFORMED;                                              width = length < 2u ? length : 2u; }
+        else if ((unit >= 0xD800u and unit <= 0xDBFFu)) {
+          ::uint_least16_t const surrogate = ENDIAN_BIG != endianness ? (text[2] << 0u) | (text[3] << 8u) : (text[2] << 8u) | (text[3] << 0u); // ->> Low
 
-      unsigned unit = ENDIAN_BIG != endianness ? text[0] | (text[1] << 8) : (text[0] << 8) | text[1];
-      if (strategy == STRATEGY_FORMAT_UCS_2) { invalid = unit >= 0xD800u and unit <= 0xDFFFu ? state::MALFORMED : 0; goto done; }
-      if (unit >= 0xDC00u and unit <= 0xDFFFu) { invalid = state::MALFORMED; goto done; }
-      if (unit >= 0xD800u and unit <= 0xDBFFu) {
-        if (length < 4) { width = length; { invalid = state::MALFORMED; goto done; } }
-        if (text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; goto done; }
-        unsigned low = ENDIAN_BIG != endianness ? text[2] | (text[3] << 8) : (text[2] << 8) | text[3];
-        if (low < 0xDC00u or low > 0xDFFFu) { invalid = state::MALFORMED; goto done; }
-        width = 4;
-      }
+          if (surrogate < 0xDC00u or surrogate > 0xDFFFu) { invalid = state::MALFORMED; width = 2u; }
+          else                                            { invalid = invalid;          width = 4u; }
+        } else width = 2u;
+      }   else width = 2u;
     } goto done;
 
-    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: {
-      width = length < 4 ? length : 4;
-      if (length < 4 or text[1] > 0xFFu or text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; goto done; }
-      ::uint_least32_t value = ENDIAN_BIG != endianness ?
-        static_cast< ::uint_least32_t>(text[0]) | (static_cast< ::uint_least32_t>(text[1]) << 8) |
-          (static_cast< ::uint_least32_t>(text[2]) << 16) | (static_cast< ::uint_least32_t>(text[3]) << 24) :
-        (static_cast< ::uint_least32_t>(text[0]) << 24) | (static_cast< ::uint_least32_t>(text[1]) << 16) |
-          (static_cast< ::uint_least32_t>(text[2]) << 8) | static_cast< ::uint_least32_t>(text[3]);
-      if (value > 0x10FFFFu or (value >= 0xD800u and value <= 0xDFFFu)) { invalid = state::MALFORMED; goto done; }
+    case STRATEGY_FORMAT_UCS_4: case STRATEGY_FORMAT_UTF_32: case STRATEGY_FORMAT_UTF_32BE: case STRATEGY_FORMAT_UTF_32LE: /* ->> A valid scalar always consumes four octets */ {
+      if      (length < 4u or text[1] > 0xFFu or text[2] > 0xFFu or text[3] > 0xFFu) { invalid = state::MALFORMED; width = length < 4u ? length : 4u; }
+      else if (
+        ::uint_least32_t const value = ENDIAN_BIG != endianness
+        ? (static_cast< ::uint_least32_t>(text[0]) << (8u * 0u)) | (static_cast< ::uint_least32_t>(text[1]) << (8u * 1u)) | (static_cast< ::uint_least32_t>(text[2]) << (8u * 2u)) | (static_cast< ::uint_least32_t>(text[3]) << (8u * 3u))
+        : (static_cast< ::uint_least32_t>(text[0]) << (8u * 3u)) | (static_cast< ::uint_least32_t>(text[1]) << (8u * 2u)) | (static_cast< ::uint_least32_t>(text[2]) << (8u * 1u)) | (static_cast< ::uint_least32_t>(text[3]) << (8u * 0u))
+      ) { if (value > 0x10FFFFu or (value >= 0xD800u and value <= 0xDFFFu)) { invalid = state::MALFORMED; width = length < 4u ? length : 4u; } else width = 4u; }
+      else                                                                                                                                          width = 4u;
     } goto done;
 
-    case STRATEGY_FORMAT_WINDOWS_949: {
-      // Unified Hangul Code extends EUC-KR: lead 81..FE; ASCII-letter and
-      // high-byte trails (41..5A, 61..7A, 81..FE) allow additional Hangul.
-      if (text[0] < 0x80u) goto done;
-      width = length < 2 ? length : 2;
-      if (length < 2 or text[0] < 0x81u or text[0] > 0xFEu or
-          not ((text[1] >= 0x41u and text[1] <= 0x5Au) or (text[1] >= 0x61u and text[1] <= 0x7Au) or
-               (text[1] >= 0x81u and text[1] <= 0xFEu))) invalid = state::MALFORMED;
+    case STRATEGY_FORMAT_WINDOWS_949: /* ->> Unified Hangul Code extends EUC-KR: Lead 0x81–0xFE; ASCII-letter and high-byte trails (0x41–0x5A, 0x61–0x7A, and 0x81–0xFE) allow additional Hangul */ {
+      if (text[0] < 0x80u) { /* Do nothing… */ }
+      else                 { invalid = length >= 2u and (text[0] >= 0x81u and text[0] <= 0xFEu) and ((text[1] >= 0x41u and text[1] <= 0x5Au) or (text[1] >= 0x61u and text[1] <= 0x7Au) or (text[1] >= 0x81u and text[1] <= 0xFEu)) ? invalid : state::MALFORMED; width = length < 2u ? length : 2u; }
     } goto done;
 
     /* ->> Stateful strategies */
@@ -792,7 +765,7 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
         ((text[0] >= 0xC1u and text[0] <= 0xCFu))                                                          and // ->> Non-spacing accent byte (0xC1–0xCF)
         ((text[1] >= 'A'   and text[1] <= 'Z') or (text[1] >= 'a' and text[1] <= 'z') or (text[1] == ' ')) and //       optionally followed by a base-letter byte
         length >= 2u                                                                                           //
-      ) ? 2u : 1u;
+      ) ? 2u : 1u;                                                                                             //
     } goto done;
 
     case STRATEGY_FORMAT_BOCU_1: {
@@ -823,8 +796,8 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
       }
 
       else if (status.iso2022.shifted) {
-        if (length >= 2u and (text[0] >= 0x21u and text[0] <= 0x77u) and (text[1] >= 0x21u and text[1] <= 0x7Eu)) width   = 2u;
-        else                                                                                                      invalid = state::MALFORMED;
+        if (length < 2u or (text[0] < 0x21u or text[0] > 0x77u) or (text[1] < 0x21u or text[1] > 0x7Eu)) invalid = state::MALFORMED;
+        else                                                                                             width   = 2u;
       }
 
       else if (text[0] > 0x7Fu)
@@ -877,38 +850,29 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
         invalid = state::MALFORMED;
 
       else if (status.iso2022.shifted) {
-        if      (length < 2u or text[0] < 0x21u or text[0] > 0x7Eu or text[1] < 0x21u or text[1] > 0x7Eu) { if (strategy == STRATEGY_FORMAT_KOI7_SWITCHED) width = 1u; else invalid = state::MALFORMED; } // ->> KOI7 still represents a single 7-bit character after a shift
+        if      (length < 2u or text[0] < 0x21u or text[0] > 0x7Eu or text[1] < 0x21u or text[1] > 0x7Eu) { if (STRATEGY_FORMAT_KOI7_SWITCHED == strategy) width = 1u; else invalid = state::MALFORMED; } // ->> KOI7 still represents a single 7-bit character after a shift
         else if (STRATEGY_FORMAT_KOI7_SWITCHED != strategy)                                                                                                width = 2u;
       }
     } goto done;
 
-    case STRATEGY_FORMAT_SCSU: /* ->> UTR #6 (ICU SCSU): Command bytes can alter the strategy (big-endian UCS-2) without producing a character */ {
-      if (status.scsu.unicoded) {
-        if      (text[0] >= 0xF2u)                      invalid = state::MALFORMED;
-        else if (text[0] == 0xF0u)                      { state.characterCount = 1u; status.scsu.unicoded = true;  width = 3u; } // ->> UQU: Quote a character
-        else if (text[0] == 0xF1u)                      { state.characterCount = 0u; status.scsu.unicoded = false; width = 3u; }
-        else if (text[0] >= 0xE8u and text[0] <= 0xEFu) { state.characterCount = 0u; status.scsu.unicoded = false; width = 2u; }
-        else if (text[0] >= 0xE0u and text[0] <= 0xE7u) { state.characterCount = 0u; status.scsu.unicoded = false; width = 1u; }
-        else {
-          width = 2u; // ->> Dual code units in a surrogate pair represent one scalar (four bytes), not two characters
+    case STRATEGY_FORMAT_SCSU: /* ->> UTR #6: SCSU commands switch modes; Unicode mode carries big-endian UTF-16 code units, including surrogate pairs */ {
+      if          (status.scsu.unicoded and (text[0] >= 0xF2u))                                                                                                          { invalid = state::MALFORMED; width = width; }
+      else if     (status.scsu.unicoded and (text[0] == 0xF0u))                                                                                                          { invalid = invalid;          width = 3u; state.characterCount = 1u; status.scsu.unicoded = true;  } // ->> UQU: Quote a character
+      else if     (status.scsu.unicoded and (text[0] == 0xF1u))                                                                                                          { invalid = invalid;          width = 3u; state.characterCount = 0u; status.scsu.unicoded = false; }
+      else if     (status.scsu.unicoded and (text[0] >= 0xE8u and text[0] <= 0xEFu))                                                                                     { invalid = invalid;          width = 2u; state.characterCount = 0u; status.scsu.unicoded = false; }
+      else if     (status.scsu.unicoded and (text[0] >= 0xE0u and text[0] <= 0xE7u))                                                                                     { invalid = invalid;          width = 1u; state.characterCount = 0u; status.scsu.unicoded = false; }
+      else if     (status.scsu.unicoded and (text[0] >= 0xD8u and text[0] <= 0xDBu) and (length >= 4u and text[1] <= 0xFFu and (text[2] >= 0xDCu and text[2] <= 0xDFu))) { invalid = invalid;          width = 4u; } // ->> A UTF-16 surrogate pair occupies two big-endian code units (four octets)
+      else if     (status.scsu.unicoded and (text[0] >= 0xDCu and text[0] <= 0xDFu) or  (length >= 2u                      and (text[0] >= 0xD8u and text[0] <= 0xDBu))) { invalid = state::MALFORMED; width = 2u; }
+      else if     (status.scsu.unicoded)                                                                                                                                 { invalid = invalid;          width = 2u; }
+      else if (not status.scsu.unicoded and (text[0] >= 0x01u and text[0] <= 0x08u))                                                                                     { invalid = invalid;          width = 2u; state.characterCount = 1u; status.scsu.unicoded = false; } // ->> SQ0–SQ7
+      else if (not status.scsu.unicoded and (text[0] == 0x0Bu))                                                                                                          { invalid = invalid;          width = 3u; state.characterCount = 1u; status.scsu.unicoded = false; } // ->> SDX
+      else if (not status.scsu.unicoded and (text[0] == 0x0Eu))                                                                                                          { invalid = invalid;          width = 3u; state.characterCount = 1u; status.scsu.unicoded = false; } // ->> SQU: Quoted character
+      else if (not status.scsu.unicoded and (text[0] == 0x0Fu))                                                                                                          { invalid = invalid;          width = 1u; state.characterCount = 0u; status.scsu.unicoded = true;  } //
+      else if (not status.scsu.unicoded and (text[0] >= 0x10u and text[0] <= 0x17u))                                                                                     { invalid = invalid;          width = 1u; state.characterCount = 0u; status.scsu.unicoded = false; } // ->> SC0–SC7
+      else if (not status.scsu.unicoded and (text[0] >= 0x18u and text[0] <= 0x1Fu))                                                                                     { invalid = invalid;          width = 2u; state.characterCount = 0u; status.scsu.unicoded = false; } // ->> SD0–SD7
+      else if (not status.scsu.unicoded and (text[0] == 0x0Cu or (text[0] != 0x09u and text[0] != 0x0Au and text[0] != 0x0Du and text[0] >= 0x01u and text[0] < 0x20u)))   invalid = state::MALFORMED;
 
-          if (length >= 2u and text[0] >= 0xD8u and text[0] <= 0xDBu) {
-            if (length >= 4u and text[1] <= 0xFFu and text[2] >= 0xDCu and text[2] <= 0xDFu) width   = 4u;
-            else /* if … */                                                                  invalid = state::MALFORMED;
-          } else if (text[0] >= 0xDCu and text[0] <= 0xDFu)                                  invalid = state::MALFORMED;
-        }
-      }
-
-      else {
-        if      (text[0] >= 0x01u and text[0] <= 0x08u) { state.characterCount = 1u; status.scsu.unicoded = false; width = 2u; } // ->> SQ0–SQ7
-        else if (text[0] == 0x0Bu)                      { state.characterCount = 1u; status.scsu.unicoded = false; width = 3u; } // ->> SDX
-        else if (text[0] == 0x0Eu)                      { state.characterCount = 1u; status.scsu.unicoded = false; width = 3u; } // ->> SQU: Quoted character
-        else if (text[0] == 0x0Fu)                      { state.characterCount = 0u; status.scsu.unicoded = true;  width = 1u; } //
-        else if (text[0] >= 0x10u and text[0] <= 0x17u) { state.characterCount = 0u; status.scsu.unicoded = false; width = 1u; } // ->> SC0–SC7
-        else if (text[0] >= 0x18u and text[0] <= 0x1Fu) { state.characterCount = 0u; status.scsu.unicoded = false; width = 2u; } // ->> SD0–SD7
-        else if (text[0] == 0x0Cu or (text[0] != 0x09u and text[0] != 0x0Au and text[0] != 0x0Du and text[0] >= 0x01u and text[0] < 0x20u)) invalid = state::MALFORMED;
-      }
-
+      /* TODO */
       if (length < width)
       invalid = state::MALFORMED;
     } goto done;
@@ -920,9 +884,9 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
       unsigned pending     = 0u;
 
       // ...
-      if (length >= 1u and text[0] > 0x7Fu or (STRATEGY_FORMAT_UTF_7_IMAP == strategy and (text[0] < 0x20u or text[0] > 0x7Eu))) { invalid = state::MALFORMED; goto done; }
-      if (length >= 1u and text[0] != (STRATEGY_FORMAT_UTF_7_IMAP == strategy ? '&' : '+'))                                                                  { goto done; }
-      if (length >= 2u and text[1] == '-')                                                                                                       { width = 2u; goto done; } // ->> Literal `+` or `&`
+      if (text[0] > 0x7Fu or (STRATEGY_FORMAT_UTF_7_IMAP == strategy and text[0] < 0x20u)) { invalid = state::MALFORMED; goto done; }
+      if (text[0] != (STRATEGY_FORMAT_UTF_7_IMAP == strategy ? '&' : '+'))                 { goto done; }
+      if (length >= 2u and text[1] == '-')                                                 { width = 2u; goto done; } // ->> Literal `+` or `&`
 
       state.characterCount = 0u;
 
@@ -942,8 +906,8 @@ extern "C" ::std::size_t next(unsigned char const text[], enum format::encoding 
 
           // ...
           bits        -= 16u;
-          accumulator &= (1u << bits) - 1u;
           unit         = (accumulator >> bits) & 0xFFFFu;
+          accumulator &= (1u << bits) - 1u;
 
           if (not pending) {
             if      (unit >= 0x0020u and unit <= 0x007Eu and STRATEGY_FORMAT_UTF_7_IMAP == strategy) { invalid = state::MALFORMED; break; } // ->> Must be direct ASCII, or `&-`
@@ -1030,7 +994,7 @@ extern "C" ::std::size_t length(unsigned char const text[], enum format::encodin
 
           // ...
           if (length >= state::UNSUPPORTED - width)
-          return state::COUNT_LIMIT;
+          return state::INSUFFICIENT;
 
           length += width;
         }
@@ -1063,11 +1027,11 @@ extern "C" ::std::size_t length(unsigned char const text[], enum format::encodin
           text[length] == (strategy == STRATEGY_FORMAT_UTF_7 ? '+' : '&') and
           text[length + 1u] == 'A' and text[length + 2u] == 'A' and
           text[length + 3u] == 'A' and text[length + 4u] == '-') break;
-      if (length >= state::UNSUPPORTED - unitBytes) return state::COUNT_LIMIT;
+      if (length >= state::UNSUPPORTED - unitBytes) return state::INSUFFICIENT;
       length += unitBytes;
     }
   }
-  if (length >= state::UNSUPPORTED) return state::COUNT_LIMIT;
+  if (length >= state::UNSUPPORTED) return state::INSUFFICIENT;
 
   // Determine byte order for fixed-width encodings, overriding the policy
   // for formats with explicit BE/LE suffixes. A leading UTF-16/UTF-32 BOM
@@ -1104,7 +1068,7 @@ extern "C" ::std::size_t length(unsigned char const text[], enum format::encodin
     ::std::size_t const failure = result >= state::UNSUPPORTED ? result : 0;
     if (failure == 0) {
       if (width == 0 or width > length - position or count > state::UNSUPPORTED - produced) {
-        status = state::COUNT_LIMIT;
+        status = state::INSUFFICIENT;
         break;
       }
       position = iterator.offset;
@@ -1625,7 +1589,7 @@ static ::std::size_t unicode_shifted(unsigned char const character[], struct sta
 }
 
 // Return one Unicode scalar (U+0000..U+10FFFF), or state::* status.
-// NO_CHARACTER denotes a BOM/shift command, not a Unicode scalar; retry at
+// COMMANDED denotes a BOM/shift command, not a Unicode scalar; retry at
 // the updated offset. UTF-7 can yield multiple scalars while the offset stays
 // at the run's beginning; use state until the run has been fully delivered.
 // Fresh scalar state uses the default constructor; UTF-7 requires reset(encoding)
@@ -1826,7 +1790,7 @@ extern "C" ::std::size_t unicode(unsigned char const character[], enum format::e
   enum policy const endianBefore = cursor->endianness;
   ::std::size_t const width = next(character, encoding, cursor);
   if (width >= state::UNSUPPORTED) return width;
-  if (cursor->characterCount == 0u) return state::NO_CHARACTER;
+  if (cursor->characterCount == 0u) return state::COMMANDED;
   if (mapping != NULL) {
     unsigned const byte = character[0];
     unsigned const scalar = not entire and byte < 128u ? byte : mapping[entire ? byte : byte - 128u];
@@ -1939,12 +1903,12 @@ extern "C" ::std::size_t bom(enum format::encoding encoding, unsigned char bom[]
   }
 
   switch (encoding) {
-    case format::UTF_7:    { unsigned char const sequence[] = {'+', '/', 'v', '8', '-'};    return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_8:    { unsigned char const sequence[] = {0xEFu, 0xBBu, 0xBFu};        return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_16BE: { unsigned char const sequence[] = {0xFEu, 0xFFu};               return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_16LE: { unsigned char const sequence[] = {0xFFu, 0xFEu};               return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_32BE: { unsigned char const sequence[] = {0x00u, 0x00u, 0xFEu, 0xFFu}; return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
-    case format::UTF_32LE: { unsigned char const sequence[] = {0xFFu, 0xFEu, 0x00u, 0x00u}; return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::NO_SPACE; } break;
+    case format::UTF_7:    { unsigned char const sequence[] = {'+', '/', 'v', '8', '-'};    return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::INSUFFICIENT; } break;
+    case format::UTF_8:    { unsigned char const sequence[] = {0xEFu, 0xBBu, 0xBFu};        return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::INSUFFICIENT; } break;
+    case format::UTF_16BE: { unsigned char const sequence[] = {0xFEu, 0xFFu};               return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::INSUFFICIENT; } break;
+    case format::UTF_16LE: { unsigned char const sequence[] = {0xFFu, 0xFEu};               return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::INSUFFICIENT; } break;
+    case format::UTF_32BE: { unsigned char const sequence[] = {0x00u, 0x00u, 0xFEu, 0xFFu}; return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::INSUFFICIENT; } break;
+    case format::UTF_32LE: { unsigned char const sequence[] = {0xFFu, 0xFEu, 0x00u, 0x00u}; return not capacity or capacity >= sizeof sequence ? (void) (NULL != bom ? ::std::memcpy(bom, sequence, sizeof sequence) : NULL), sizeof sequence : state::INSUFFICIENT; } break;
     default:;
   }
 
@@ -1953,6 +1917,19 @@ extern "C" ::std::size_t bom(enum format::encoding encoding, unsigned char bom[]
 
 /* Main */
 int main(int, char*[]) {
+  // ->> next(…): reject invalid geometry and retain fixed-width Unicode code units.
+  { unsigned char const bytes[] = {0x20u, 0x21u, 0u}; assert(next(bytes, format::JIS_C6226_1983) == state::MALFORMED); }
+  { unsigned char const bytes[] = {0x21u, 0x7Fu, 0u}; assert(next(bytes, format::JIS_C6226_1983) == state::MALFORMED); }
+  { unsigned char const bytes[] = {0x21u, 0x21u, 0u}; assert(next(bytes, format::JIS_C6226_1983) == 2u); }
+  { unsigned char const bytes[] = {0xA0u, 0x40u, 0u}; assert(next(bytes, format::SHIFT_JIS) == state::MALFORMED); }
+  { unsigned char const bytes[] = {0xFAu, 0x40u, 0u}; assert(next(bytes, format::SHIFT_JIS) == 2u); }
+  { unsigned char const bytes[] = {0x81u, 0x30u, 0u}; assert(next(bytes, format::GB18030) == state::MALFORMED); }
+  { unsigned char const bytes[] = {0x81u, 0x30u, 0x30u, 0x30u, 0u}; assert(next(bytes, format::GB18030) == state::MALFORMED); }
+  { unsigned char const bytes[] = {0xEDu, 0xA0u, 0x80u, 0u}; assert(next(bytes, format::UTF_8) == state::MALFORMED); }
+  { unsigned char const bytes[] = {0xEDu, 0xA0u, 0xBDu, 0xEDu, 0xB8u, 0x80u, 0u}; assert(next(bytes, format::CESU_8) == 6u); }
+  { unsigned char const bytes[] = {0x41u, 0x00u, 0x00u, 0x00u}; assert(next(bytes, format::UTF_16LE) == 2u); }
+  { unsigned char const bytes[] = {0x00u, 0x00u, 0x00u, 0x41u, 0x00u, 0x00u, 0x00u, 0x00u}; assert(next(bytes, format::UTF_32BE) == 4u); }
+  { unsigned char const bytes[] = {'+', 0u}; assert(next(bytes, format::UTF_7) == state::MALFORMED); }
   // Representative Unicode mappings for each newly supported encoding.
   { unsigned char const bytes[] = {0x27u, 0x00u};        assert(unicode(bytes, format::ADOBE_STANDARD_ENCODING)        == 0x2019u); }
   { unsigned char const bytes[] = {0x22u, 0x00u};        assert(unicode(bytes, format::ADOBE_SYMBOL_ENCODING)          == 0x2200u); }
@@ -2083,9 +2060,9 @@ int main(int, char*[]) {
   assert(bomBytes[0] == 0xFFu and bomBytes[1] == 0xFEu and bomBytes[2] == 0x00u and bomBytes[3] == 0x00u);
   assert(bom(format::UTF_7, bomBytes, sizeof(bomBytes)) == 5u);
   assert(bomBytes[0] == '+' and bomBytes[1] == '/' and bomBytes[2] == 'v' and bomBytes[3] == '8' and bomBytes[4] == '-');
-  assert(bom(format::UTF_8, bomBytes, 2u) == state::NO_SPACE);
+  assert(bom(format::UTF_8, bomBytes, 2u) == state::INSUFFICIENT);
   unsigned char const utf7Bom[] = {'+', '/', 'v', '8', '-', 0u};
-  assert(unicode(utf7Bom, format::UTF_7) == state::NO_CHARACTER);
+  assert(unicode(utf7Bom, format::UTF_7) == state::COMMANDED);
   assert(bom(format::UTF_7_IMAP, bomBytes) == state::UNSUPPORTED);
   assert(bom(format::WINDOWS_1252, bomBytes) == state::UNSUPPORTED);
   assert(bom(format::UTF_16, bomBytes, 0u, ENDIAN_MIXED) == state::UNSUPPORTED);
@@ -2300,7 +2277,7 @@ int main(int, char*[]) {
   { unsigned char const text[] = {0xEDu, 0xA3u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x60DEu); assert(cursor.offset == sizeof(text) - 1u); }
   { unsigned char const text[] = {0x92u, 0xC8u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x939Au); assert(cursor.offset == sizeof(text) - 1u); }
   { unsigned char const text[] = {0xF0u, 0x62u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xE022u); assert(cursor.offset == sizeof(text) - 1u); }
-  { unsigned char const text[] = {0xD6u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xFF96u); assert(cursor.offset == sizeof(text) - 1u); }
+  { unsigned char const text[] = {0xD6u, 0x00u};     struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xFF96u); assert(cursor.offset == sizeof(text) - 1u); }
   { unsigned char const text[] = {0x9Cu, 0x56u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x5F16u); assert(cursor.offset == sizeof(text) - 1u); }
   { unsigned char const text[] = {0xF4u, 0x72u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0xE322u); assert(cursor.offset == sizeof(text) - 1u); }
   { unsigned char const text[] = {0x94u, 0xA0u, 0u}; struct state cursor; assert(unicode(text, format::WINDOWS_31J, &cursor) == 0x7BB1u); assert(cursor.offset == sizeof(text) - 1u); }
@@ -2327,7 +2304,7 @@ int main(int, char*[]) {
   { unsigned char const text[] = {0x81u, 0x30u, 0x81u, 0x30u, 0u}; struct state cursor; assert(unicode(text, format::GB18030, &cursor) == 0x80u); }
   { unsigned char const text[] = {0x8Eu, 0xA1u, 0xA1u, 0xA1u, 0u}; struct state cursor; assert(unicode(text, format::EUC_TW, &cursor)  == state::MALFORMED); }
   { unsigned char const text[] = {0x88u, 0x62u, 'A', 0u}; struct state cursor;
-    assert(unicode(text, format::BIG5_HKSCS, &cursor) == 0x00CAu); assert(cursor.offset == 2u);
+    assert(unicode(&text[cursor.offset], format::BIG5_HKSCS, &cursor) == 0x00CAu); assert(cursor.offset == 2u);
     assert(unicode(&text[cursor.offset], format::BIG5_HKSCS, &cursor) == 0x0304u); assert(cursor.offset == 2u);
     assert(unicode(&text[cursor.offset], format::BIG5_HKSCS, &cursor) == 'A'); assert(cursor.offset == 3u);
   }
@@ -2346,7 +2323,7 @@ int main(int, char*[]) {
   assert(cursor.offset == 0);
   assert(cursor.status == 0 and cursor.invalidCount == 0 and cursor.characterCount == 0);
 
-  unsigned char const overlong[] = { 0xC0u, 0xAFu, 0 }; assert(length(overlong, format::UTF_8, INVALID_TERMINATE) == state::OVERLONG);
+  unsigned char const overlong[] = { 0xC0u, 0xAFu, 0 }; assert(length(overlong, format::UTF_8, INVALID_TERMINATE) == state::OVERENCODED);
   struct state ignored;
   assert(length(overlong, format::UTF_8, INVALID_IGNORE, &ignored) == 0);
   assert(ignored.offset == 2);
@@ -2365,7 +2342,7 @@ int main(int, char*[]) {
 
   // next() reports malformed input at a properly terminated incomplete sequence.
   struct state malformedCursor;
-  unsigned char const invalidUtf8[] = { 0xC0u, 0xAFu, 0 }; assert(next(invalidUtf8, format::UTF_8, &malformedCursor) == state::OVERLONG);
+  unsigned char const invalidUtf8[] = { 0xC0u, 0xAFu, 0 }; assert(next(invalidUtf8, format::UTF_8, &malformedCursor) == state::OVERENCODED);
   assert(malformedCursor.offset == 0 and malformedCursor.invalidCount == 1);
   assert(next(utf8, format::UTF_8) == 1);
 
@@ -2405,9 +2382,9 @@ int main(int, char*[]) {
   // Unicode code-point reconstruction with properly terminated input.
   assert(unicode(utf8, format::UTF_8) == 'A');
   assert(unicode(&utf8[1], format::UTF_8) == 0x20ACu);
-  unsigned char const utf8Supplementary[] = { 0xF0u, 0x9Fu, 0x98u, 0x80u, 0 };     assert(unicode(utf8Supplementary, format::UTF_8)         == 0x1F600u);
-  unsigned char const utf16Supplementary[] = { 0x3Du, 0xD8u, 0x00u, 0xDEu, 0, 0 }; assert(unicode(utf16Supplementary, format::UTF_16LE) == 0x1F600u);
-  unsigned char const utf32Big[] = { 0, 0x01u, 0xF6u, 0, 0, 0, 0, 0 };             assert(unicode(utf32Big, format::UTF_32BE)                       == 0x1F600u);
+  unsigned char const utf8Supplementary [] = {0xF0u, 0x9Fu, 0x98u, 0x80u, 0x00u};                      assert(unicode(utf8Supplementary,  format::UTF_8)    == 0x1F600u);
+  unsigned char const utf16Supplementary[] = {0x3Du, 0xD8u, 0x00u, 0xDEu, 0x00u, 0x00u};               assert(unicode(utf16Supplementary, format::UTF_16LE) == 0x1F600u);
+  unsigned char const utf32Big          [] = {0x00u, 0x01u, 0xF6u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u}; assert(unicode(utf32Big,           format::UTF_32BE) == 0x1F600u);
   assert(unicode(cesu8, format::CESU_8) == 0x1F600u);
   assert(unicode(utf8, format::US_ASCII) == 'A');
   assert(unicode(eucJP, format::EUC_JP) == 'A');
@@ -2422,7 +2399,7 @@ int main(int, char*[]) {
   unsigned char const koi8A[] = { 0xE1u, 0 };              assert(unicode(koi8A, format::KOI8_R)                                    == 0x0410u);
   unsigned char const macEacute[] = { 0x8Eu, 0 };          assert(unicode(macEacute, format::MACINTOSH)                         == 0x00E9u);
   struct state unicodeBom;
-  assert(unicode(withBom, format::UTF_16, &unicodeBom) == state::NO_CHARACTER);
+  assert(unicode(withBom, format::UTF_16, &unicodeBom) == state::COMMANDED);
   assert(unicode(&withBom[unicodeBom.offset], format::UTF_16, &unicodeBom) == 'A');
   assert(unicode(&withBom[unicodeBom.offset], format::UTF_16, &unicodeBom) == 0x1F600u);
   assert(unicodeBom.offset == 8u);

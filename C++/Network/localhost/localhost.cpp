@@ -68,7 +68,7 @@ extern "C" __declspec(dllimport) int          WSAAPI  WSAStartup    (::WORD, ::L
 # if not defined htons
   extern "C" __declspec(dllimport) ::u_short WSAAPI htons(::u_short);
 # endif
-#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+#elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
 # include <arpa/inet.h>  // --> htonl(…), htons(…)
 # include <cerrno>       // --> EADDRINUSE, EINTR; errno
 # include <dirent.h>     // --> ::DIR, ::dirent; ::closedir(…), ::opendir(…), ::readdir(…)
@@ -153,18 +153,18 @@ enum /* : unsigned … */ {
   static ::HANDLE        localhostMutex    = NULL;
   static ::HANDLE        localhostShutdown = NULL;
   static ::LONG volatile workerCount       = 0L;
-#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+#elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
   typedef int   socket_t; // --> POSIX descriptor
   typedef void* thread_t; // --> thread::client(…)
 
   static int      const INVALID_COMMAND_LINE  = EXIT_FAILURE + 1;
   static socket_t const INVALID_SOCKET_HANDLE = -1;
 
-  static socket_t                control                                                                  = INVALID_SOCKET_HANDLE;
-  static char                    controlPath[sizeof static_cast<struct ::sockaddr_un*>(NULL) -> sun_path] = {};
-  static ::sig_atomic_t volatile localhostShutdown                                                        = static_cast< ::sig_atomic_t>(false);
-  static long                    workerCount                                                              = 0L;
-  static ::pthread_mutex_t       workerMutex                                                              = PTHREAD_MUTEX_INITIALIZER;
+  static socket_t                control                                     = INVALID_SOCKET_HANDLE;
+  static char                    controlPath[sizeof ::sockaddr_un::sun_path] = {};
+  static ::sig_atomic_t volatile localhostShutdown                           = static_cast< ::sig_atomic_t>(false);
+  static long                    workerCount                                 = 0L;
+  static ::pthread_mutex_t       workerMutex                                 = PTHREAD_MUTEX_INITIALIZER;
 #endif
 static socket_t         listeners[2] = {INVALID_SOCKET_HANDLE, INVALID_SOCKET_HANDLE};
 static ::uint_least32_t bindIPv4     = INADDR_LOOPBACK; // ->> Host-order IPv4; `--bind` selects a particular network interface
@@ -208,7 +208,7 @@ struct string /* final */ {
     return true;
   }
 
-  #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
     bool appendControlName() /* noexcept */ {
       struct ::stat attributes = {};
       char const   *directory  = ::std::getenv("XDG_RUNTIME_DIR");
@@ -308,7 +308,7 @@ struct directory /* final */ {
       }
 
       return false;
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       struct ::stat attributes = {};
       return 0 == ::stat(path, &attributes) and S_ISDIR(attributes.st_mode);
     #endif
@@ -327,7 +327,7 @@ struct directory /* final */ {
       }
 
       return false;
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       /* ... */ {
         struct ::stat attributes = {};
 
@@ -347,7 +347,7 @@ struct socket /* final */ {
     if (INVALID_SOCKET_HANDLE != socket)
     #if defined _WIN32
       (void) ::closesocket(socket);
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       (void) ::close(socket);
     #endif
   }
@@ -359,7 +359,7 @@ struct socket /* final */ {
     char     const type [],
     #if defined _WIN32
       ::ULONGLONG const size,
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       ::off_t const size,
     #endif
     char const extra[]
@@ -372,7 +372,7 @@ struct socket /* final */ {
     struct ::std::tm utc = {};
     #if defined _WIN32
       ::ULONGLONG value = size;
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       ::off_t value = size;
     #endif
 
@@ -380,7 +380,7 @@ struct socket /* final */ {
     #if defined _WIN32
       if (0 == ::_gmtime64_s(&utc, &static_cast< ::__time64_t const&>(static_cast< ::__time64_t>(::std::time(NULL)))))
       (void) ::std::strftime(date, sizeof date, "%a, %d %b %Y %H:%M:%S GMT", &utc);
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       if (NULL != ::gmtime_r(&static_cast< ::std::time_t const&>(::std::time(NULL)), &utc))
       (void) ::std::strftime(date, sizeof date, "%a, %d %b %Y %H:%M:%S GMT", &utc);
     #endif
@@ -423,7 +423,7 @@ struct socket /* final */ {
 
     #if defined _WIN32
       (void) ::setsockopt(server, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<char const*>(&static_cast< ::BOOL const&>(TRUE)), sizeof(::BOOL)); // ->> Exclusive
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       (void) ::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &static_cast<int const&>(true), sizeof(int)); // ->> Reuse
     #endif
 
@@ -434,7 +434,7 @@ struct socket /* final */ {
         // ...
         #if defined _WIN32
           (void) ::setsockopt(server, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<char const*>(&static_cast<int const&>(true)), sizeof(int));
-        #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
           (void) ::setsockopt(server, IPPROTO_IPV6, IPV6_V6ONLY, &static_cast<int const&>(true), sizeof(int));
         #endif
 
@@ -467,7 +467,7 @@ struct socket /* final */ {
       ::std::size_t const amount = SOCKET_SEND_LIMIT < length ? static_cast< ::std::size_t>(SOCKET_SEND_LIMIT) : length;
       #if defined _WIN32
         int const written = ::send(client, data, static_cast<int>(amount), 0);
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         #if defined MSG_NOSIGNAL
           ::ssize_t const written = ::send(client, data, amount, MSG_NOSIGNAL);
         #else
@@ -477,7 +477,7 @@ struct socket /* final */ {
 
       // ... ->> `send(…)` may write fewer bytes than requested, so retry until all data is sent
       if (written <= 0) {
-        #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
           if (EINTR == errno)
           continue;
         #endif
@@ -494,7 +494,7 @@ struct socket /* final */ {
   static void sendDocument(socket_t const client, unsigned const status, char const label[], struct string const* const document, bool const head, char const extra[]) /* noexcept */ {
     #if defined _WIN32
       ::ULONGLONG const size = static_cast< ::ULONGLONG>(document -> length);
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       ::off_t const size = static_cast< ::off_t>(document -> length);
     #endif
 
@@ -525,7 +525,7 @@ struct socket /* final */ {
   static void workerEnd() /* noexcept */ {
     #if defined _WIN32
       (void) ::InterlockedDecrement(&workerCount);
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       (void) ::pthread_mutex_lock(&workerMutex);
       --workerCount;
       (void) ::pthread_mutex_unlock(&workerMutex);
@@ -536,7 +536,7 @@ struct socket /* final */ {
 struct thread /* final */ {
   #if defined _WIN32
     typedef unsigned /* __stdcall */ thread_t;
-  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
     typedef void *thread_t;
   #endif
 
@@ -545,7 +545,7 @@ struct thread /* final */ {
     #if defined _WIN32
       socket_t const client = static_cast<socket_t>(reinterpret_cast< ::UINT_PTR>(parameter));
       ::ULONGLONG    size   = 0u;
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       socket_t const client = *static_cast<socket_t*>(parameter); ::std::free(parameter);
       ::off_t        size   = 0;
     #endif
@@ -568,7 +568,7 @@ struct thread /* final */ {
 
       (void) ::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char const*>(&timeout), sizeof timeout);
       (void) ::setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char const*>(&timeout), sizeof timeout);
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       struct ::timeval const timeout = {TIMEOUT_CLIENT_SECONDS, 0};
 
       (void) ::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
@@ -582,7 +582,7 @@ struct thread /* final */ {
       while (HEADER_MAXIMUM_LENGTH > request.length) {
         #if defined _WIN32
           int const received = ::recv(client, &request.memory[request.length], static_cast<int>(HEADER_MAXIMUM_LENGTH - request.length), 0);
-        #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
           ::ssize_t const received = ::recv(client, &request.memory[request.length], HEADER_MAXIMUM_LENGTH - request.length, 0);
         #endif
 
@@ -881,7 +881,7 @@ struct thread /* final */ {
 
                   ::std::free(widepath);
                 }
-              #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+              #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
                 struct ::dirent *entry  = NULL;
                 ::DIR *const     search = ::opendir(path.value);
 
@@ -906,7 +906,7 @@ struct thread /* final */ {
                       name = NULL;
                     }
                   }
-                #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+                #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
                   entry  = ::readdir(search);
                   length = NULL != entry ? ::std::strlen(entry -> d_name) : -1;
 
@@ -942,7 +942,7 @@ struct thread /* final */ {
               #if defined _WIN32
                 if (INVALID_HANDLE_VALUE != search)
                 (void) ::FindClose(search);
-              #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+              #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
                 if (NULL != search)
                 (void) ::closedir(search);
               #endif
@@ -996,7 +996,7 @@ struct thread /* final */ {
               stream = ::_wfopen(widepath, L"rb");
               ::std::free(widepath);
             }
-          #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+          #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
             stream = ::std::fopen(path.value, "rb");
           #endif
 
@@ -1063,7 +1063,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
   #if defined _WIN32
     if (not root.set("C:\\LapysDev"))
     return EXIT_FAILURE;
-  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
     if (not root.set("."))
     return EXIT_FAILURE;
   #endif
@@ -1168,7 +1168,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
           status = 0 != ::SetEvent(event) ? EXIT_SUCCESS : status;
           (void) ::CloseHandle(event);
         }
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         struct string name;
 
         if (name.appendControlName()) {
@@ -1211,7 +1211,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
 
       if (FALSE != consoleAttached)
       (void) ::FreeConsole(); // ->> The Windows-subsystem executable temporarily borrows the calling shell’s console only to report command results
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       (void) ::std::fputs(message, stdout);
     #endif
 
@@ -1242,7 +1242,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
         localhostMutex = NULL;
       }
     }
-  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
     struct string name;
 
     if (name.appendControlName()) {
@@ -1308,7 +1308,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
   else {
     status = EXIT_FAILURE;
 
-    #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+    #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
       struct /* final */ {
         struct ::sigaction action;
         struct ::sigaction ignored;
@@ -1332,7 +1332,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
     while (
       #if defined _WIN32
         WAIT_OBJECT_0 != ::WaitForSingleObject(localhostShutdown, 0u)
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         static_cast< ::sig_atomic_t>(false) == localhostShutdown
       #endif
     ) {
@@ -1343,13 +1343,13 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
       FD_ZERO(&incoming);
       FD_SET (listeners[0], &incoming);
       FD_SET (listeners[1], &incoming);
-      #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         FD_SET(control, &incoming);
       #endif
 
       #if defined _WIN32
         int const selected = ::select(0, &incoming, NULL, NULL, &timeout);
-      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         int       largest  = listeners[0] > listeners[1] ? listeners[0] : listeners[1];
         int const selected = ::select((control > largest ? control : largest) + 1, &incoming, NULL, NULL, &timeout);
       #endif
@@ -1357,7 +1357,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
       if (selected <= 0)
       continue;
 
-      #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+      #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         if (FD_ISSET(control, &incoming)) {
           socket_t client = ::accept(control, NULL, NULL);
 
@@ -1405,7 +1405,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
                 socket::workerEnd();
               }
             } else socket::close(client);
-          #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+          #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
             bool accepted = false;
             bool launched = false;
 
@@ -1449,7 +1449,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
     if (NULL != localhostMutex)    { (void) ::CloseHandle(localhostMutex);    localhostMutex    = NULL; }
     if (NULL != localhostShutdown) { (void) ::CloseHandle(localhostShutdown); localhostShutdown = NULL; }
     (void) ::WSACleanup();
-  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
     socket::close(control);
     if ('\0' != *controlPath) (void) ::unlink(controlPath);
     control      = INVALID_SOCKET_HANDLE;
@@ -1499,7 +1499,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
     (void) ::LocalFree(wideArguments);
     return status;
   }
-#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+#elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
   int main(int count, char* arguments[]) {
     return comain(count, const_cast<char const* const*>(arguments));
   }
