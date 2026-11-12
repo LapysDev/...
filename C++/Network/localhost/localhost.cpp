@@ -15,9 +15,10 @@
 # define WIN32_LEAN_AND_MEAN
 #
 # include <cwchar>     // --> ::std::wcslen(…)
+# include <stdlib.h>   // --> ::errno_t
 # include <winsock2.h> // --> ::SOCKET, ::WSADATA, ::fd_set, ::sockaddr, ::sockaddr_in, ::timeval; AF_INET, FD_ISSET, FD_SET, FD_ZERO, INADDR_LOOPBACK, INVALID_SOCKET, MAKEWORD, SO_EXCLUSIVEADDRUSE, SO_RCVTIMEO, SO_SNDTIMEO, SOL_SOCKET, SOCK_STREAM; …
 # include <ws2tcpip.h> // --> in6addr_loopback, IPPROTO_IPV6, IPPROTO_TCP, IPV6_V6ONLY; ::sockaddr_in6
-# include <windows.h>  // --> ATTACH_PARENT_PROCESS, CP_UTF8, ERROR_ALREADY_EXISTS, EVENT_MODIFY_STATE, FALSE, FILE_ATTRIBUTE_DIRECTORY, GetFileExInfoStandard, INVALID_FILE_ATTRIBUTES, INVALID_HANDLE_VALUE, MB_ERR_INVALID_CHARS, STD_OUTPUT_HANDLE, TRUE, WAIT_OBJECT_0, WC_ERR_INVALID_CHARS; ::BOOL, ::DWORD, ::HANDLE, ::HINSTANCE, ::LONG, ::LPWSTR, ::UINT_PTR, ::ULONGLONG, ::WIN32_FILE_ATTRIBUTE_DATA, ::WIN32_FIND_DATAW; ::AttachConsole(…), ::FreeConsole(…); …
+# include <windows.h>  // --> ATTACH_PARENT_PROCESS, CP_UTF8, ERROR_ALREADY_EXISTS, EVENT_MODIFY_STATE, FALSE, FILE_ATTRIBUTE_DIRECTORY, GetFileExInfoStandard, INVALID_FILE_ATTRIBUTES, INVALID_HANDLE_VALUE, MB_ERR_INVALID_CHARS, STD_OUTPUT_HANDLE, TRUE, WAIT_OBJECT_0, WC_ERR_INVALID_CHARS; ::BOOL, ::DWORD, ::HANDLE, ::HINSTANCE, ::LONG, ::LPOVERLAPPED, ::LPSECURITY_ATTRIBUTES, ::LPSTR, ::LPWSTR, ::UINT_PTR, ::ULONGLONG, ::WIN32_FILE_ATTRIBUTE_DATA, ::WIN32_FIND_DATAW; ::AttachConsole(…), ::FreeConsole(…); …
 #   include <process.h>  // --> ::_beginthreadex(…)
 #   include <shellapi.h> // --> ::CommandLineToArgvW(…)
 #
@@ -271,7 +272,7 @@ struct string /* final */ {
       wchar_t *rawtext = NULL;
 
       // ...
-      length = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, -1, NULL, 0);
+      length = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, -1, static_cast< ::LPWSTR>(NULL), 0);
       if (length <= 0) return NULL;
 
       rawtext = static_cast<wchar_t*>(::std::malloc(static_cast< ::std::size_t>(length) * sizeof(wchar_t)));
@@ -314,7 +315,7 @@ struct directory /* final */ {
     #endif
   }
 
-  static bool isFile(char const path[], void* size) /* noexcept */ {
+  static bool isFile(char const path[], void* const size) /* noexcept */ {
     // ->> Assert ordinary static files rather than directories, optionally obtaining their size.
     #if defined _WIN32
       if (wchar_t *const widepath = string::raw(path)) {
@@ -378,10 +379,10 @@ struct socket /* final */ {
 
     // ...
     #if defined _WIN32
-      if (0 == ::_gmtime64_s(&utc, &static_cast< ::__time64_t const&>(static_cast< ::__time64_t>(::std::time(NULL)))))
+      if (0 == ::_gmtime64_s(&utc, &static_cast< ::__time64_t const&>(static_cast< ::__time64_t>(::std::time(static_cast< ::std::time_t*>(NULL))))))
       (void) ::std::strftime(date, sizeof date, "%a, %d %b %Y %H:%M:%S GMT", &utc);
     #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
-      if (NULL != ::gmtime_r(&static_cast< ::std::time_t const&>(::std::time(NULL)), &utc))
+      if (static_cast<struct ::tm*>(NULL) != ::gmtime_r(&static_cast< ::std::time_t const&>(::std::time(static_cast< ::std::time_t*>(NULL))), &utc))
       (void) ::std::strftime(date, sizeof date, "%a, %d %b %Y %H:%M:%S GMT", &utc);
     #endif
 
@@ -616,7 +617,7 @@ struct thread /* final */ {
       request.spaces[0]                                                                          =                             ::std::strchr(request.memory,        ' ');
       request.spaces[1]                                                                          = NULL != request.spaces[0] ? ::std::strchr(request.spaces[0] + 1, ' ') : NULL;
       request.lineEnd[request.lineEnd > request.memory and request.lineEnd[-1] == '\r' ? -1 : 0] = '\0';
-      if (NULL == request.spaces[0] or NULL == request.spaces[1] or NULL != ::std::strchr(request.spaces[1] + 1, ' ')) {
+      if (NULL == request.spaces[0] or NULL == request.spaces[1] or static_cast<char*>(NULL) != ::std::strchr(request.spaces[1] + 1, ' ')) {
         socket::sendError(client, HTTP_BAD_REQUEST, "Bad Request", false);
         break;
       }
@@ -786,7 +787,7 @@ struct thread /* final */ {
             else if (0 != ::std::strcmp(segment, ".") and '\0' != *segment) {
               #if defined _WIN32
                 ::std::size_t const length = ::std::strlen(segment);
-                if (resolved) resolved = segment[length - 1u] != '.' and segment[length - 1u] != ' ' and NULL == ::std::strpbrk(segment, ":*?\"<>|");
+                if (resolved) resolved = segment[length - 1u] != '.' and segment[length - 1u] != ' ' and static_cast<char const*>(NULL) == ::std::strpbrk(segment, ":*?\"<>|");
               #endif
 
               if (resolved and 0u != path.length and '/' != path.value[path.length - 1u] and '\\' != path.value[path.length - 1u]) resolved = path     .append   ('/');
@@ -885,7 +886,7 @@ struct thread /* final */ {
                 struct ::dirent *entry  = NULL;
                 ::DIR *const     search = ::opendir(path.value);
 
-                listed = NULL != search;
+                listed = static_cast< ::DIR*>(NULL) != search;
               #endif
 
               while (listed) {
@@ -896,19 +897,19 @@ struct thread /* final */ {
                 // ...
                 #if defined _WIN32
                   isDirectory = 0u != (entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
-                  length      = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, entry.cFileName, -1, NULL, 0, NULL, NULL);
+                  length      = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, entry.cFileName, -1, static_cast< ::LPSTR>(NULL), 0, static_cast< ::LPCCH>(NULL), static_cast< ::LPBOOL>(NULL));
 
                   if (length > 0) {
                     name = static_cast<char*>(::std::malloc(length * sizeof(char)));
 
-                    if (NULL != name and 0 == ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, entry.cFileName, -1, name, length, NULL, NULL)) {
+                    if (NULL != name and 0 == ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, entry.cFileName, -1, name, length, static_cast< ::LPCCH>(NULL), static_cast< ::LPBOOL>(NULL))) {
                       ::std::free(name);
                       name = NULL;
                     }
                   }
                 #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
                   entry  = ::readdir(search);
-                  length = NULL != entry ? ::std::strlen(entry -> d_name) : -1;
+                  length = static_cast<struct ::dirent*>(NULL) != entry ? ::std::strlen(entry -> d_name) : -1;
 
                   if (length > 0) {
                     name = static_cast<char*>(::std::malloc((length + 1u) * sizeof(char)));
@@ -943,7 +944,7 @@ struct thread /* final */ {
                 if (INVALID_HANDLE_VALUE != search)
                 (void) ::FindClose(search);
               #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
-                if (NULL != search)
+                if (static_cast< ::DIR*>(NULL) != search)
                 (void) ::closedir(search);
               #endif
 
@@ -1207,7 +1208,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
 
       // ...
       if (INVALID_HANDLE_VALUE != stream and NULL != stream)
-      (void) ::WriteFile(stream, message, static_cast< ::DWORD>(::std::strlen(message)), &reinterpret_cast< ::DWORD&>(const_cast< ::ULARGE_INTEGER&>(static_cast< ::ULARGE_INTEGER const&>(::ULARGE_INTEGER()))), NULL);
+      (void) ::WriteFile(stream, message, static_cast< ::DWORD>(::std::strlen(message)), &reinterpret_cast< ::DWORD&>(const_cast< ::ULARGE_INTEGER&>(static_cast< ::ULARGE_INTEGER const&>(::ULARGE_INTEGER()))), static_cast< ::LPOVERLAPPED>(NULL));
 
       if (FALSE != consoleAttached)
       (void) ::FreeConsole(); // ->> The Windows-subsystem executable temporarily borrows the calling shell’s console only to report command results
@@ -1231,15 +1232,15 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
   // ->> The control endpoint enforces single-instance startup and private shutdown.
   bool controlStarted = false;
   #if defined _WIN32
-    localhostMutex = ::CreateMutexW(NULL, FALSE, L"Local\\LapysDev.Localhost.Instance");
+    localhostMutex = ::CreateMutexW(static_cast< ::LPSECURITY_ATTRIBUTES>(NULL), FALSE, L"Local\\LapysDev.Localhost.Instance");
 
-    if (NULL != localhostMutex) {
-      localhostShutdown = ERROR_ALREADY_EXISTS != ::GetLastError() ? ::CreateEventW(NULL, TRUE, FALSE, L"Local\\LapysDev.Localhost.Shutdown") : localhostShutdown;
-      controlStarted    = NULL != localhostShutdown;
+    if (static_cast< ::HANDLE>(NULL) != localhostMutex) {
+      localhostShutdown = ERROR_ALREADY_EXISTS != ::GetLastError() ? ::CreateEventW(static_cast< ::LPSECURITY_ATTRIBUTES>(NULL), TRUE, FALSE, L"Local\\LapysDev.Localhost.Shutdown") : localhostShutdown;
+      controlStarted    = static_cast< ::HANDLE>(NULL) != localhostShutdown;
 
       if (not controlStarted) {
         (void) ::CloseHandle(localhostMutex);
-        localhostMutex = NULL;
+        localhostMutex = static_cast< ::HANDLE>(NULL);
       }
     }
   #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
@@ -1321,12 +1322,12 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
       // ...
       signal.action.sa_handler = &signal.stop;
       (void) ::sigemptyset(&signal.action.sa_mask);
-      (void) ::sigaction  (SIGINT,  &signal.action, NULL);
-      (void) ::sigaction  (SIGTERM, &signal.action, NULL);
+      (void) ::sigaction  (SIGINT,  &signal.action, static_cast<struct ::sigaction*>(NULL));
+      (void) ::sigaction  (SIGTERM, &signal.action, static_cast<struct ::sigaction*>(NULL));
 
       signal.ignored.sa_handler = SIG_IGN;
       (void) ::sigemptyset(&signal.ignored.sa_mask);
-      (void) ::sigaction  (SIGPIPE, &signal.ignored, NULL);
+      (void) ::sigaction  (SIGPIPE, &signal.ignored, static_cast<struct ::sigaction*>(NULL));
     #endif
 
     while (
@@ -1348,10 +1349,10 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
       #endif
 
       #if defined _WIN32
-        int const selected = ::select(0, &incoming, NULL, NULL, &timeout);
+        int const selected = ::select(0, &incoming, static_cast< ::fd_set*>(NULL), static_cast< ::fd_set*>(NULL), &timeout);
       #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         int       largest  = listeners[0] > listeners[1] ? listeners[0] : listeners[1];
-        int const selected = ::select((control > largest ? control : largest) + 1, &incoming, NULL, NULL, &timeout);
+        int const selected = ::select((control > largest ? control : largest) + 1, &incoming, static_cast< ::fd_set*>(NULL), static_cast< ::fd_set*>(NULL), &timeout);
       #endif
 
       if (selected <= 0)
@@ -1359,7 +1360,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
 
       #if defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
         if (FD_ISSET(control, &incoming)) {
-          socket_t client = ::accept(control, NULL, NULL);
+          socket_t client = ::accept(control, static_cast<struct ::sockaddr*>(NULL), static_cast< ::socklen_t*>(NULL));
 
           if (INVALID_SOCKET_HANDLE != client) {
             char                   command        = '\0';
@@ -1383,7 +1384,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
 
       for (unsigned char index = 0u; index != sizeof listeners / sizeof(socket_t); ++index)
       if (FD_ISSET(listeners[index], &incoming)) {
-        socket_t const client = ::accept(listeners[index], NULL, NULL);
+        socket_t const client = ::accept(listeners[index], static_cast<struct ::sockaddr*>(NULL), static_cast< ::socklen_t*>(NULL));
 
         if (INVALID_SOCKET_HANDLE != client) {
           #if defined _WIN32
@@ -1398,7 +1399,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
             } while (not accepted);
 
             if (accepted) {
-              if (::HANDLE const handle = reinterpret_cast< ::HANDLE>(::_beginthreadex(NULL, 0u, &thread::client, reinterpret_cast<void*>(static_cast< ::UINT_PTR>(client)), 0u, NULL)))
+              if (::HANDLE const handle = reinterpret_cast< ::HANDLE>(::_beginthreadex(NULL, 0u, &thread::client, reinterpret_cast<void*>(static_cast< ::UINT_PTR>(client)), 0u, static_cast<unsigned*>(NULL))))
                 (void) ::CloseHandle(handle);
               else {
                 socket::close(client);
@@ -1422,7 +1423,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
                 // ...
                 *parameter = client;
 
-                if (0 == ::pthread_create(&created, NULL, &thread::client, parameter)) {
+                if (0 == ::pthread_create(&created, static_cast< ::pthread_attr_t const*>(NULL), &thread::client, parameter)) {
                   launched = true;
                   (void) ::pthread_detach(created);
                 } else ::std::free(parameter);
@@ -1446,8 +1447,8 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
   }
 
   #if defined _WIN32
-    if (NULL != localhostMutex)    { (void) ::CloseHandle(localhostMutex);    localhostMutex    = NULL; }
-    if (NULL != localhostShutdown) { (void) ::CloseHandle(localhostShutdown); localhostShutdown = NULL; }
+    if (static_cast< ::HANDLE>(NULL) != localhostMutex)    { (void) ::CloseHandle(localhostMutex);    localhostMutex    = static_cast< ::HANDLE>(NULL); }
+    if (static_cast< ::HANDLE>(NULL) != localhostShutdown) { (void) ::CloseHandle(localhostShutdown); localhostShutdown = static_cast< ::HANDLE>(NULL); }
     (void) ::WSACleanup();
   #elif defined __ANDROID__ or defined __APPLE__ or defined __linux__ or defined __unix__
     socket::close(control);
@@ -1473,7 +1474,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
 
       // ...
       for (int index = 0; index < count; ++index) {
-        int const length = ::WideCharToMultiByte(CP_UTF8, 0u, wideArguments[index], -1, NULL, 0, NULL, NULL);
+        int const length = ::WideCharToMultiByte(CP_UTF8, 0u, wideArguments[index], -1, static_cast< ::LPSTR>(NULL), 0, static_cast< ::LPCCH>(NULL), static_cast< ::LPBOOL>(NULL));
 
         // ...
         if (length <= 0) {
@@ -1483,7 +1484,7 @@ static int comain(int const count, char const* const arguments[]) /* noexcept */
 
         arguments[index] = static_cast<char*>(::std::malloc(static_cast< ::std::size_t>(length)));
 
-        if (NULL == arguments[index] or length != ::WideCharToMultiByte(CP_UTF8, 0u, wideArguments[index], -1, arguments[index], length, NULL, NULL)) {
+        if (NULL == arguments[index] or length != ::WideCharToMultiByte(CP_UTF8, 0u, wideArguments[index], -1, arguments[index], length, static_cast< ::LPCCH>(NULL), static_cast< ::LPBOOL>(NULL))) {
           ready = false;
           break;
         }
