@@ -499,7 +499,7 @@ struct socket /* final */ {
       ::off_t const size = static_cast< ::off_t>(document -> length);
     #endif
 
-    if (not head and socket::headers(client, status, label, "text/html; charset=utf-8", size, extra))
+    if (not head and socket::headers(client, status, label, "text/html; charset=UTF-8", size, extra))
     (void) socket::send(client, document -> value, document -> length);
   }
 
@@ -712,7 +712,7 @@ struct thread /* final */ {
 
         // ...
         do {
-          if (uri.append(request.target, NULL != delimiter ? static_cast< ::std::size_t>(delimiter - request.target) : ::std::strlen(request.target)))
+          if (not uri.append(request.target, NULL != delimiter ? static_cast< ::std::size_t>(delimiter - request.target) : ::std::strlen(request.target)))
           break;
 
           if (NULL == uri.value or '/' != *uri.value or not canonical.set("/") or not path.set(root.value))
@@ -1009,16 +1009,16 @@ struct thread /* final */ {
           if (char const *const extension = ::std::strrchr(path.value, '.'))
           for (struct format /* final */ { char const extension[7], *type /* [31] */; } const formats[] = {
             {".avif", "image/avif"}, {".bmp", "image/bmp"},
-            {".cpp",  "text/plain"}, {".css", "text/css; charset=utf-8"}, {".csv", "text/csv"},
+            {".cpp",  "text/plain"}, {".css", "text/css; charset=UTF-8"}, {".csv", "text/csv"},
             {".gif",  "image/gif"},
-            {".h",    "text/plain"}, {".htm", "text/html; charset=utf-8"}, {".html", "text/html; charset=utf-8"},
+            {".h",    "text/plain"}, {".htm", "text/html; charset=UTF-8"}, {".html", "text/html; charset=UTF-8"},
             {".ico",  "image/x-icon"},
-            {".jpeg", "image/jpeg"}, {".jpg", "image/jpeg"}, {".js", "text/javascript; charset=utf-8"}, {".json", "application/json; charset=utf-8"},
+            {".jpeg", "image/jpeg"}, {".jpg", "image/jpeg"}, {".js", "text/javascript; charset=UTF-8"}, {".json", "application/json; charset=UTF-8"},
             {".log",  "text/plain"},
-            {".map",  "application/json"}, {".mjs", "text/javascript; charset=utf-8"}, {".mp3", "audio/mpeg"}, {".mp4", "video/mp4"},
+            {".map",  "application/json"}, {".mjs", "text/javascript; charset=UTF-8"}, {".mp3", "audio/mpeg"}, {".mp4", "video/mp4"},
             {".otf",  "font/otf"},
             {".pdf",  "application/pdf"},  {".png",  "image/png"}, {".py", "text/plain"},
-            {".svg",  "image/svg+xml"},    {".txt",  "text/plain; charset=utf-8"},
+            {".svg",  "image/svg+xml"},    {".txt",  "text/plain; charset=UTF-8"},
             {".wasm", "application/wasm"}, {".webp", "image/webp"}, {".woff", "font/woff"}, {".woff2", "font/woff2"},
             {".xml",  "application/xml"},  {".zip",   "application/zip"}
           }, *format = formats; format != &formats[sizeof formats / sizeof(struct format)]; ++format) {
